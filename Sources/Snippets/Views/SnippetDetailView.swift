@@ -18,7 +18,6 @@ struct SnippetDetailView: View {
     @State private var isCopyPressed: Bool = false
     @State private var isEditPressed: Bool = false
     @State private var isDeletePressed: Bool = false
-    @State private var showPreview: Bool = true
 
     private var theme: Theme { Theme.current(colorScheme) }
 
@@ -51,7 +50,6 @@ struct SnippetDetailView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     titleBlock
                     actionBar
-                    previewSection
                     if !snippet.snippetDescription.isEmpty {
                         descriptionBlock
                     }
@@ -188,52 +186,6 @@ struct SnippetDetailView: View {
             }
     }
 
-    private var previewSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            SectionHeader("preview", trailing: AnyView(
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                        showPreview.toggle()
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: showPreview ? "eye.fill" : "eye.slash")
-                            .font(Mono.font(size: 10, weight: .semibold))
-                        Text(showPreview ? "hide" : "show")
-                            .font(Mono.font(size: 10, weight: .semibold))
-                    }
-                    .foregroundStyle(theme.textMuted)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background {
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(theme.surface)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                    .strokeBorder(theme.border, lineWidth: 1)
-                            }
-                    }
-                }
-                .buttonStyle(.plain)
-            ))
-
-            if showPreview {
-                WebPreviewView(
-                    code: snippet.code,
-                    language: language,
-                    isDark: colorScheme == .dark,
-                    compact: false
-                )
-                .frame(minHeight: 220, maxHeight: 480)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(theme.border, lineWidth: 1)
-                }
-                .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
-            }
-        }
-    }
 
     private var descriptionBlock: some View {
         VStack(alignment: .leading, spacing: 8) {

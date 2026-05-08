@@ -151,10 +151,6 @@
         },
         {
           "kind" : "file",
-          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/WebPreviewView.swift"
-        },
-        {
-          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/ContentView.swift"
         },
         {
@@ -208,7 +204,6 @@
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SectionHeader.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetCard.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/StatusBar.swift.o",
-        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/WebPreviewView.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ContentView.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetDetailView.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetEditorView.swift.o",
@@ -340,10 +335,6 @@
         },
         {
           "kind" : "file",
-          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/WebPreviewView.swift.o"
-        },
-        {
-          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ContentView.swift.o"
         },
         {
@@ -387,7 +378,6 @@
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SectionHeader.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SnippetCard.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/StatusBar.swift",
-        "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/WebPreviewView.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/ContentView.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetDetailView.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetEditorView.swift",
@@ -427,7 +417,6 @@
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SectionHeader.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SnippetCard.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/StatusBar.swift",
-      "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/WebPreviewView.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/ContentView.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetDetailView.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetEditorView.swift",
@@ -598,10 +587,6 @@
         },
         {
           "kind" : "file",
-          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/WebPreviewView.swift"
-        },
-        {
-          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/ContentView.swift"
         },
         {
@@ -717,10 +702,6 @@
         {
           "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Theme.swift.o"
-        },
-        {
-          "kind" : "file",
-          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/WebPreviewView.swift.o"
         },
         {
           "kind" : "file",

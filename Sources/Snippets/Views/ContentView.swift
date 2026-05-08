@@ -19,9 +19,10 @@ struct ContentView: View {
     @State private var collectionDraftName: String = ""
     @State private var collectionDraftSnippetIDs: Set<PersistentIdentifier> = []
     @State private var selectedSnippetID: PersistentIdentifier? = nil
-    enum SidebarSelectionContext: Equatable {
+    enum SidebarSelectionContext: Hashable {
         case recent
-        case library
+        case allSnippets
+        case collection(PersistentIdentifier)
     }
     @State private var sidebarSelectionContext: SidebarSelectionContext? = nil
     @State private var selectedCollectionID: PersistentIdentifier? = nil
@@ -137,7 +138,11 @@ struct ContentView: View {
                         onSelect: { snippet in
                             withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
                                 selectedSnippetID = snippet.persistentModelID
-                                sidebarSelectionContext = .library
+                                if let colID = selectedCollectionID {
+                                    sidebarSelectionContext = .collection(colID)
+                                } else {
+                                    sidebarSelectionContext = .allSnippets
+                                }
                             }
                         },
                         onNew: { isPresentingNew = true }
@@ -204,7 +209,7 @@ struct ContentView: View {
                 try modelContext.save()
                 withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
                     selectedSnippetID = newSnippet.persistentModelID
-                    sidebarSelectionContext = .library
+                    sidebarSelectionContext = .allSnippets
                 }
             }
         }
@@ -410,7 +415,7 @@ if !availableLanguages.isEmpty {
                 DisclosureGroup(isExpanded: $isAllSnippetsExpanded) {
                     VStack(alignment: .leading, spacing: 2) {
                         ForEach(snippets) { snippet in
-                            sidebarSnippetRow(for: snippet)
+                            sidebarSnippetRow(for: snippet, context: .allSnippets)
                         }
                     }
                     .padding(.leading, 12)
@@ -439,7 +444,7 @@ if !availableLanguages.isEmpty {
                     DisclosureGroup(isExpanded: isExpanded) {
                         VStack(alignment: .leading, spacing: 2) {
                             ForEach(collection.snippets) { snippet in
-                                sidebarSnippetRow(for: snippet)
+                                sidebarSnippetRow(for: snippet, context: .collection(collection.persistentModelID))
                             }
                         }
                         .padding(.leading, 12)
@@ -743,13 +748,13 @@ if !availableLanguages.isEmpty {
     }
 
     @ViewBuilder
-    private func sidebarSnippetRow(for snippet: Snippet) -> some View {
+    private func sidebarSnippetRow(for snippet: Snippet, context: SidebarSelectionContext) -> some View {
         let language = SupportedLanguage(rawValue: snippet.language) ?? .unknown
         let accent = Color(hex: language.accentHex) ?? theme.accent
-        let isActive = selectedSnippetID == snippet.persistentModelID && sidebarSelectionContext == .library
+        let isActive = selectedSnippetID == snippet.persistentModelID && sidebarSelectionContext == context
         Button {
             selectedSnippetID = snippet.persistentModelID
-            sidebarSelectionContext = .library
+            sidebarSelectionContext = context
         } label: {
             HStack(spacing: 8) {
                 Circle()
@@ -843,8 +848,7 @@ private struct ModernSidebar: View {
         case all
         case language(String)
         case collection(PersistentIdentifier)
-        case snippet(PersistentIdentifier)
-        case recentSnippet(PersistentIdentifier)
+        case snippet(PersistentIdentifier, ContentView.SidebarSelectionContext)
     }
 
     let snippets: [Snippet]
@@ -879,8 +883,8 @@ private struct ModernSidebar: View {
     private var selection: Binding<Selection?> {
         Binding(
             get: {
-                if let id = selectedSnippetID {
-                    return sidebarSelectionContext == .recent ? .recentSnippet(id) : .snippet(id)
+                if let id = selectedSnippetID, let context = sidebarSelectionContext {
+                    return .snippet(id, context)
                 }
                 if let id = selectedCollectionID { return .collection(id) }
                 if let lang = selectedLanguage { return .language(lang.rawValue) }
@@ -900,12 +904,9 @@ private struct ModernSidebar: View {
                     selectedCollectionID = id
                     selectedLanguage = nil
                     selectedSnippetID = nil
-                case .snippet(let id):
+                case .snippet(let id, let context):
                     selectedSnippetID = id
-                    sidebarSelectionContext = .library
-                case .recentSnippet(let id):
-                    selectedSnippetID = id
-                    sidebarSelectionContext = .recent
+                    sidebarSelectionContext = context
                 }
             }
         )
@@ -927,7 +928,7 @@ private struct ModernSidebar: View {
                                 .fill(accent)
                                 .frame(width: 8, height: 8)
                         }
-                        .tag(Selection.snippet(snippet.persistentModelID))
+                        .tag(Selection.snippet(snippet.persistentModelID, .allSnippets))
                         .draggable(String(snippet.persistentModelID.hashValue))
                         .contextMenu {
                             Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
@@ -979,7 +980,7 @@ private struct ModernSidebar: View {
                                     .fill(accent)
                                     .frame(width: 8, height: 8)
                             }
-                            .tag(Selection.snippet(snippet.persistentModelID))
+                            .tag(Selection.snippet(snippet.persistentModelID, .collection(collection.persistentModelID)))
                             .draggable(String(snippet.persistentModelID.hashValue))
                             .contextMenu {
                                 Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
@@ -1034,7 +1035,7 @@ private struct ModernSidebar: View {
                                 .fill(accent)
                                 .frame(width: 8, height: 8)
                         }
-                        .tag(Selection.recentSnippet(snippet.persistentModelID))
+                        .tag(Selection.snippet(snippet.persistentModelID, .recent))
                         .contextMenu {
                             Button { onEditSnippet(snippet) } label: {
                                 Label("Edit snippet", systemImage: "pencil")

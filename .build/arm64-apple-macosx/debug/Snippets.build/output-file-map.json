@@ -128,13 +128,6 @@
     "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/StatusBar.swiftdeps",
     "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/StatusBar.dia"
   },
-  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/WebPreviewView.swift": {
-    "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/WebPreviewView.d",
-    "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/WebPreviewView.swift.o",
-    "swiftmodule": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/WebPreviewView~partial.swiftmodule",
-    "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/WebPreviewView.swiftdeps",
-    "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/WebPreviewView.dia"
-  },
   "/Users/halilbagosi/snippets/Sources/Snippets/Views/ContentView.swift": {
     "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ContentView.d",
     "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ContentView.swift.o",
