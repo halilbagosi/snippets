@@ -143,6 +143,13 @@ enum PreviewHTMLBuilder {
         body { margin: 0; padding: 16px; font-family: -apple-system, sans-serif; background: \(bg); color: \(fg); }
         .error { color: #ff6b6b; font-family: monospace; font-size: 12px; white-space: pre-wrap; padding: 12px; }
         </style>
+        <script>
+        window.addEventListener('error', function(e) {
+            if (e.target && e.target.tagName === 'SCRIPT') {
+                document.body.innerHTML = '<div class="error">Failed to load React/Babel dependencies.\\n\\nIf you are running in Xcode with App Sandbox enabled, please ensure "Outgoing Connections (Client)" is checked in your app entitlements to allow live React previews.</div>';
+            }
+        }, true);
+        </script>
         <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
         <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
         <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -306,13 +313,43 @@ enum PreviewHTMLBuilder {
         <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
+            background: \(compact ? "transparent" : "linear-gradient(135deg, #1f2937 0%, #111827 100%)");
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: \(compact ? "0" : "16px");
+            overflow: hidden;
+        }
+        .code-card {
             background: \(bg);
+            border-radius: \(compact ? "6px" : "12px");
+            box-shadow: \(compact ? "none" : "0 10px 30px rgba(0,0,0,0.3)");
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        .window-controls {
+            display: \(compact ? "none" : "flex");
+            gap: 6px;
+            padding: 12px 16px 8px;
+            background: rgba(0,0,0,0.1);
+        }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .red { background: #ff5f56; }
+        .yellow { background: #ffbd2e; }
+        .green { background: #27c93f; }
+        .code-container {
             font-family: ui-monospace, 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
             font-size: \(fontSize);
             line-height: \(lineHeight);
             color: \(fg);
             padding: \(padding);
-            overflow: hidden;
+            overflow: auto;
+            flex: 1;
         }
         .line { display: flex; }
         .gutter {
@@ -329,19 +366,20 @@ enum PreviewHTMLBuilder {
         .cmt { color: \(commentColor); font-style: italic; }
         .typ { color: \(typeColor); }
         .num { color: \(numberColor); }
-        .accent-bar {
-            position: fixed;
-            top: 0; left: 0;
-            width: 3px;
-            height: 100%;
-            background: \(accentHex);
-            opacity: 0.6;
-            border-radius: 0 2px 2px 0;
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.3); border-radius: 4px; }
         </style>
         </head>
         <body>
-        <div class="accent-bar"></div>
+        <div class="code-card">
+            <div class="window-controls">
+                <div class="dot red"></div>
+                <div class="dot yellow"></div>
+                <div class="dot green"></div>
+            </div>
+            <div class="code-container" id="code-container"></div>
+        </div>
         <script>
         (function(){
             const raw = \(jsonStringLiteral(escapedCode));
@@ -353,14 +391,12 @@ enum PreviewHTMLBuilder {
                 const highlighted = highlightLine(lines[i], keywords);
                 html += '<div class="line"><span class="gutter">' + num + '</span><span class="code-content">' + highlighted + '</span></div>';
             }
-            document.body.insertAdjacentHTML('beforeend', html);
+            document.getElementById('code-container').innerHTML = html;
 
             function highlightLine(line, kws) {
-                // Comment detection
                 if (line.trimStart().startsWith('//') || line.trimStart().startsWith('#')) {
                     return '<span class="cmt">' + line + '</span>';
                 }
-                // Simple token-based highlighting
                 return line.replace(/(["'`])(?:(?!\\1|\\\\)[\\s\\S]|\\\\.)*?\\1|\\b(\\d+\\.?\\d*(?:[eE][+-]?\\d+)?)\\b|\\b([a-zA-Z_]\\w*)\\b/g,
                     function(m, q, num, word) {
                         if (q) return '<span class="str">' + m + '</span>';
@@ -458,7 +494,8 @@ struct WebPreviewView: NSViewRepresentable {
             isDark: isDark,
             compact: compact
         )
-        webView.loadHTMLString(htmlContent, baseURL: nil)
+        // Provide a valid app bundle URL as baseURL so external CDNs can load without restrictions
+        webView.loadHTMLString(htmlContent, baseURL: Bundle.main.bundleURL)
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }

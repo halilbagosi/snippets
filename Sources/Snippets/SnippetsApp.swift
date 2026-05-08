@@ -39,6 +39,20 @@ struct SnippetsApp: App {
     #if canImport(AppKit)
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     #endif
+    
+    private var sharedModelContainer: ModelContainer = {
+        let schema = Schema([Snippet.self, MediaItem.self, SnippetCollection.self])
+        let appSupport = URL.applicationSupportDirectory
+        let storeURL = appSupport.appending(path: "Snippets.store")
+
+        do {
+            try FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+            let configuration = ModelConfiguration(url: storeURL)
+            return try ModelContainer(for: schema, configurations: [configuration])
+        } catch {
+            fatalError("Unresolved error loading SwiftData container: \(error.localizedDescription)")
+        }
+    }()
 
     var body: some Scene {
         WindowGroup {
@@ -52,6 +66,6 @@ struct SnippetsApp: App {
             CommandGroup(replacing: .help) { }
         }
         #endif
-        .modelContainer(for: [Snippet.self, MediaItem.self, Collection.self])
+        .modelContainer(sharedModelContainer)
     }
 }

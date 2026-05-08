@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body { margin: 0; padding: 16px; font-family: -apple-system, sans-serif; background: #0e1014; color: #e6edf3; }
+.error { color: #ff6b6b; font-family: monospace; font-size: 12px; white-space: pre-wrap; padding: 12px; }
+</style>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function() {
+    try {
+        const userCode = `export default function App() {
+    return <h1>Hello React</h1>;
+}`;
+        const cleaned = userCode
+            .replace(/^\s*import\s+.*?[;\n]/gm, '')
+            .replace(/^\s*export\s+default\s+/gm, 'const __DefaultExport__ = ')
+            .replace(/^\s*export\s+/gm, '');
+        const transpiled = Babel.transform(cleaned, {
+            presets: ['react'],
+            plugins: []
+        }).code;
+        const module = { exports: {} };
+        const fn = new Function('React', 'ReactDOM', 'module', 'exports', 'useState', 'useEffect', 'useRef', 'useMemo', 'useCallback',
+            transpiled + ';\nreturn typeof __DefaultExport__ !== "undefined" ? __DefaultExport__ : (typeof App !== "undefined" ? App : null);'
+        );
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+        const Component = fn(React, ReactDOM, module, module.exports, useState, useEffect, useRef, useMemo, useCallback);
+        if (Component) {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(Component));
+        } else {
+            document.getElementById('root').innerHTML = '<div class="error">No default export or App component found.</div>';
+        }
+    } catch(e) {
+        document.getElementById('root').innerHTML = '<div class="error">' + e.toString() + '</div>';
+    }
+})();
+</script>
+</body>
+</html>

@@ -7,15 +7,15 @@ struct ContentView: View {
 
     @Query(sort: [SortDescriptor(\Snippet.updatedAt, order: .reverse)])
     private var snippets: [Snippet]
-    @Query(sort: [SortDescriptor(\Snippets.Collection.updatedAt, order: .reverse)])
-    private var collections: [Snippets.Collection]
+    @Query(sort: [SortDescriptor(\SnippetCollection.updatedAt, order: .reverse)])
+    private var collections: [SnippetCollection]
 
     @State private var selectedLanguage: SupportedLanguage? = nil
     @State private var searchText: String = ""
     @State private var editingSnippet: Snippet? = nil
     @State private var isPresentingNew: Bool = false
     @State private var isPresentingCollectionEditor: Bool = false
-    @State private var editingCollection: Snippets.Collection? = nil
+    @State private var editingCollection: SnippetCollection? = nil
     @State private var collectionDraftName: String = ""
     @State private var collectionDraftSnippetIDs: Set<PersistentIdentifier> = []
     @State private var selectedSnippetID: PersistentIdentifier? = nil
@@ -32,7 +32,7 @@ struct ContentView: View {
     @State private var isAllSnippetsExpanded: Bool = false
     @State private var expandedCollections: Set<PersistentIdentifier> = []
 
-    private var collectionNameMatches: [Snippets.Collection] {
+    private var collectionNameMatches: [SnippetCollection] {
         let needle = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !needle.isEmpty else { return [] }
         return collections.filter { $0.name.lowercased().contains(needle) }
@@ -93,7 +93,7 @@ struct ContentView: View {
         return snippets.first(where: { $0.persistentModelID == id })
     }
 
-    private var selectedCollection: Snippets.Collection? {
+    private var selectedCollection: SnippetCollection? {
         guard let id = selectedCollectionID else { return nil }
         return collections.first(where: { $0.persistentModelID == id })
     }
@@ -201,7 +201,7 @@ struct ContentView: View {
         .sheet(isPresented: $isPresentingNew) {
             SnippetEditorView(mode: .create, availableCollections: collections) { newSnippet in
                 modelContext.insert(newSnippet)
-                try? modelContext.save()
+                try modelContext.save()
                 withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
                     selectedSnippetID = newSnippet.persistentModelID
                     sidebarSelectionContext = .library
@@ -210,8 +210,7 @@ struct ContentView: View {
         }
         .sheet(item: $editingSnippet) { snippet in
             SnippetEditorView(mode: .edit(snippet), availableCollections: collections) { _ in
-                snippet.updatedAt = .now
-                try? modelContext.save()
+                try modelContext.save()
             }
         }
         .sheet(isPresented: $isPresentingCollectionEditor) {
@@ -594,7 +593,7 @@ if !availableLanguages.isEmpty {
     }
 
     @ViewBuilder
-    private func collectionRow(for collection: Collection) -> some View {
+    private func collectionRow(for collection: SnippetCollection) -> some View {
         sidebarRow(
             icon: "folder",
             title: collection.name.lowercased(),
@@ -669,7 +668,7 @@ if !availableLanguages.isEmpty {
         isPresentingCollectionEditor = true
     }
 
-    private func beginEditCollection(_ collection: Collection) {
+    private func beginEditCollection(_ collection: SnippetCollection) {
         editingCollection = collection
         collectionDraftName = collection.name
         collectionDraftSnippetIDs = Set(collection.snippets.map(\.persistentModelID))
@@ -684,14 +683,14 @@ if !availableLanguages.isEmpty {
             isPresentingCollectionEditor = false
         }
         guard !trimmed.isEmpty else { return }
-        let collection: Collection
+        let collection: SnippetCollection
         if let editingCollection {
             collection = editingCollection
             collection.name = trimmed
         } else if let existing = collections.first(where: { $0.name.caseInsensitiveCompare(trimmed) == .orderedSame }) {
             collection = existing
         } else {
-            collection = Collection(name: trimmed)
+            collection = SnippetCollection(name: trimmed)
             modelContext.insert(collection)
         }
 
@@ -778,7 +777,7 @@ if !availableLanguages.isEmpty {
         }
     }
 
-    private func copySnippet(_ snippet: Snippet, to collection: Collection) {
+    private func copySnippet(_ snippet: Snippet, to collection: SnippetCollection) {
         if !snippet.collections.contains(where: { $0.persistentModelID == collection.persistentModelID }) {
             snippet.collections.append(collection)
             collection.updatedAt = .now
@@ -787,7 +786,7 @@ if !availableLanguages.isEmpty {
         }
     }
 
-    private func handleDrop(items: [String], to collection: Collection?) -> Bool {
+    private func handleDrop(items: [String], to collection: SnippetCollection?) -> Bool {
         guard let first = items.first, let hash = Int(first) else { return false }
         guard let snippet = snippets.first(where: { $0.persistentModelID.hashValue == hash }) else { return false }
         
@@ -799,7 +798,7 @@ if !availableLanguages.isEmpty {
         return true
     }
 
-    private func delete(_ collection: Collection) {
+    private func delete(_ collection: SnippetCollection) {
         for snippet in snippets {
             snippet.collections.removeAll(where: { $0.persistentModelID == collection.persistentModelID })
         }
@@ -820,7 +819,7 @@ if !availableLanguages.isEmpty {
         try? modelContext.save()
     }
 
-    private func moveSnippet(_ snippet: Snippet, to collection: Collection) {
+    private func moveSnippet(_ snippet: Snippet, to collection: SnippetCollection) {
         for other in collections {
             other.snippets.removeAll(where: { $0.persistentModelID == snippet.persistentModelID })
         }
@@ -849,7 +848,7 @@ private struct ModernSidebar: View {
     }
 
     let snippets: [Snippet]
-    let collections: [Collection]
+    let collections: [SnippetCollection]
     let recentSnippets: [Snippet]
     let availableLanguages: [SupportedLanguage]
     let sidebarFilteredLanguages: [SupportedLanguage]
@@ -866,14 +865,14 @@ private struct ModernSidebar: View {
     @Binding var expandedCollections: Set<PersistentIdentifier>
 
     let onNew: () -> Void
-    let onEditCollection: (Collection) -> Void
-    let onDeleteCollection: (Collection) -> Void
+    let onEditCollection: (SnippetCollection) -> Void
+    let onDeleteCollection: (SnippetCollection) -> Void
     let onEditSnippet: (Snippet) -> Void
     let onDeleteSnippet: (Snippet) -> Void
     let onMoveSnippetToLibrary: (Snippet) -> Void
-    let onMoveSnippetToCollection: (Snippet, Collection) -> Void
-    let onCopySnippetToCollection: (Snippet, Collection) -> Void
-    let onHandleDrop: ([String], Collection?) -> Bool
+    let onMoveSnippetToCollection: (Snippet, SnippetCollection) -> Void
+    let onCopySnippetToCollection: (Snippet, SnippetCollection) -> Void
+    let onHandleDrop: ([String], SnippetCollection?) -> Bool
 
     private var theme: Theme { Theme.current(colorScheme) }
 

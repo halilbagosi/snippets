@@ -1,4 +1,5 @@
 import SwiftUI
+import WebKit
 import AVKit
 #if canImport(AppKit)
 import AppKit

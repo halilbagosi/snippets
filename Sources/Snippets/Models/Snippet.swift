@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 
+
 @Model
 final class Snippet {
     var title: String
@@ -13,8 +14,8 @@ final class Snippet {
     @Relationship(deleteRule: .cascade, inverse: \MediaItem.snippet)
     var mediaItems: [MediaItem]
 
-    @Relationship(inverse: \Snippets.Collection.snippets)
-    var collections: [Snippets.Collection]
+    @Relationship(inverse: \SnippetCollection.snippets)
+    var collections: [SnippetCollection]
 
     init(
         title: String = "",
@@ -24,7 +25,7 @@ final class Snippet {
         createdAt: Date = .now,
         updatedAt: Date = .now,
         mediaItems: [MediaItem] = [],
-        collections: [Snippets.Collection] = []
+        collections: [SnippetCollection] = []
     ) {
         self.title = title
         self.snippetDescription = snippetDescription

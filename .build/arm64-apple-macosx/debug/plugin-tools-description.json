@@ -16,6 +16,48 @@
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/Assets.xcassets"
         }
       ]
+    },
+    "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/babel.min.js" : {
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Resources/WebPreview/babel.min.js"
+        }
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/babel.min.js"
+        }
+      ]
+    },
+    "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/react-dom.production.min.js" : {
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Resources/WebPreview/react-dom.production.min.js"
+        }
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/react-dom.production.min.js"
+        }
+      ]
+    },
+    "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/react.production.min.js" : {
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Resources/WebPreview/react.production.min.js"
+        }
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/react.production.min.js"
+        }
+      ]
     }
   },
   "explicitTargetDependencyImportCheckingMode" : {

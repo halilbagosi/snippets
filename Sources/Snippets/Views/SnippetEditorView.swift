@@ -15,8 +15,8 @@ struct SnippetEditorView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     let mode: Mode
-    let availableCollections: [Collection]
-    let onSave: (Snippet) -> Void
+    let availableCollections: [SnippetCollection]
+    let onSave: (Snippet) throws -> Void
 
     @State private var title: String = ""
     @State private var description: String = ""
@@ -25,6 +25,7 @@ struct SnippetEditorView: View {
     @State private var manualLanguage: SupportedLanguage? = nil
     @State private var mediaItems: [MediaItem] = []
     @State private var selectedCollectionIDs: Set<PersistentIdentifier> = []
+    @State private var saveErrorMessage: String? = nil
 
     @FocusState private var focus: Field?
     @State private var codeFocused: Bool = false
@@ -78,6 +79,14 @@ struct SnippetEditorView: View {
         }
         .onChange(of: code) { _, newValue in
             detectedLanguage = LanguageDetector.detect(code: newValue)
+        }
+        .alert("Could not save snippet", isPresented: Binding(
+            get: { saveErrorMessage != nil },
+            set: { if !$0 { saveErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { saveErrorMessage = nil }
+        } message: {
+            Text(saveErrorMessage ?? "Unknown error")
         }
     }
 
@@ -475,19 +484,20 @@ struct SnippetEditorView: View {
                 createdAt: .now,
                 updatedAt: .now
             )
-            for item in mediaItems {
-                modelContext.insert(item)
-                item.snippet = snippet
-            }
+            for item in mediaItems { item.snippet = snippet }
             snippet.mediaItems = mediaItems
-            snippet.collections = availableCollections.filter { selectedCollectionIDs.contains($0.persistentModelID) }
-            for collection in snippet.collections {
-                if !collection.snippets.contains(where: { $0.persistentModelID == snippet.persistentModelID }) {
-                    collection.snippets.append(snippet)
-                }
+            let selectedCollections = availableCollections.filter { selectedCollectionIDs.contains($0.persistentModelID) }
+            snippet.collections = selectedCollections
+            for collection in selectedCollections {
                 collection.updatedAt = .now
             }
-            onSave(snippet)
+            do {
+                try onSave(snippet)
+            } catch {
+                saveErrorMessage = error.localizedDescription
+                return
+            }
+            dismiss()
         case .edit(let snippet):
             snippet.title = trimmedTitle
             snippet.snippetDescription = trimmedDescription
@@ -509,25 +519,19 @@ struct SnippetEditorView: View {
             snippet.mediaItems = mediaItems
 
             let selectedCollections = availableCollections.filter { selectedCollectionIDs.contains($0.persistentModelID) }
-            let oldCollectionIDs = Set(snippet.collections.map(\.persistentModelID))
-            let newCollectionIDs = Set(selectedCollections.map(\.persistentModelID))
-            let removedIDs = oldCollectionIDs.subtracting(newCollectionIDs)
-
-            for collection in availableCollections where removedIDs.contains(collection.persistentModelID) {
-                collection.snippets.removeAll(where: { $0.persistentModelID == snippet.persistentModelID })
-                collection.updatedAt = .now
-            }
             for collection in selectedCollections {
-                if !collection.snippets.contains(where: { $0.persistentModelID == snippet.persistentModelID }) {
-                    collection.snippets.append(snippet)
-                }
                 collection.updatedAt = .now
             }
             snippet.collections = selectedCollections
-            onSave(snippet)
+            do {
+                try modelContext.save()
+                try onSave(snippet)
+            } catch {
+                saveErrorMessage = error.localizedDescription
+                return
+            }
+            dismiss()
         }
-
-        dismiss()
     }
 }
 

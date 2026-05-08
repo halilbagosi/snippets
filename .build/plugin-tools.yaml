@@ -40,6 +40,24 @@ commands:
     outputs: ["/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/Assets.xcassets/"]
     description: "Copying /Users/halilbagosi/snippets/Sources/Snippets/Resources/Assets.xcassets"
 
+  "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/babel.min.js":
+    tool: copy-tool
+    inputs: ["/Users/halilbagosi/snippets/Sources/Snippets/Resources/WebPreview/babel.min.js"]
+    outputs: ["/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/babel.min.js"]
+    description: "Copying /Users/halilbagosi/snippets/Sources/Snippets/Resources/WebPreview/babel.min.js"
+
+  "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/react-dom.production.min.js":
+    tool: copy-tool
+    inputs: ["/Users/halilbagosi/snippets/Sources/Snippets/Resources/WebPreview/react-dom.production.min.js"]
+    outputs: ["/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/react-dom.production.min.js"]
+    description: "Copying /Users/halilbagosi/snippets/Sources/Snippets/Resources/WebPreview/react-dom.production.min.js"
+
+  "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/react.production.min.js":
+    tool: copy-tool
+    inputs: ["/Users/halilbagosi/snippets/Sources/Snippets/Resources/WebPreview/react.production.min.js"]
+    outputs: ["/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/react.production.min.js"]
+    description: "Copying /Users/halilbagosi/snippets/Sources/Snippets/Resources/WebPreview/react.production.min.js"
+
   "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt":
     tool: write-auxiliary-file
     inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
@@ -87,6 +105,6 @@ commands:
 
   "Snippets-arm64-apple-macosx-debug.module-resources":
     tool: phony
-    inputs: ["/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/Assets.xcassets/"]
+    inputs: ["/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/Assets.xcassets/","/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/babel.min.js","/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/react-dom.production.min.js","/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/react.production.min.js"]
     outputs: ["<Snippets-arm64-apple-macosx-debug.module-resources>"]
 

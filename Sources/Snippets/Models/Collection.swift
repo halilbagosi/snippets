@@ -3,7 +3,7 @@ import SwiftData
 
 
 @Model
-final class Collection {
+final class SnippetCollection {
     var name: String
     var createdAt: Date
     var updatedAt: Date
