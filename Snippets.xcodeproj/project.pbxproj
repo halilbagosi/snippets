@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05E974774E5E5DED7EC6CCF3 /* GlassBreakShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 71C4746CD5C79D305B4018CC /* GlassBreakShaders.metal */; };
 		1034317420206F8CAC37E289 /* LanguageBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD742F16AED07C5B6DA1EFE /* LanguageBadge.swift */; };
 		18842E040399CB803941F5F9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 77AF4491E0E2EED462C1D90D /* Assets.xcassets */; };
 		19FDFDF94315B732D1434FFF /* DotGridBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C82E0C23D62D7837A6EAE83 /* DotGridBackground.swift */; };
@@ -15,45 +16,70 @@
 		23BC99AF3722159BED37DB79 /* SectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6A7ABD6C5C29369D4E765CB /* SectionHeader.swift */; };
 		2460C134FCE44B1078188ADB /* SnippetCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE6D5D60A49D9012A433BB0B /* SnippetCard.swift */; };
 		2A2BBE7653270548A8B5B6EE /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 527137D235CE709BA5106BD6 /* ContentView.swift */; };
+		2B3D7F2BDCDD2556A2A7431B /* MediaManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = C002CC5D0BE4C24D08C08D7E /* MediaManaging.swift */; };
+		2B9F6EC9F2798F37F16C9CEB /* ViewSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53F647721774252E892243AA /* ViewSnapshot.swift */; };
 		397143D34A386C5AB9B9F776 /* EditorTabHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E7553D99F70014816334E2E /* EditorTabHeader.swift */; };
 		43260EDC3C75C408FE45C49D /* StatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D40E0FD0DBEC4CDF48159F /* StatusBar.swift */; };
+		4926D30AB3A22D5DEFA9F689 /* react.production.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 9F7660C09B90A40CD33676C8 /* react.production.min.js */; };
+		49595C2F65E32BDA2D559953 /* babel.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 29089448FCCCF08708B6D5BE /* babel.min.js */; };
 		57042C49CE60CE3F6A61EC66 /* Clipboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C86D0794EADE7F8B51B1BAF /* Clipboard.swift */; };
 		594C6D13011DDBBD5D15AC39 /* Snippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF187CF147DC1A469228D65B /* Snippet.swift */; };
 		5B978194589E774F90F467E0 /* LanguageDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45DB595C53F53F1E91521AED /* LanguageDetector.swift */; };
+		66C17FD412F23A691ABD9577 /* MetalShatterRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4B86DEA3B64DB166C571A9E /* MetalShatterRenderer.swift */; };
+		6F96B388B708445D18E383BB /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA8F72B9D99EE79A5560B20B /* Collection.swift */; };
 		714157BF3E736FCB8F2A2078 /* SyntaxHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE3C15B51B300315B4C9C82D /* SyntaxHighlighter.swift */; };
 		75DEBF786D35A7E30F69E826 /* MediaItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F03E294B335BB3E3BF02C8FB /* MediaItem.swift */; };
 		76263E83CF42A28E871EC2CB /* CodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75F3BC00BF325FED95F09D6B /* CodeView.swift */; };
+		7B4A1C9753EB99BEF4E902A1 /* react-dom.production.min.js in Resources */ = {isa = PBXBuildFile; fileRef = AB67D68F6543256833826354 /* react-dom.production.min.js */; };
+		7F62BEEDE019601A65905EF2 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC81238946BF781158E8BD10 /* AppEnvironment.swift */; };
 		A0C9005949BBBE4C9692FF02 /* SnippetEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59B7E708E9A71A8D278A41B3 /* SnippetEditorView.swift */; };
+		BB51B00EE13037C53F5DA937 /* SnippetEditorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AB91DFDD3B0645519C5B24 /* SnippetEditorViewModel.swift */; };
 		BB54C7C033CE5A7677F7F87A /* GlassCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6647D3427226EEDC4A25AD0F /* GlassCard.swift */; };
 		BDA308DF249FA373D892C3CC /* SnippetGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ECC648E99C364BFA89801A4 /* SnippetGalleryView.swift */; };
 		CEFBD8DCF49611190B9FEAB9 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD11467A40DD47264EDFEACA /* Theme.swift */; };
 		D13C3E476D1D8367ABDF3C8B /* CodeEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8EF3384EF715D1C281D899A /* CodeEditor.swift */; };
+		DB7EE30E586966E1472A4152 /* CollectionIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398A89B7A64DB3CF4B4A6487 /* CollectionIconView.swift */; };
 		EB29689EA72D86EE09C15C19 /* SnippetsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B9284FC624AB4701E78C6EA /* SnippetsApp.swift */; };
+		F5959339759E376F7863731D /* SnippetGalleryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C656C885257DE5CAA7598C /* SnippetGalleryViewModel.swift */; };
+		F78BD22E75633CDC96F2885B /* MetalShatterOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46B19E06E86DF9B77DDF5915 /* MetalShatterOverlay.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0B9284FC624AB4701E78C6EA /* SnippetsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsApp.swift; sourceTree = "<group>"; };
 		0C82E0C23D62D7837A6EAE83 /* DotGridBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DotGridBackground.swift; sourceTree = "<group>"; };
+		29089448FCCCF08708B6D5BE /* babel.min.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = babel.min.js; sourceTree = "<group>"; };
 		2E7553D99F70014816334E2E /* EditorTabHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorTabHeader.swift; sourceTree = "<group>"; };
+		398A89B7A64DB3CF4B4A6487 /* CollectionIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionIconView.swift; sourceTree = "<group>"; };
 		45DB595C53F53F1E91521AED /* LanguageDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetector.swift; sourceTree = "<group>"; };
+		46B19E06E86DF9B77DDF5915 /* MetalShatterOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalShatterOverlay.swift; sourceTree = "<group>"; };
 		527137D235CE709BA5106BD6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		53F647721774252E892243AA /* ViewSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewSnapshot.swift; sourceTree = "<group>"; };
 		59B7E708E9A71A8D278A41B3 /* SnippetEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetEditorView.swift; sourceTree = "<group>"; };
 		6647D3427226EEDC4A25AD0F /* GlassCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassCard.swift; sourceTree = "<group>"; };
 		6C86D0794EADE7F8B51B1BAF /* Clipboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipboard.swift; sourceTree = "<group>"; };
+		71C4746CD5C79D305B4018CC /* GlassBreakShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = GlassBreakShaders.metal; sourceTree = "<group>"; };
+		74C656C885257DE5CAA7598C /* SnippetGalleryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetGalleryViewModel.swift; sourceTree = "<group>"; };
 		75F3BC00BF325FED95F09D6B /* CodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeView.swift; sourceTree = "<group>"; };
 		77AF4491E0E2EED462C1D90D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7ECC648E99C364BFA89801A4 /* SnippetGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetGalleryView.swift; sourceTree = "<group>"; };
 		90D40E0FD0DBEC4CDF48159F /* StatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar.swift; sourceTree = "<group>"; };
+		92AB91DFDD3B0645519C5B24 /* SnippetEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetEditorViewModel.swift; sourceTree = "<group>"; };
+		9F7660C09B90A40CD33676C8 /* react.production.min.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = react.production.min.js; sourceTree = "<group>"; };
 		A8EF3384EF715D1C281D899A /* CodeEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeEditor.swift; sourceTree = "<group>"; };
+		AB67D68F6543256833826354 /* react-dom.production.min.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "react-dom.production.min.js"; sourceTree = "<group>"; };
 		ADD742F16AED07C5B6DA1EFE /* LanguageBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageBadge.swift; sourceTree = "<group>"; };
 		AE3C15B51B300315B4C9C82D /* SyntaxHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntaxHighlighter.swift; sourceTree = "<group>"; };
 		B3AFA46BF758F60544FD944C /* SnippetDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetDetailView.swift; sourceTree = "<group>"; };
 		B6A7ABD6C5C29369D4E765CB /* SectionHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionHeader.swift; sourceTree = "<group>"; };
 		BD11467A40DD47264EDFEACA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		C002CC5D0BE4C24D08C08D7E /* MediaManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManaging.swift; sourceTree = "<group>"; };
 		C865FC767A106A831B3B7ADC /* Snippets.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Snippets.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DF187CF147DC1A469228D65B /* Snippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snippet.swift; sourceTree = "<group>"; };
+		EA8F72B9D99EE79A5560B20B /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
+		EC81238946BF781158E8BD10 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		EE6D5D60A49D9012A433BB0B /* SnippetCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetCard.swift; sourceTree = "<group>"; };
 		F03E294B335BB3E3BF02C8FB /* MediaItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaItem.swift; sourceTree = "<group>"; };
+		F4B86DEA3B64DB166C571A9E /* MetalShatterRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalShatterRenderer.swift; sourceTree = "<group>"; };
 		FDCE1D4586F0F153EC14552A /* MediaManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -62,6 +88,7 @@
 			isa = PBXGroup;
 			children = (
 				77AF4491E0E2EED462C1D90D /* Assets.xcassets */,
+				B2E5F8806A5B4C785DC1EC71 /* WebPreview */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -70,6 +97,9 @@
 			isa = PBXGroup;
 			children = (
 				0B9284FC624AB4701E78C6EA /* SnippetsApp.swift */,
+				52340538EFD250B44AE38B68 /* App */,
+				B996AA964155DC8F483D4FD4 /* Core */,
+				D162801B5F6E0AE5BCE07169 /* Features */,
 				7E385DE74F2ED8AAE61F0D13 /* Models */,
 				094CB87B8102F2BD1DE1886E /* Resources */,
 				4CAABA42AB1C2E75A4F7BEAD /* Services */,
@@ -79,20 +109,41 @@
 			path = Sources/Snippets;
 			sourceTree = "<group>";
 		};
+		32F8FA0F9162B95586F72B95 /* Editor */ = {
+			isa = PBXGroup;
+			children = (
+				92AB91DFDD3B0645519C5B24 /* SnippetEditorViewModel.swift */,
+			);
+			path = Editor;
+			sourceTree = "<group>";
+		};
 		39B0700EE61042C1F116AF8B /* Components */ = {
 			isa = PBXGroup;
 			children = (
 				A8EF3384EF715D1C281D899A /* CodeEditor.swift */,
 				75F3BC00BF325FED95F09D6B /* CodeView.swift */,
+				398A89B7A64DB3CF4B4A6487 /* CollectionIconView.swift */,
 				0C82E0C23D62D7837A6EAE83 /* DotGridBackground.swift */,
 				2E7553D99F70014816334E2E /* EditorTabHeader.swift */,
+				71C4746CD5C79D305B4018CC /* GlassBreakShaders.metal */,
 				6647D3427226EEDC4A25AD0F /* GlassCard.swift */,
 				ADD742F16AED07C5B6DA1EFE /* LanguageBadge.swift */,
+				46B19E06E86DF9B77DDF5915 /* MetalShatterOverlay.swift */,
+				F4B86DEA3B64DB166C571A9E /* MetalShatterRenderer.swift */,
 				B6A7ABD6C5C29369D4E765CB /* SectionHeader.swift */,
 				EE6D5D60A49D9012A433BB0B /* SnippetCard.swift */,
 				90D40E0FD0DBEC4CDF48159F /* StatusBar.swift */,
+				53F647721774252E892243AA /* ViewSnapshot.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		42181C40AAE9B49AD031DDB0 /* Protocols */ = {
+			isa = PBXGroup;
+			children = (
+				C002CC5D0BE4C24D08C08D7E /* MediaManaging.swift */,
+			);
+			path = Protocols;
 			sourceTree = "<group>";
 		};
 		4CAABA42AB1C2E75A4F7BEAD /* Services */ = {
@@ -107,6 +158,14 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
+		52340538EFD250B44AE38B68 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				EC81238946BF781158E8BD10 /* AppEnvironment.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
 		61EA2F68B57DA8FFC5853BB2 = {
 			isa = PBXGroup;
 			children = (
@@ -115,13 +174,40 @@
 			);
 			sourceTree = "<group>";
 		};
+		752E4D5163A0932DB1FC0C7E /* Gallery */ = {
+			isa = PBXGroup;
+			children = (
+				74C656C885257DE5CAA7598C /* SnippetGalleryViewModel.swift */,
+			);
+			path = Gallery;
+			sourceTree = "<group>";
+		};
 		7E385DE74F2ED8AAE61F0D13 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				EA8F72B9D99EE79A5560B20B /* Collection.swift */,
 				F03E294B335BB3E3BF02C8FB /* MediaItem.swift */,
 				DF187CF147DC1A469228D65B /* Snippet.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		895AACB74219C5026E0E9B0D /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				42181C40AAE9B49AD031DDB0 /* Protocols */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		B2E5F8806A5B4C785DC1EC71 /* WebPreview */ = {
+			isa = PBXGroup;
+			children = (
+				29089448FCCCF08708B6D5BE /* babel.min.js */,
+				AB67D68F6543256833826354 /* react-dom.production.min.js */,
+				9F7660C09B90A40CD33676C8 /* react.production.min.js */,
+			);
+			path = WebPreview;
 			sourceTree = "<group>";
 		};
 		B5991E14D22A43A53A83D5F4 /* Views */ = {
@@ -136,12 +222,29 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		B996AA964155DC8F483D4FD4 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				895AACB74219C5026E0E9B0D /* Services */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
 		BCC329E0F8754AC69CB26D35 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				C865FC767A106A831B3B7ADC /* Snippets.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		D162801B5F6E0AE5BCE07169 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				32F8FA0F9162B95586F72B95 /* Editor */,
+				752E4D5163A0932DB1FC0C7E /* Gallery */,
+			);
+			path = Features;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -205,6 +308,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				18842E040399CB803941F5F9 /* Assets.xcassets in Resources */,
+				49595C2F65E32BDA2D559953 /* babel.min.js in Resources */,
+				7B4A1C9753EB99BEF4E902A1 /* react-dom.production.min.js in Resources */,
+				4926D30AB3A22D5DEFA9F689 /* react.production.min.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -215,27 +321,37 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7F62BEEDE019601A65905EF2 /* AppEnvironment.swift in Sources */,
 				57042C49CE60CE3F6A61EC66 /* Clipboard.swift in Sources */,
 				D13C3E476D1D8367ABDF3C8B /* CodeEditor.swift in Sources */,
 				76263E83CF42A28E871EC2CB /* CodeView.swift in Sources */,
+				6F96B388B708445D18E383BB /* Collection.swift in Sources */,
+				DB7EE30E586966E1472A4152 /* CollectionIconView.swift in Sources */,
 				2A2BBE7653270548A8B5B6EE /* ContentView.swift in Sources */,
 				19FDFDF94315B732D1434FFF /* DotGridBackground.swift in Sources */,
 				397143D34A386C5AB9B9F776 /* EditorTabHeader.swift in Sources */,
+				05E974774E5E5DED7EC6CCF3 /* GlassBreakShaders.metal in Sources */,
 				BB54C7C033CE5A7677F7F87A /* GlassCard.swift in Sources */,
 				1034317420206F8CAC37E289 /* LanguageBadge.swift in Sources */,
 				5B978194589E774F90F467E0 /* LanguageDetector.swift in Sources */,
 				75DEBF786D35A7E30F69E826 /* MediaItem.swift in Sources */,
 				1B94B892B8517D17E61F8E80 /* MediaManager.swift in Sources */,
+				2B3D7F2BDCDD2556A2A7431B /* MediaManaging.swift in Sources */,
+				F78BD22E75633CDC96F2885B /* MetalShatterOverlay.swift in Sources */,
+				66C17FD412F23A691ABD9577 /* MetalShatterRenderer.swift in Sources */,
 				23BC99AF3722159BED37DB79 /* SectionHeader.swift in Sources */,
 				594C6D13011DDBBD5D15AC39 /* Snippet.swift in Sources */,
 				2460C134FCE44B1078188ADB /* SnippetCard.swift in Sources */,
 				1F40E612DA4D429891B73A61 /* SnippetDetailView.swift in Sources */,
 				A0C9005949BBBE4C9692FF02 /* SnippetEditorView.swift in Sources */,
+				BB51B00EE13037C53F5DA937 /* SnippetEditorViewModel.swift in Sources */,
 				BDA308DF249FA373D892C3CC /* SnippetGalleryView.swift in Sources */,
+				F5959339759E376F7863731D /* SnippetGalleryViewModel.swift in Sources */,
 				EB29689EA72D86EE09C15C19 /* SnippetsApp.swift in Sources */,
 				43260EDC3C75C408FE45C49D /* StatusBar.swift in Sources */,
 				714157BF3E736FCB8F2A2078 /* SyntaxHighlighter.swift in Sources */,
 				CEFBD8DCF49611190B9FEAB9 /* Theme.swift in Sources */,
+				2B9F6EC9F2798F37F16C9CEB /* ViewSnapshot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

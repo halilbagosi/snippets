@@ -127,6 +127,7 @@ struct SnippetDetailView: View {
         HStack(spacing: 8) {
             Button {
                 Clipboard.copy(snippet.code)
+                snippet.copyCount += 1
                 didCopy = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     didCopy = false

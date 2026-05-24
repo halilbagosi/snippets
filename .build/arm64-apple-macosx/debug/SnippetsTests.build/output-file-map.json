@@ -1,0 +1,19 @@
+{
+  "": {
+    "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/primary.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Tests/SnippetsTests/SnippetEditorViewModelTests.swift": {
+    "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetEditorViewModelTests.d",
+    "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetEditorViewModelTests.swift.o",
+    "swiftmodule": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetEditorViewModelTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetEditorViewModelTests.swiftdeps",
+    "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetEditorViewModelTests.dia"
+  },
+  "/Users/halilbagosi/snippets/Tests/SnippetsTests/SnippetGalleryViewModelTests.swift": {
+    "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetGalleryViewModelTests.d",
+    "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetGalleryViewModelTests.swift.o",
+    "swiftmodule": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetGalleryViewModelTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetGalleryViewModelTests.swiftdeps",
+    "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetGalleryViewModelTests.dia"
+  }
+}

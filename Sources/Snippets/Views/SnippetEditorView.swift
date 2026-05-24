@@ -5,10 +5,7 @@ import AppKit
 #endif
 
 struct SnippetEditorView: View {
-    enum Mode {
-        case create
-        case edit(Snippet)
-    }
+    typealias Mode = SnippetEditorMode
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -17,34 +14,34 @@ struct SnippetEditorView: View {
     let mode: Mode
     let availableCollections: [SnippetCollection]
     let onSave: (Snippet) throws -> Void
+    private let mediaManager: any MediaManaging
 
-    @State private var title: String = ""
-    @State private var description: String = ""
-    @State private var code: String = ""
-    @State private var detectedLanguage: SupportedLanguage = .unknown
-    @State private var manualLanguage: SupportedLanguage? = nil
-    @State private var mediaItems: [MediaItem] = []
-    @State private var selectedCollectionIDs: Set<PersistentIdentifier> = []
-    @State private var saveErrorMessage: String? = nil
+    @State private var viewModel = SnippetEditorViewModel()
 
     @FocusState private var focus: Field?
     @State private var codeFocused: Bool = false
 
     enum Field: Hashable { case title, description }
 
+    init(
+        mode: Mode,
+        availableCollections: [SnippetCollection],
+        mediaManager: any MediaManaging = MediaManager.shared,
+        onSave: @escaping (Snippet) throws -> Void
+    ) {
+        self.mode = mode
+        self.availableCollections = availableCollections
+        self.mediaManager = mediaManager
+        self.onSave = onSave
+    }
+
     private var isEditingAnyField: Bool { focus != nil || codeFocused }
 
     private var theme: Theme { Theme.current(colorScheme) }
-    private var effectiveLanguage: SupportedLanguage { manualLanguage ?? detectedLanguage }
+    private var effectiveLanguage: SupportedLanguage { viewModel.effectiveLanguage }
     private var isEditing: Bool { if case .edit = mode { return true }; return false }
-    private var canSave: Bool {
-        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var lineCount: Int {
-        max(code.split(separator: "\n", omittingEmptySubsequences: false).count, 1)
-    }
+    private var canSave: Bool { viewModel.canSave }
+    private var lineCount: Int { viewModel.lineCount }
 
     var body: some View {
         ZStack {
@@ -72,21 +69,22 @@ struct SnippetEditorView: View {
         }
         .frame(minWidth: 820, minHeight: 660)
         .onAppear {
-            load()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            viewModel.load(mode: mode)
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(50))
                 focus = .title
             }
         }
-        .onChange(of: code) { _, newValue in
-            detectedLanguage = LanguageDetector.detect(code: newValue)
+        .onChange(of: viewModel.code) { _, newValue in
+            viewModel.updateDetectedLanguage(for: newValue)
         }
         .alert("Could not save snippet", isPresented: Binding(
-            get: { saveErrorMessage != nil },
-            set: { if !$0 { saveErrorMessage = nil } }
+            get: { viewModel.saveErrorMessage != nil },
+            set: { if !$0 { viewModel.saveErrorMessage = nil } }
         )) {
-            Button("OK", role: .cancel) { saveErrorMessage = nil }
+            Button("OK", role: .cancel) { viewModel.saveErrorMessage = nil }
         } message: {
-            Text(saveErrorMessage ?? "Unknown error")
+            Text(viewModel.saveErrorMessage ?? "Unknown error")
         }
     }
 
@@ -96,7 +94,7 @@ struct SnippetEditorView: View {
                 Image(systemName: effectiveLanguage.symbolName)
                     .font(Mono.font(size: 11, weight: .semibold))
                     .foregroundStyle(Color(hex: effectiveLanguage.accentHex) ?? theme.accent)
-                Text(headerFilename)
+                Text(viewModel.headerFilename(isEditing: isEditing))
                     .font(Mono.font(size: 12, weight: .medium))
                     .foregroundStyle(theme.text)
                 Text("●")
@@ -165,40 +163,10 @@ struct SnippetEditorView: View {
         }
     }
 
-    private var headerFilename: String {
-        let slug = title
-            .lowercased()
-            .replacingOccurrences(of: " ", with: "-")
-            .filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
-        let base = slug.isEmpty ? (isEditing ? "snippet" : "untitled") : slug
-        return base + extensionFor(effectiveLanguage)
-    }
-
-    private func extensionFor(_ language: SupportedLanguage) -> String {
-        switch language {
-        case .swift: return ".swift"
-        case .glsl: return ".glsl"
-        case .metal: return ".metal"
-        case .hlsl: return ".hlsl"
-        case .kotlin: return ".kt"
-        case .rust: return ".rs"
-        case .go: return ".go"
-        case .python: return ".py"
-        case .typescript: return ".ts"
-        case .javascript: return ".js"
-        case .react: return ".jsx"
-        case .css: return ".css"
-        case .html: return ".html"
-        case .json: return ".json"
-        case .cpp: return ".cpp"
-        case .unknown: return ".txt"
-        }
-    }
-
     private var titleSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader("title")
-            TextField("e.g. Procedural Noise Shader", text: $title)
+            TextField("e.g. Procedural Noise Shader", text: $viewModel.title)
                 .textFieldStyle(.plain)
                 .focused($focus, equals: .title)
                 .font(Sans.font(size: 18, weight: .semibold))
@@ -214,7 +182,7 @@ struct SnippetEditorView: View {
     private var descriptionSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader("description")
-            TextField("What does this snippet do?", text: $description, axis: .vertical)
+            TextField("What does this snippet do?", text: $viewModel.snippetDescription, axis: .vertical)
                 .textFieldStyle(.plain)
                 .focused($focus, equals: .description)
                 .lineLimit(2...5)
@@ -233,11 +201,11 @@ struct SnippetEditorView: View {
             SectionHeader("language")
             HStack(spacing: 10) {
                 Menu {
-                    Button("Auto-detect") { manualLanguage = nil }
+                    Button("Auto-detect") { viewModel.resetManualLanguage() }
                     Divider()
                     ForEach(SupportedLanguage.allCases) { language in
                         Button {
-                            manualLanguage = language
+                            viewModel.selectManualLanguage(language)
                         } label: {
                             HStack {
                                 Image(systemName: language.symbolName)
@@ -248,7 +216,7 @@ struct SnippetEditorView: View {
                 } label: {
                     HStack(spacing: 8) {
                         LanguageBadge(language: effectiveLanguage)
-                        if manualLanguage == nil {
+                        if viewModel.manualLanguage == nil {
                             Text("auto-detect")
                                 .font(Mono.font(size: 11, weight: .medium))
                                 .foregroundStyle(theme.textMuted)
@@ -264,9 +232,9 @@ struct SnippetEditorView: View {
                 .menuStyle(.button)
                 .fixedSize()
 
-                if manualLanguage != nil {
+                if viewModel.manualLanguage != nil {
                     Button {
-                        manualLanguage = nil
+                        viewModel.resetManualLanguage()
                     } label: {
                         Text("reset to auto")
                             .font(Mono.font(size: 11, weight: .semibold))
@@ -306,7 +274,7 @@ struct SnippetEditorView: View {
                     }
 
                 CodeEditor(
-                    text: $code,
+                    text: $viewModel.code,
                     isFocused: $codeFocused,
                     language: effectiveLanguage,
                     theme: theme,
@@ -316,7 +284,7 @@ struct SnippetEditorView: View {
                 .padding(2)
                 .frame(minHeight: 260)
 
-                if code.isEmpty && !codeFocused {
+                if viewModel.code.isEmpty && !codeFocused {
                     Text("// paste or type your code here…")
                         .font(Mono.font(size: 13))
                         .foregroundStyle(theme.comment)
@@ -340,30 +308,34 @@ struct SnippetEditorView: View {
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
                     ForEach(availableCollections) { collection in
-                        let isSelected = selectedCollectionIDs.contains(collection.persistentModelID)
+                        let isSelected = viewModel.selectedCollectionIDs.contains(collection.persistentModelID)
+                        let collectionColor = collection.displayColor
                         Button {
-                            if isSelected {
-                                selectedCollectionIDs.remove(collection.persistentModelID)
-                            } else {
-                                selectedCollectionIDs.insert(collection.persistentModelID)
-                            }
+                            viewModel.toggleCollection(collection)
                         } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(collectionColor)
+                                CollectionIconView(
+                                    iconName: collection.displayIconName,
+                                    color: collectionColor,
+                                    size: 14,
+                                    isSelected: isSelected
+                                )
                                 Text(collection.name.lowercased())
                                     .lineLimit(1)
                                 Spacer(minLength: 0)
                             }
                             .font(Mono.font(size: 11, weight: .semibold))
-                            .foregroundStyle(isSelected ? .white : theme.textMuted)
+                            .foregroundStyle(isSelected ? collectionColor : theme.textMuted)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 8)
                             .background {
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(isSelected ? theme.accent : theme.surface)
+                                    .fill(isSelected ? collectionColor.opacity(colorScheme == .dark ? 0.28 : 0.16) : theme.surface)
                                     .overlay {
                                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                            .strokeBorder(isSelected ? theme.accent.opacity(0.4) : theme.border, lineWidth: 1)
+                                            .strokeBorder(isSelected ? collectionColor.opacity(0.4) : theme.border, lineWidth: 1)
                                     }
                             }
                         }
@@ -385,8 +357,7 @@ struct SnippetEditorView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
                     Button {
-                        let imported = MediaManager.pickAndImport()
-                        mediaItems.append(contentsOf: imported)
+                        viewModel.attachMedia(using: mediaManager)
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "plus")
@@ -408,21 +379,18 @@ struct SnippetEditorView: View {
                     }
                     .buttonStyle(.plain)
 
-                    if !mediaItems.isEmpty {
-                        Text("\(mediaItems.count) attached")
+                    if !viewModel.mediaItems.isEmpty {
+                        Text("\(viewModel.mediaItems.count) attached")
                             .font(Mono.font(size: 11))
                             .foregroundStyle(theme.textMuted)
                     }
                 }
 
-                if !mediaItems.isEmpty {
+                if !viewModel.mediaItems.isEmpty {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 12)], spacing: 12) {
-                        ForEach(mediaItems) { item in
+                        ForEach(viewModel.mediaItems) { item in
                             MediaThumbnail(item: item) {
-                                if let index = mediaItems.firstIndex(where: { $0.persistentModelID == item.persistentModelID }) {
-                                    let removed = mediaItems.remove(at: index)
-                                    MediaManager.deleteFile(for: removed)
-                                }
+                                viewModel.removeMediaItem(item, using: mediaManager)
                             }
                         }
                     }
@@ -437,8 +405,8 @@ struct SnippetEditorView: View {
             .init(label: "ln \(lineCount)"),
             .init(label: "col 1"),
             .init(label: effectiveLanguage.rawValue.lowercased(), tint: Color(hex: effectiveLanguage.accentHex)),
-            .init(icon: "paperclip", label: "\(mediaItems.count)"),
-            .init(icon: "folder", label: "\(selectedCollectionIDs.count)")
+            .init(icon: "paperclip", label: "\(viewModel.mediaItems.count)"),
+            .init(icon: "folder", label: "\(viewModel.selectedCollectionIDs.count)")
         ])
     }
 
@@ -451,85 +419,15 @@ struct SnippetEditorView: View {
             }
     }
 
-    private func load() {
-        if case .edit(let snippet) = mode {
-            title = snippet.title
-            description = snippet.snippetDescription
-            code = snippet.code
-            mediaItems = snippet.mediaItems
-            selectedCollectionIDs = Set(snippet.collections.map(\.persistentModelID))
-            if let lang = SupportedLanguage(rawValue: snippet.language) {
-                manualLanguage = lang
-                detectedLanguage = lang
-            } else {
-                detectedLanguage = LanguageDetector.detect(code: snippet.code)
-            }
-        } else {
-            detectedLanguage = LanguageDetector.detect(code: code)
-        }
-    }
-
     private func save() {
-        guard canSave else { return }
-        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        let didSave = viewModel.save(
+            mode: mode,
+            availableCollections: availableCollections,
+            modelContext: modelContext,
+            onSave: onSave
+        )
 
-        switch mode {
-        case .create:
-            let snippet = Snippet(
-                title: trimmedTitle,
-                snippetDescription: trimmedDescription,
-                language: effectiveLanguage.rawValue,
-                code: code,
-                createdAt: .now,
-                updatedAt: .now
-            )
-            for item in mediaItems { item.snippet = snippet }
-            snippet.mediaItems = mediaItems
-            let selectedCollections = availableCollections.filter { selectedCollectionIDs.contains($0.persistentModelID) }
-            snippet.collections = selectedCollections
-            for collection in selectedCollections {
-                collection.updatedAt = .now
-            }
-            do {
-                try onSave(snippet)
-            } catch {
-                saveErrorMessage = error.localizedDescription
-                return
-            }
-            dismiss()
-        case .edit(let snippet):
-            snippet.title = trimmedTitle
-            snippet.snippetDescription = trimmedDescription
-            snippet.language = effectiveLanguage.rawValue
-            snippet.code = code
-            snippet.updatedAt = .now
-
-            let existingIDs = Set(snippet.mediaItems.map { $0.persistentModelID })
-            let newIDs = Set(mediaItems.map { $0.persistentModelID })
-
-            for item in snippet.mediaItems where !newIDs.contains(item.persistentModelID) {
-                MediaManager.deleteFile(for: item)
-                modelContext.delete(item)
-            }
-            for item in mediaItems where !existingIDs.contains(item.persistentModelID) {
-                modelContext.insert(item)
-                item.snippet = snippet
-            }
-            snippet.mediaItems = mediaItems
-
-            let selectedCollections = availableCollections.filter { selectedCollectionIDs.contains($0.persistentModelID) }
-            for collection in selectedCollections {
-                collection.updatedAt = .now
-            }
-            snippet.collections = selectedCollections
-            do {
-                try modelContext.save()
-                try onSave(snippet)
-            } catch {
-                saveErrorMessage = error.localizedDescription
-                return
-            }
+        if didSave {
             dismiss()
         }
     }

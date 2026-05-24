@@ -10,12 +10,24 @@ final class Snippet {
     var code: String
     var createdAt: Date
     var updatedAt: Date
+    var copyCount: Int = 0
+    var deletedAt: Date?
 
     @Relationship(deleteRule: .cascade, inverse: \MediaItem.snippet)
     var mediaItems: [MediaItem]
 
     @Relationship(inverse: \SnippetCollection.snippets)
     var collections: [SnippetCollection]
+
+    var isDeleted: Bool {
+        deletedAt != nil
+    }
+
+    var daysUntilPermanentDeletion: Int {
+        guard let deletedAt else { return 30 }
+        let elapsed = Calendar.current.dateComponents([.day], from: deletedAt, to: Date.now).day ?? 0
+        return max(30 - elapsed, 0)
+    }
 
     init(
         title: String = "",
@@ -24,6 +36,8 @@ final class Snippet {
         code: String = "",
         createdAt: Date = .now,
         updatedAt: Date = .now,
+        copyCount: Int = 0,
+        deletedAt: Date? = nil,
         mediaItems: [MediaItem] = [],
         collections: [SnippetCollection] = []
     ) {
@@ -33,6 +47,8 @@ final class Snippet {
         self.code = code
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.copyCount = copyCount
+        self.deletedAt = deletedAt
         self.mediaItems = mediaItems
         self.collections = collections
     }

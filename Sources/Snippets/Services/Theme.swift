@@ -44,10 +44,10 @@ struct Theme {
     var textMuted: Color {
         scheme == .dark
             ? Color(red: 0.580, green: 0.612, blue: 0.651)
-            : Color(red: 0.341, green: 0.376, blue: 0.416)
+            : Color(red: 0.239, green: 0.267, blue: 0.298)
     }
     var textFaint: Color {
-        scheme == .dark ? Color.white.opacity(0.30) : Color.black.opacity(0.35)
+        scheme == .dark ? Color.white.opacity(0.30) : Color.black.opacity(0.50)
     }
 
     var accent: Color {
@@ -75,6 +75,10 @@ struct Theme {
     func accentColor(for rawLanguage: String) -> Color {
         guard let language = SupportedLanguage(rawValue: rawLanguage) else { return accent }
         return accentColor(for: language)
+    }
+
+    func safeAccentText(_ accent: Color) -> Color {
+        scheme == .dark ? accent : accent.blended(with: .black, ratio: 0.35)
     }
 }
 

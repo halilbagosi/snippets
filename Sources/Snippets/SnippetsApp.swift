@@ -14,7 +14,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
             NSApp.activate(ignoringOtherApps: true)
             for window in NSApp.windows {
                 window.makeKeyAndOrderFront(nil)
@@ -39,7 +40,8 @@ struct SnippetsApp: App {
     #if canImport(AppKit)
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     #endif
-    
+    @State private var environment = AppEnvironment()
+
     private var sharedModelContainer: ModelContainer = {
         let schema = Schema([Snippet.self, MediaItem.self, SnippetCollection.self])
         let appSupport = URL.applicationSupportDirectory
@@ -57,6 +59,7 @@ struct SnippetsApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(environment)
                 .frame(minWidth: 1100, minHeight: 720)
         }
         #if os(macOS)

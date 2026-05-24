@@ -5,33 +5,66 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
 
-    @Query(sort: [SortDescriptor(\Snippet.updatedAt, order: .reverse)])
+    @Query(filter: #Predicate<Snippet> { $0.deletedAt == nil }, sort: [SortDescriptor(\Snippet.updatedAt, order: .reverse)])
     private var snippets: [Snippet]
+    @Query(sort: [SortDescriptor(\Snippet.updatedAt, order: .reverse)])
+    private var allSnippets: [Snippet]
     @Query(sort: [SortDescriptor(\SnippetCollection.updatedAt, order: .reverse)])
     private var collections: [SnippetCollection]
 
-    @State private var selectedLanguage: SupportedLanguage? = nil
+    @State private var selectedLanguages: Set<SupportedLanguage> = []
+    @State private var selectedSearchCollections: Set<PersistentIdentifier> = []
     @State private var searchText: String = ""
     @State private var editingSnippet: Snippet? = nil
     @State private var isPresentingNew: Bool = false
     @State private var isPresentingCollectionEditor: Bool = false
     @State private var editingCollection: SnippetCollection? = nil
     @State private var collectionDraftName: String = ""
+    @State private var collectionDraftColor: Color = Color(hex: SnippetCollection.defaultColorHex) ?? .accentColor
+    @State private var collectionDraftIconName: String = SnippetCollection.defaultIconName
     @State private var collectionDraftSnippetIDs: Set<PersistentIdentifier> = []
+    @State private var collectionDraftParentID: PersistentIdentifier? = nil
+    @State private var isSubcollectionDraft: Bool = false
     @State private var selectedSnippetID: PersistentIdentifier? = nil
     enum SidebarSelectionContext: Hashable {
-        case recent
+        case frequentlyUsed
         case allSnippets
+        case trash
         case collection(PersistentIdentifier)
     }
     @State private var sidebarSelectionContext: SidebarSelectionContext? = nil
     @State private var selectedCollectionID: PersistentIdentifier? = nil
     @State private var sidebarSearch: String = ""
     @State private var isLibrarySectionExpanded: Bool = true
-    @State private var isRecentSectionExpanded: Bool = true
+    @State private var isFrequentlyUsedSectionExpanded: Bool = true
     @State private var isLanguagesSectionExpanded: Bool = true
     @State private var isAllSnippetsExpanded: Bool = false
     @State private var expandedCollections: Set<PersistentIdentifier> = []
+    @State private var lastDeletedSnippet: DeletedSnippetSnapshot? = nil
+    
+
+    private struct DeletedMediaSnapshot {
+        let fileName: String
+        let kind: MediaKind
+        let addedAt: Date
+    }
+
+    private struct DeletedSnippetSnapshot {
+        let id: PersistentIdentifier
+        let title: String
+        let snippetDescription: String
+        let language: String
+        let code: String
+        let createdAt: Date
+        let updatedAt: Date
+        let copyCount: Int
+        let mediaItems: [DeletedMediaSnapshot]
+        let collectionIDs: [PersistentIdentifier]
+    }
+
+    private var topLevelCollections: [SnippetCollection] {
+        collections.filter { $0.parent == nil }
+    }
 
     private var collectionNameMatches: [SnippetCollection] {
         let needle = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -41,17 +74,34 @@ struct ContentView: View {
 
     private var baseFilteredSnippets: [Snippet] {
         snippets.filter { snippet in
-            if let selectedLanguage, snippet.language != selectedLanguage.rawValue { return false }
-            if let selectedCollectionID {
-                return snippet.collections.contains(where: { $0.persistentModelID == selectedCollectionID })
+            if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
+            
+            let belongsToCollection = { (colID: PersistentIdentifier) -> Bool in
+                if let collection = collections.first(where: { $0.persistentModelID == colID }) {
+                    let allowedIDs = collection.allDescendantIDs
+                    return snippet.collections.contains(where: { allowedIDs.contains($0.persistentModelID) })
+                }
+                return false
             }
+
+            if let selectedCollectionID {
+                if !belongsToCollection(selectedCollectionID) { return false }
+            }
+            
+            if !selectedSearchCollections.isEmpty {
+                if !selectedSearchCollections.contains(where: { belongsToCollection($0) }) { return false }
+            }
+            
             return true
         }
     }
 
     private var snippetsInCollectionSearchSection: [Snippet] {
         guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
-        let matchedIDs = Set(collectionNameMatches.map(\.persistentModelID))
+        var matchedIDs = Set<PersistentIdentifier>()
+        for col in collectionNameMatches {
+            matchedIDs.formUnion(col.allDescendantIDs)
+        }
         return baseFilteredSnippets.filter { snippet in
             snippet.collections.contains(where: { matchedIDs.contains($0.persistentModelID) })
         }
@@ -85,8 +135,16 @@ struct ContentView: View {
         return availableLanguages.filter { $0.rawValue.lowercased().contains(needle) }
     }
 
-    private var recentSnippets: [Snippet] {
-        Array(snippets.prefix(5))
+    private var frequentlyUsedSnippets: [Snippet] {
+        Array(
+            snippets.sorted {
+                if $0.copyCount != $1.copyCount {
+                    return $0.copyCount > $1.copyCount
+                }
+                return $0.updatedAt > $1.updatedAt
+            }
+            .prefix(5)
+        )
     }
 
     private var selectedSnippet: Snippet? {
@@ -120,93 +178,104 @@ struct ContentView: View {
             sidebar
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 360)
         } detail: {
-            ZStack {
-                Group {
-                    DotGridBackground(gradientPalette: backgroundPalette, lightModeStrength: 0.78)
-                        .ignoresSafeArea()
-                }
-
-                VStack(spacing: 0) {
-                    SnippetGalleryView(
-                        snippets: gallerySnippets,
-                        collectionMatchSnippets: snippetsInCollectionSearchSection,
-                        contentMatchSnippets: snippetsInContentSearchSection,
-                        searchQuery: searchText.trimmingCharacters(in: .whitespacesAndNewlines),
-                        searchText: $searchText,
-                        selectedLanguage: $selectedLanguage,
-                        availableLanguages: availableLanguages,
-                        onSelect: { snippet in
-                            withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
-                                selectedSnippetID = snippet.persistentModelID
-                                if let colID = selectedCollectionID {
-                                    sidebarSelectionContext = .collection(colID)
-                                } else {
-                                    sidebarSelectionContext = .allSnippets
-                                }
-                            }
-                        },
-                        onNew: { isPresentingNew = true }
-                    )
-                    .blur(radius: selectedSnippet == nil ? 0 : 2)
-                    .saturation(selectedSnippet == nil ? 1.0 : 0.95)
-                    .allowsHitTesting(selectedSnippet == nil)
-
-                    StatusBar(segments: detailStatusSegments())
-                }
-
-                if let snippet = selectedSnippet {
-                    Color.black
-                        .opacity(colorScheme == .dark ? 0.34 : 0.22)
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
-                                selectedSnippetID = nil
-                            }
-                        }
-                        .transition(.opacity)
-                        .zIndex(1)
-
-                    GeometryReader { proxy in
-                        let cardWidth = min(max(proxy.size.width * 0.86, 700), 1080)
-                        let cardHeight = min(max(proxy.size.height * 0.84, 500), 860)
-
-                        SnippetDetailView(snippet: snippet) {
-                            editingSnippet = snippet
-                        } onDelete: {
-                            delete(snippet)
-                        } onClose: {
-                            withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
-                                selectedSnippetID = nil
-                            }
-                        }
-                        .frame(width: cardWidth, height: cardHeight)
-                        .background {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(theme.surface)
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .strokeBorder(theme.borderStrong, lineWidth: 1)
-                                }
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .transition(
-                            .asymmetric(
-                                insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)),
-                                removal: .opacity.combined(with: .scale(scale: 0.97, anchor: .center))
-                            )
-                        )
+            if sidebarSelectionContext == .trash {
+                TrashView()
+            } else {
+                ZStack {
+                    Group {
+                        DotGridBackground(gradientPalette: backgroundPalette, lightModeStrength: 0.78)
+                            .ignoresSafeArea()
                     }
-                    .zIndex(2)
+
+                    VStack(spacing: 0) {
+                        SnippetGalleryView(
+                            snippets: gallerySnippets,
+                            collectionMatchSnippets: snippetsInCollectionSearchSection,
+                            contentMatchSnippets: snippetsInContentSearchSection,
+                            searchQuery: searchText.trimmingCharacters(in: .whitespacesAndNewlines),
+                            searchText: $searchText,
+                            selectedLanguages: $selectedLanguages,
+                            selectedSearchCollections: $selectedSearchCollections,
+                            availableLanguages: availableLanguages,
+                            availableCollections: collections,
+                            onSelect: { snippet in
+                                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                    selectedSnippetID = snippet.persistentModelID
+                                    if let colID = selectedCollectionID {
+                                        sidebarSelectionContext = .collection(colID)
+                                    } else {
+                                        sidebarSelectionContext = .allSnippets
+                                    }
+                                }
+                            },
+                            onNew: { isPresentingNew = true },
+                            onDelete: { snippet in delete(snippet) },
+                            onUndoDelete: { restoreLastDeletedSnippet() }
+                        )
+                        .blur(radius: selectedSnippet == nil ? 0 : 2)
+                        .saturation(selectedSnippet == nil ? 1.0 : 0.95)
+                        .allowsHitTesting(selectedSnippet == nil)
+
+                        StatusBar(segments: detailStatusSegments())
+                    }
+
+                    if let snippet = selectedSnippet {
+                        Color.black
+                            .opacity(colorScheme == .dark ? 0.34 : 0.22)
+                            .ignoresSafeArea()
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                    selectedSnippetID = nil
+                                }
+                            }
+                            .transition(.opacity)
+                            .zIndex(1)
+
+                        GeometryReader { proxy in
+                            let cardWidth = min(max(proxy.size.width * 0.86, 700), 1080)
+                            let cardHeight = min(max(proxy.size.height * 0.84, 500), 860)
+
+                            SnippetDetailView(snippet: snippet) {
+                                editingSnippet = snippet
+                            } onDelete: {
+                                delete(snippet)
+                            } onClose: {
+                                withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                    selectedSnippetID = nil
+                                }
+                            }
+                            .frame(width: cardWidth, height: cardHeight)
+                            .background {
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(theme.surface)
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .strokeBorder(theme.borderStrong, lineWidth: 1)
+                                    }
+                            }
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .transition(
+                                .asymmetric(
+                                    insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)),
+                                    removal: .opacity.combined(with: .scale(scale: 0.97, anchor: .center))
+                                )
+                            )
+                        }
+                        .zIndex(2)
+                    }
                 }
+                .animation(.spring(response: 0.4, dampingFraction: 0.88), value: selectedSnippetID)
             }
-            .animation(.spring(response: 0.4, dampingFraction: 0.88), value: selectedSnippetID)
+        } // Closing missing brace for `detail: {`
+        .task {
+            performTrashCleanup()
         }
         .sheet(isPresented: $isPresentingNew) {
             SnippetEditorView(mode: .create, availableCollections: collections) { newSnippet in
                 modelContext.insert(newSnippet)
-                try modelContext.save()
+                try? modelContext.save()
                 withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
                     selectedSnippetID = newSnippet.persistentModelID
                     sidebarSelectionContext = .allSnippets
@@ -215,15 +284,21 @@ struct ContentView: View {
         }
         .sheet(item: $editingSnippet) { snippet in
             SnippetEditorView(mode: .edit(snippet), availableCollections: collections) { _ in
-                try modelContext.save()
+                try? modelContext.save()
             }
         }
         .sheet(isPresented: $isPresentingCollectionEditor) {
             CollectionEditorSheet(
                 title: editingCollection == nil ? "New collection" : "Edit collection",
                 collectionName: $collectionDraftName,
+                collectionColor: $collectionDraftColor,
+                collectionIconName: $collectionDraftIconName,
                 selectedSnippetIDs: $collectionDraftSnippetIDs,
+                parentCollectionID: $collectionDraftParentID,
+                isSubcollection: $isSubcollectionDraft,
+                editingCollectionID: editingCollection?.persistentModelID,
                 snippets: snippets,
+                collections: collections,
                 onCancel: { isPresentingCollectionEditor = false },
                 onSave: { commitCollectionEditor() }
             )
@@ -245,11 +320,12 @@ struct ContentView: View {
             }
         } else {
             segs.append(.init(label: "\(baseFilteredSnippets.count) / \(snippets.count) snippets"))
-            if let lang = selectedLanguage {
-                segs.append(.init(label: "filter: \(lang.rawValue.lowercased())", tint: Color(hex: lang.accentHex)))
+            if !selectedLanguages.isEmpty {
+                let langsStr = selectedLanguages.map { $0.rawValue.lowercased() }.joined(separator: ", ")
+                segs.append(.init(label: "filter: \(langsStr)", tint: theme.accent))
             }
             if let selectedCollection {
-                segs.append(.init(label: "collection: \(selectedCollection.name.lowercased())", tint: theme.accent))
+                segs.append(.init(label: "collection: \(selectedCollection.name.lowercased())", tint: selectedCollection.displayColor))
             }
         }
         segs.append(.init(label: "utf-8"))
@@ -272,16 +348,16 @@ struct ContentView: View {
         ModernSidebar(
             snippets: snippets,
             collections: collections,
-            recentSnippets: recentSnippets,
+            frequentlyUsedSnippets: frequentlyUsedSnippets,
             availableLanguages: availableLanguages,
             sidebarFilteredLanguages: sidebarFilteredLanguages,
             sidebarSearch: $sidebarSearch,
-            selectedLanguage: $selectedLanguage,
+            selectedLanguages: $selectedLanguages,
             selectedSnippetID: $selectedSnippetID,
             sidebarSelectionContext: $sidebarSelectionContext,
             selectedCollectionID: $selectedCollectionID,
             isLibrarySectionExpanded: $isLibrarySectionExpanded,
-            isRecentSectionExpanded: $isRecentSectionExpanded,
+            isFrequentlyUsedSectionExpanded: $isFrequentlyUsedSectionExpanded,
             isLanguagesSectionExpanded: $isLanguagesSectionExpanded,
             isAllSnippetsExpanded: $isAllSnippetsExpanded,
             expandedCollections: $expandedCollections,
@@ -293,7 +369,8 @@ struct ContentView: View {
             onMoveSnippetToLibrary: { snippet in moveSnippetToLibrary(snippet) },
             onMoveSnippetToCollection: { snippet, collection in moveSnippet(snippet, to: collection) },
             onCopySnippetToCollection: { snippet, collection in copySnippet(snippet, to: collection) },
-            onHandleDrop: { items, collection in handleDrop(items: items, to: collection) }
+            onHandleDrop: { items, collection in handleDrop(items: items, to: collection) },
+            onOpenTrash: { sidebarSelectionContext = .trash }
         )
     }
 
@@ -316,11 +393,33 @@ struct ContentView: View {
 
                         librarySection
 
-                        if !recentSnippets.isEmpty {
-                            recentSection
+                        if !frequentlyUsedSnippets.isEmpty {
+                            frequentlyUsedSection
                         }
-if !availableLanguages.isEmpty {
+                        if !availableLanguages.isEmpty {
                             languagesSection
+                        }
+
+                        // Trash entry for legacy sidebar
+                        Button {
+                            sidebarSelectionContext = .trash
+                            selectedSnippetID = nil
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "trash")
+                                    .font(Mono.font(size: 11, weight: .semibold))
+                                    .frame(width: 14)
+                                    .foregroundStyle(Color.red)
+                                Text("trash")
+                                    .font(Mono.font(size: 12, weight: .medium))
+                                    .foregroundStyle(theme.textMuted)
+                                Spacer()
+                                Text("\(allSnippets.filter { $0.deletedAt != nil }.count)")
+                                    .font(Mono.font(size: 10, weight: .semibold))
+                                    .foregroundStyle(theme.textFaint)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
                         }
 
                         Spacer(minLength: 12)
@@ -424,10 +523,10 @@ if !availableLanguages.isEmpty {
                         icon: "square.grid.2x2",
                         title: "all snippets",
                         count: snippets.count,
-                        isActive: selectedLanguage == nil && selectedSnippetID == nil && selectedCollectionID == nil,
+                        isActive: selectedLanguages.isEmpty && selectedSnippetID == nil && selectedCollectionID == nil,
                         accent: theme.accent
                     ) {
-                        selectedLanguage = nil
+                        selectedLanguages.removeAll()
                         selectedSnippetID = nil
                         selectedCollectionID = nil
                     }
@@ -436,24 +535,8 @@ if !availableLanguages.isEmpty {
                     }
                 }
 
-                ForEach(collections) { collection in
-                    let isExpanded = Binding(
-                        get: { expandedCollections.contains(collection.persistentModelID) },
-                        set: { if $0 { expandedCollections.insert(collection.persistentModelID) } else { expandedCollections.remove(collection.persistentModelID) } }
-                    )
-                    DisclosureGroup(isExpanded: isExpanded) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            ForEach(collection.snippets) { snippet in
-                                sidebarSnippetRow(for: snippet, context: .collection(collection.persistentModelID))
-                            }
-                        }
-                        .padding(.leading, 12)
-                    } label: {
-                        collectionRow(for: collection)
-                            .dropDestination(for: String.self) { items, _ in
-                                return handleDrop(items: items, to: collection)
-                            }
-                    }
+                ForEach(topLevelCollections) { collection in
+                    legacyCollectionTree(for: collection)
                 }
             }
             .padding(.top, 4)
@@ -465,16 +548,16 @@ if !availableLanguages.isEmpty {
     }
 
 
-    private var recentSection: some View {
-        DisclosureGroup(isExpanded: $isRecentSectionExpanded) {
+    private var frequentlyUsedSection: some View {
+        DisclosureGroup(isExpanded: $isFrequentlyUsedSectionExpanded) {
             VStack(alignment: .leading, spacing: 4) {
-                ForEach(recentSnippets) { snippet in
-                    recentRow(for: snippet)
+                ForEach(frequentlyUsedSnippets) { snippet in
+                    frequentlyUsedRow(for: snippet)
                 }
             }
             .padding(.top, 4)
         } label: {
-            Text("recent")
+            Text("frequently used")
                 .font(Mono.font(size: 11, weight: .semibold))
                 .foregroundStyle(theme.textMuted)
         }
@@ -499,10 +582,14 @@ if !availableLanguages.isEmpty {
                         icon: language.symbolName,
                         title: language.rawValue.lowercased(),
                         count: snippets.filter { $0.language == language.rawValue }.count,
-                        isActive: selectedLanguage == language && selectedSnippetID == nil,
+                        isActive: selectedLanguages.contains(language) && selectedSnippetID == nil,
                         accent: Color(hex: language.accentHex) ?? theme.accent
                     ) {
-                        selectedLanguage = (selectedLanguage == language) ? nil : language
+                        if selectedLanguages.contains(language) {
+                            selectedLanguages.remove(language)
+                        } else {
+                            selectedLanguages.insert(language)
+                        }
                         selectedSnippetID = nil
                         selectedCollectionID = nil
                     }
@@ -564,13 +651,13 @@ if !availableLanguages.isEmpty {
     }
 
     @ViewBuilder
-    private func recentRow(for snippet: Snippet) -> some View {
+    private func frequentlyUsedRow(for snippet: Snippet) -> some View {
         let language = SupportedLanguage(rawValue: snippet.language) ?? .unknown
         let accent = Color(hex: language.accentHex) ?? theme.accent
-        let isActive = selectedSnippetID == snippet.persistentModelID && sidebarSelectionContext == .recent
+        let isActive = selectedSnippetID == snippet.persistentModelID && sidebarSelectionContext == .frequentlyUsed
         Button {
             selectedSnippetID = snippet.persistentModelID
-            sidebarSelectionContext = .recent
+            sidebarSelectionContext = .frequentlyUsed
         } label: {
             HStack(spacing: 8) {
                 Circle()
@@ -599,16 +686,36 @@ if !availableLanguages.isEmpty {
 
     @ViewBuilder
     private func collectionRow(for collection: SnippetCollection) -> some View {
-        sidebarRow(
-            icon: "folder",
-            title: collection.name.lowercased(),
-            count: collection.snippets.count,
-            isActive: selectedCollectionID == collection.persistentModelID && selectedSnippetID == nil,
-            accent: theme.accent
-        ) {
+        let accent = collection.displayColor
+        let isActive = selectedCollectionID == collection.persistentModelID && selectedSnippetID == nil
+        Button {
             selectedCollectionID = (selectedCollectionID == collection.persistentModelID) ? nil : collection.persistentModelID
             selectedSnippetID = nil
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: collection.displayIconName)
+                    .font(Mono.font(size: 11, weight: .semibold))
+                    .frame(width: 14)
+                    .foregroundStyle(accent)
+                
+                Text(collection.name.lowercased())
+                    .font(Mono.font(size: 12, weight: isActive ? .semibold : .medium))
+                    .foregroundStyle(isActive ? theme.text : theme.textMuted)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                Text("\(collection.snippets.filter { $0.deletedAt == nil }.count)")
+                    .font(Mono.font(size: 10, weight: .semibold))
+                    .foregroundStyle(theme.textFaint)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isActive ? accent.opacity(colorScheme == .dark ? 0.15 : 0.10) : Color.clear)
+            }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .contextMenu {
             Button { beginEditCollection(collection) } label: {
                 Label("Edit collection", systemImage: "pencil")
@@ -616,6 +723,30 @@ if !availableLanguages.isEmpty {
             Button(role: .destructive) { delete(collection) } label: {
                 Label("Delete collection", systemImage: "trash")
             }
+        }
+    }
+
+    @ViewBuilder
+    private func legacyCollectionTree(for collection: SnippetCollection) -> some View {
+        let isExpanded = Binding(
+            get: { expandedCollections.contains(collection.persistentModelID) },
+            set: { if $0 { expandedCollections.insert(collection.persistentModelID) } else { expandedCollections.remove(collection.persistentModelID) } }
+        )
+        DisclosureGroup(isExpanded: isExpanded) {
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(collection.children) { child in
+                    AnyView(legacyCollectionTree(for: child))
+                }
+                ForEach(collection.snippets.filter { $0.deletedAt == nil }) { snippet in
+                    sidebarSnippetRow(for: snippet, context: .collection(collection.persistentModelID))
+                }
+            }
+            .padding(.leading, 12)
+        } label: {
+            collectionRow(for: collection)
+                .dropDestination(for: String.self) { items, _ in
+                    return handleDrop(items: items, to: collection)
+                }
         }
     }
 
@@ -656,48 +787,135 @@ if !availableLanguages.isEmpty {
     }
 
     private func delete(_ snippet: Snippet) {
+        lastDeletedSnippet = DeletedSnippetSnapshot(
+            id: snippet.persistentModelID,
+            title: snippet.title,
+            snippetDescription: snippet.snippetDescription,
+            language: snippet.language,
+            code: snippet.code,
+            createdAt: snippet.createdAt,
+            updatedAt: snippet.updatedAt,
+            copyCount: snippet.copyCount,
+            mediaItems: snippet.mediaItems.map { item in
+                DeletedMediaSnapshot(fileName: item.fileName, kind: item.kind, addedAt: item.addedAt)
+            },
+            collectionIDs: snippet.collections.map(\.persistentModelID)
+        )
+
         if selectedSnippetID == snippet.persistentModelID {
             selectedSnippetID = nil
         }
-        for item in snippet.mediaItems {
-            MediaManager.deleteFile(for: item)
+        // Soft-delete: set deletedAt so the snippet is retained in Trash for 30 days
+        snippet.deletedAt = Date.now
+        snippet.updatedAt = .now
+        try? modelContext.save()
+    }
+
+    private func restoreLastDeletedSnippet() -> PersistentIdentifier? {
+        guard let snapshot = lastDeletedSnippet else { return nil }
+
+        // Try to find the existing (soft-deleted) snippet and clear its deletedAt
+        if let existing = allSnippets.first(where: { $0.persistentModelID == snapshot.id }) {
+            existing.deletedAt = nil
+            existing.updatedAt = .now
+            try? modelContext.save()
+            lastDeletedSnippet = nil
+            return existing.persistentModelID
         }
-        modelContext.delete(snippet)
+
+        // Fallback: recreate from snapshot if the original object isn't available
+        let restoredMedia = snapshot.mediaItems.map { media in
+            MediaItem(fileName: media.fileName, kind: media.kind, addedAt: media.addedAt)
+        }
+        let restoredSnippet = Snippet(
+            title: snapshot.title,
+            snippetDescription: snapshot.snippetDescription,
+            language: snapshot.language,
+            code: snapshot.code,
+            createdAt: snapshot.createdAt,
+            updatedAt: snapshot.updatedAt,
+            copyCount: snapshot.copyCount,
+            mediaItems: restoredMedia,
+            collections: collections.filter { snapshot.collectionIDs.contains($0.persistentModelID) }
+        )
+
+        modelContext.insert(restoredSnippet)
+        try? modelContext.save()
+        lastDeletedSnippet = nil
+        return restoredSnippet.persistentModelID
+    }
+
+    private func performTrashCleanup() {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date.now) ?? Date.distantPast
+        for snippet in allSnippets {
+            if let deletedAt = snippet.deletedAt, deletedAt < cutoff {
+                for media in snippet.mediaItems {
+                    MediaManager.deleteFile(for: media)
+                }
+                modelContext.delete(snippet)
+            }
+        }
         try? modelContext.save()
     }
 
     private func beginCreateCollection() {
         editingCollection = nil
         collectionDraftName = ""
+        collectionDraftColor = Color(hex: SnippetCollection.defaultColorHex) ?? theme.accent
+        collectionDraftIconName = SnippetCollection.defaultIconName
         collectionDraftSnippetIDs = []
+        collectionDraftParentID = nil
+        isSubcollectionDraft = false
         isPresentingCollectionEditor = true
     }
 
     private func beginEditCollection(_ collection: SnippetCollection) {
         editingCollection = collection
         collectionDraftName = collection.name
+        collectionDraftColor = collection.displayColor
+        collectionDraftIconName = collection.displayIconName
         collectionDraftSnippetIDs = Set(collection.snippets.map(\.persistentModelID))
+        collectionDraftParentID = collection.parent?.persistentModelID
+        isSubcollectionDraft = collection.parent != nil
         isPresentingCollectionEditor = true
+    }
+
+    private func resetCollectionDraft() {
+        collectionDraftName = ""
+        collectionDraftColor = Color(hex: SnippetCollection.defaultColorHex) ?? theme.accent
+        collectionDraftIconName = SnippetCollection.defaultIconName
+        collectionDraftSnippetIDs = []
+        collectionDraftParentID = nil
+        isSubcollectionDraft = false
     }
 
     private func commitCollectionEditor() {
         let trimmed = collectionDraftName.trimmingCharacters(in: .whitespacesAndNewlines)
         defer {
-            collectionDraftName = ""
-            collectionDraftSnippetIDs = []
+            resetCollectionDraft()
             isPresentingCollectionEditor = false
         }
         guard !trimmed.isEmpty else { return }
+        let colorHex = collectionDraftColor.hexString(fallback: SnippetCollection.defaultColorHex)
+        let iconName = SnippetCollection.validSFSymbolName(collectionDraftIconName)
         let collection: SnippetCollection
         if let editingCollection {
             collection = editingCollection
             collection.name = trimmed
-        } else if let existing = collections.first(where: { $0.name.caseInsensitiveCompare(trimmed) == .orderedSame }) {
+        } else if let existing = collections.first(where: { $0.name.caseInsensitiveCompare(trimmed) == .orderedSame && $0.parent?.persistentModelID == collectionDraftParentID }) {
             collection = existing
         } else {
-            collection = SnippetCollection(name: trimmed)
+            collection = SnippetCollection(name: trimmed, colorHex: colorHex, iconName: iconName)
             modelContext.insert(collection)
         }
+
+        if isSubcollectionDraft, let parentID = collectionDraftParentID, let newParent = collections.first(where: { $0.persistentModelID == parentID }) {
+            collection.parent = newParent
+        } else {
+            collection.parent = nil
+        }
+        collection.colorHex = colorHex
+        collection.iconName = iconName
 
         let selectedIDs = collectionDraftSnippetIDs
         for snippet in snippets {
@@ -734,14 +952,14 @@ if !availableLanguages.isEmpty {
             }
             ForEach(collections) { collection in
                 Button { moveSnippet(snippet, to: collection) } label: {
-                    Label(collection.name, systemImage: "folder")
+                    Label(collection.name, systemImage: collection.displayIconName)
                 }
             }
         }
         Menu("Copy to") {
             ForEach(collections) { collection in
                 Button { copySnippet(snippet, to: collection) } label: {
-                    Label(collection.name, systemImage: "folder")
+                    Label(collection.name, systemImage: collection.displayIconName)
                 }
             }
         }
@@ -838,6 +1056,7 @@ if !availableLanguages.isEmpty {
     }
 }
 
+
 // MARK: - Modern sidebar (native SwiftUI + Liquid Glass on macOS 26+)
 
 @available(macOS 26.0, *)
@@ -853,17 +1072,17 @@ private struct ModernSidebar: View {
 
     let snippets: [Snippet]
     let collections: [SnippetCollection]
-    let recentSnippets: [Snippet]
+    let frequentlyUsedSnippets: [Snippet]
     let availableLanguages: [SupportedLanguage]
     let sidebarFilteredLanguages: [SupportedLanguage]
 
     @Binding var sidebarSearch: String
-    @Binding var selectedLanguage: SupportedLanguage?
+    @Binding var selectedLanguages: Set<SupportedLanguage>
     @Binding var selectedSnippetID: PersistentIdentifier?
     @Binding var sidebarSelectionContext: ContentView.SidebarSelectionContext?
     @Binding var selectedCollectionID: PersistentIdentifier?
     @Binding var isLibrarySectionExpanded: Bool
-    @Binding var isRecentSectionExpanded: Bool
+    @Binding var isFrequentlyUsedSectionExpanded: Bool
     @Binding var isLanguagesSectionExpanded: Bool
     @Binding var isAllSnippetsExpanded: Bool
     @Binding var expandedCollections: Set<PersistentIdentifier>
@@ -877,6 +1096,11 @@ private struct ModernSidebar: View {
     let onMoveSnippetToCollection: (Snippet, SnippetCollection) -> Void
     let onCopySnippetToCollection: (Snippet, SnippetCollection) -> Void
     let onHandleDrop: ([String], SnippetCollection?) -> Bool
+    let onOpenTrash: () -> Void
+
+    private var topLevelCollections: [SnippetCollection] {
+        collections.filter { $0.parent == nil }
+    }
 
     private var theme: Theme { Theme.current(colorScheme) }
 
@@ -887,22 +1111,24 @@ private struct ModernSidebar: View {
                     return .snippet(id, context)
                 }
                 if let id = selectedCollectionID { return .collection(id) }
-                if let lang = selectedLanguage { return .language(lang.rawValue) }
+                if let lang = selectedLanguages.first, selectedLanguages.count == 1 { return .language(lang.rawValue) }
                 return .all
             },
             set: { newValue in
                 switch newValue {
                 case .all, .none:
-                    selectedLanguage = nil
+                    selectedLanguages.removeAll()
                     selectedSnippetID = nil
                     selectedCollectionID = nil
                 case .language(let raw):
-                    selectedLanguage = SupportedLanguage(rawValue: raw)
+                    if let lang = SupportedLanguage(rawValue: raw) {
+                        selectedLanguages = [lang]
+                    }
                     selectedSnippetID = nil
                     selectedCollectionID = nil
                 case .collection(let id):
                     selectedCollectionID = id
-                    selectedLanguage = nil
+                    selectedLanguages.removeAll()
                     selectedSnippetID = nil
                 case .snippet(let id, let context):
                     selectedSnippetID = id
@@ -936,12 +1162,12 @@ private struct ModernSidebar: View {
                             Menu("Move to") {
                                 Button { onMoveSnippetToLibrary(snippet) } label: { Label("All snippets", systemImage: "square.grid.2x2") }
                                 ForEach(collections) { collection in
-                                    Button { onMoveSnippetToCollection(snippet, collection) } label: { Label(collection.name, systemImage: "folder") }
+                                    Button { onMoveSnippetToCollection(snippet, collection) } label: { Label(collection.name, systemImage: collection.displayIconName) }
                                 }
                             }
                             Menu("Copy to") {
                                 ForEach(collections) { collection in
-                                    Button { onCopySnippetToCollection(snippet, collection) } label: { Label(collection.name, systemImage: "folder") }
+                                    Button { onCopySnippetToCollection(snippet, collection) } label: { Label(collection.name, systemImage: collection.displayIconName) }
                                 }
                             }
                         }
@@ -962,68 +1188,14 @@ private struct ModernSidebar: View {
                 .tag(Selection.all)
                 .dropDestination(for: String.self) { items, _ in return onHandleDrop(items, nil) }
 
-                ForEach(collections) { collection in
-                    let isExpanded = Binding(
-                        get: { expandedCollections.contains(collection.persistentModelID) },
-                        set: { if $0 { expandedCollections.insert(collection.persistentModelID) } else { expandedCollections.remove(collection.persistentModelID) } }
-                    )
-                    DisclosureGroup(isExpanded: isExpanded) {
-                        ForEach(collection.snippets) { snippet in
-                            let language = SupportedLanguage(rawValue: snippet.language) ?? .unknown
-                            let accent = Color(hex: language.accentHex) ?? .accentColor
-                            Label {
-                                Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                            } icon: {
-                                Circle()
-                                    .fill(accent)
-                                    .frame(width: 8, height: 8)
-                            }
-                            .tag(Selection.snippet(snippet.persistentModelID, .collection(collection.persistentModelID)))
-                            .draggable(String(snippet.persistentModelID.hashValue))
-                            .contextMenu {
-                                Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
-                                Button(role: .destructive) { onDeleteSnippet(snippet) } label: { Label("Delete snippet", systemImage: "trash") }
-                                Menu("Move to") {
-                                    Button { onMoveSnippetToLibrary(snippet) } label: { Label("All snippets", systemImage: "square.grid.2x2") }
-                                    ForEach(collections) { target in
-                                        Button { onMoveSnippetToCollection(snippet, target) } label: { Label(target.name, systemImage: "folder") }
-                                    }
-                                }
-                                Menu("Copy to") {
-                                    ForEach(collections) { target in
-                                        Button { onCopySnippetToCollection(snippet, target) } label: { Label(target.name, systemImage: "folder") }
-                                    }
-                                }
-                            }
-                        }
-                    } label: {
-                        Label {
-                            HStack {
-                                Text(collection.name)
-                                Spacer()
-                                Text("\(collection.snippets.count)")
-                                    .foregroundStyle(.secondary)
-                                    .monospacedDigit()
-                            }
-                        } icon: {
-                            Image(systemName: "folder")
-                                .foregroundStyle(theme.accent)
-                        }
-                    }
-                    .tag(Selection.collection(collection.persistentModelID))
-                    .contextMenu {
-                        Button { onEditCollection(collection) } label: { Label("Edit collection", systemImage: "pencil") }
-                        Button(role: .destructive) { onDeleteCollection(collection) } label: { Label("Delete collection", systemImage: "trash") }
-                    }
-                    .dropDestination(for: String.self) { items, _ in return onHandleDrop(items, collection) }
+                ForEach(topLevelCollections) { collection in
+                    modernCollectionTree(for: collection)
                 }
             }
 
-            if !recentSnippets.isEmpty {
-                Section("Recent", isExpanded: $isRecentSectionExpanded) {
-                    ForEach(recentSnippets) { snippet in
+            if !frequentlyUsedSnippets.isEmpty {
+                Section("Frequently Used", isExpanded: $isFrequentlyUsedSectionExpanded) {
+                    ForEach(frequentlyUsedSnippets) { snippet in
                         let language = SupportedLanguage(rawValue: snippet.language) ?? .unknown
                         let accent = Color(hex: language.accentHex) ?? .accentColor
                         Label {
@@ -1035,7 +1207,7 @@ private struct ModernSidebar: View {
                                 .fill(accent)
                                 .frame(width: 8, height: 8)
                         }
-                        .tag(Selection.snippet(snippet.persistentModelID, .recent))
+                        .tag(Selection.snippet(snippet.persistentModelID, .frequentlyUsed))
                         .contextMenu {
                             Button { onEditSnippet(snippet) } label: {
                                 Label("Edit snippet", systemImage: "pencil")
@@ -1049,7 +1221,7 @@ private struct ModernSidebar: View {
                                 }
                                 ForEach(collections) { collection in
                                     Button { onMoveSnippetToCollection(snippet, collection) } label: {
-                                        Label(collection.name, systemImage: "folder")
+                                        Label(collection.name, systemImage: collection.displayIconName)
                                     }
                                 }
                             }
@@ -1086,6 +1258,19 @@ private struct ModernSidebar: View {
                     }
                 }
             }
+
+            Section {
+                Button {
+                    onOpenTrash()
+                } label: {
+                    Label {
+                        Text("Trash")
+                    } icon: {
+                        Image(systemName: "trash")
+                    }
+                }
+                .foregroundStyle(.red)
+            }
         }
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
@@ -1108,48 +1293,203 @@ private struct ModernSidebar: View {
             .padding(12)
         }
     }
-}
 
-private struct CollectionEditorSheet: View {
-    let title: String
-    @Binding var collectionName: String
-    @Binding var selectedSnippetIDs: Set<PersistentIdentifier>
-    let snippets: [Snippet]
-    let onCancel: () -> Void
-    let onSave: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 14) {
-                TextField("Collection name", text: $collectionName)
-                    .textFieldStyle(.roundedBorder)
-                Text("Add existing snippets (optional)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 8) {
-                        ForEach(snippets) { snippet in
-                            Button {
-                                if selectedSnippetIDs.contains(snippet.persistentModelID) {
-                                    selectedSnippetIDs.remove(snippet.persistentModelID)
-                                } else {
-                                    selectedSnippetIDs.insert(snippet.persistentModelID)
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: selectedSnippetIDs.contains(snippet.persistentModelID) ? "checkmark.circle.fill" : "circle")
-                                    Text(snippet.title.isEmpty ? "untitled" : snippet.title)
-                                        .lineLimit(1)
-                                    Spacer()
-                                }
-                            }
-                            .buttonStyle(.plain)
-                            Divider()
+    @ViewBuilder
+    private func modernCollectionTree(for collection: SnippetCollection) -> some View {
+        let isExpanded = Binding(
+            get: { expandedCollections.contains(collection.persistentModelID) },
+            set: { if $0 { expandedCollections.insert(collection.persistentModelID) } else { expandedCollections.remove(collection.persistentModelID) } }
+        )
+        DisclosureGroup(isExpanded: isExpanded) {
+            ForEach(collection.children) { child in
+                AnyView(modernCollectionTree(for: child))
+            }
+            ForEach(collection.snippets.filter { $0.deletedAt == nil }) { snippet in
+                let language = SupportedLanguage(rawValue: snippet.language) ?? .unknown
+                let accent = Color(hex: language.accentHex) ?? .accentColor
+                Label {
+                    Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                } icon: {
+                    Circle()
+                        .fill(accent)
+                        .frame(width: 8, height: 8)
+                }
+                .tag(Selection.snippet(snippet.persistentModelID, .collection(collection.persistentModelID)))
+                .draggable(String(snippet.persistentModelID.hashValue))
+                .contextMenu {
+                    Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
+                    Button(role: .destructive) { onDeleteSnippet(snippet) } label: { Label("Delete snippet", systemImage: "trash") }
+                    Menu("Move to") {
+                        Button { onMoveSnippetToLibrary(snippet) } label: { Label("All snippets", systemImage: "square.grid.2x2") }
+                        ForEach(collections) { target in
+                            Button { onMoveSnippetToCollection(snippet, target) } label: { Label(target.name, systemImage: target.displayIconName) }
+                        }
+                    }
+                    Menu("Copy to") {
+                        ForEach(collections) { target in
+                            Button { onCopySnippetToCollection(snippet, target) } label: { Label(target.name, systemImage: target.displayIconName) }
                         }
                     }
                 }
             }
-            .padding(16)
+        } label: {
+            Label {
+                HStack {
+                    Text(collection.name)
+                    Spacer()
+                    Text("\(collection.snippets.filter { $0.deletedAt == nil }.count)")
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+            } icon: {
+                Image(systemName: collection.displayIconName)
+                    .foregroundStyle(collection.displayColor)
+            }
+        }
+        .tag(Selection.collection(collection.persistentModelID))
+        .contextMenu {
+            Button { onEditCollection(collection) } label: { Label("Edit collection", systemImage: "pencil") }
+            Button(role: .destructive) { onDeleteCollection(collection) } label: { Label("Delete collection", systemImage: "trash") }
+        }
+        .dropDestination(for: String.self) { items, _ in return onHandleDrop(items, collection) }
+    }
+}
+
+private struct CollectionEditorSheet: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    private struct SymbolSection: Identifiable {
+        let title: String
+        let symbols: [String]
+
+        var id: String { title }
+    }
+
+    private struct ColorChoice: Identifiable {
+        let name: String
+        let hex: String
+
+        var id: String { hex }
+    }
+
+    let title: String
+    @Binding var collectionName: String
+    @Binding var collectionColor: Color
+    @Binding var collectionIconName: String
+    @Binding var selectedSnippetIDs: Set<PersistentIdentifier>
+    @Binding var parentCollectionID: PersistentIdentifier?
+    @Binding var isSubcollection: Bool
+    let editingCollectionID: PersistentIdentifier?
+    let snippets: [Snippet]
+    let collections: [SnippetCollection]
+    let onCancel: () -> Void
+    let onSave: () -> Void
+
+    @State private var symbolSearch: String = ""
+    @State private var isSnippetPickerExpanded: Bool = false
+
+    private let symbolColumns = Array(repeating: GridItem(.flexible(minimum: 42, maximum: 56), spacing: 18), count: 7)
+    private let palette: [ColorChoice] = [
+        .init(name: "Red", hex: "#FF453A"),
+        .init(name: "Orange", hex: "#FF9F0A"),
+        .init(name: "Yellow", hex: "#FFD60A"),
+        .init(name: "Green", hex: "#30D158"),
+        .init(name: "Blue", hex: "#0A84FF"),
+        .init(name: "Purple", hex: "#BF5AF2"),
+        .init(name: "Pink", hex: "#FF375F"),
+        .init(name: "Gray", hex: "#8E8E93")
+    ]
+    private let symbolSections: [SymbolSection] = [
+        .init(title: "Code", symbols: [
+            "curlybraces", "terminal", "chevron.left.forwardslash.chevron.right", "command",
+            "apple.terminal", "doc.plaintext", "doc.text", "doc.on.doc",
+            "text.alignleft", "number", "function", "sum",
+            "at", "cpu", "memorychip", "server.rack",
+            "externaldrive", "internaldrive", "network", "point.3.connected.trianglepath.dotted"
+        ]),
+        .init(title: "Objects", symbols: [
+            "tag", "bookmark", "paperclip", "link",
+            "pin", "archivebox", "tray.full", "shippingbox",
+            "lock", "key", "hammer", "wrench.and.screwdriver",
+            "paintpalette", "wand.and.stars", "camera", "photo",
+            "video", "play.rectangle", "music.note", "waveform"
+        ]),
+        .init(title: "People", symbols: [
+            "person", "person.fill", "person.2", "person.2.fill",
+            "person.crop.circle", "person.crop.circle.fill", "figure.stand", "figure.walk",
+            "figure.wave", "figure.2.and.child.holdinghands", "person.3", "person.3.fill",
+            "brain.head.profile", "eye", "eyes", "ear",
+            "hand.raised", "hand.thumbsup", "hand.thumbsdown", "hand.tap",
+            "hand.point.up.left", "hand.point.right", "hand.wave", "face.smiling"
+        ]),
+        .init(title: "Animals & Nature", symbols: [
+            "hare", "tortoise", "dog", "cat",
+            "bird", "fish", "pawprint", "ladybug",
+            "leaf", "tree", "globe.americas", "globe.europe.africa",
+            "sun.max", "sunrise", "sunset", "moon",
+            "sparkles", "cloud", "flame", "drop"
+        ])
+    ]
+
+    private var theme: Theme { Theme.current(colorScheme) }
+
+    private var trimmedName: String {
+        collectionName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedIconName: String {
+        collectionIconName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isSymbolValid: Bool {
+        SnippetCollection.isValidSFSymbolName(trimmedIconName)
+    }
+
+    private var previewIconName: String {
+        isSymbolValid ? trimmedIconName : SnippetCollection.defaultIconName
+    }
+
+    private var canSave: Bool {
+        !trimmedName.isEmpty && isSymbolValid
+    }
+
+    private var selectedColorHex: String {
+        collectionColor.hexString(fallback: SnippetCollection.defaultColorHex).lowercased()
+    }
+
+    private var displayedSymbolSections: [SymbolSection] {
+        let needle = symbolSearch.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return symbolSections.compactMap { section in
+            let symbols = section.symbols.filter { symbol in
+                SnippetCollection.isValidSFSymbolName(symbol) &&
+                (needle.isEmpty || symbol.lowercased().contains(needle))
+            }
+            guard !symbols.isEmpty else { return nil }
+            return SymbolSection(title: section.title, symbols: symbols)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        previewHeader
+                        colorStrip
+                        Divider()
+                        subcollectionToggleSection
+                        Divider()
+                        symbolBrowser
+                        Divider()
+                        snippetMembershipSection
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 18)
+                    .padding(.bottom, 22)
+                }
+            }
             .navigationTitle(title)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -1157,10 +1497,240 @@ private struct CollectionEditorSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save", action: onSave)
-                        .disabled(collectionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(!canSave)
                 }
             }
         }
-        .frame(minWidth: 520, minHeight: 520)
+        .frame(minWidth: 620, minHeight: 740)
+    }
+
+    private var previewHeader: some View {
+        VStack(spacing: 14) {
+            CollectionIconView(
+                iconName: previewIconName,
+                color: collectionColor,
+                size: 68,
+                isSelected: true
+            )
+            .frame(height: 82)
+
+            TextField("Collection name", text: $collectionName)
+                .textFieldStyle(.plain)
+                .font(.system(size: 24, weight: .bold))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(theme.text)
+                .frame(maxWidth: 340)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
+    }
+
+    private var colorStrip: some View {
+        HStack(spacing: 16) {
+            Image(systemName: "tag")
+                .font(.system(size: 25, weight: .medium))
+                .foregroundStyle(theme.textFaint)
+                .frame(width: 30)
+
+            ForEach(palette) { choice in
+                Button {
+                    collectionColor = Color(hex: choice.hex) ?? collectionColor
+                } label: {
+                    let isSelected = selectedColorHex == choice.hex.lowercased()
+                    Circle()
+                        .fill(Color(hex: choice.hex) ?? theme.accent)
+                        .frame(width: 40, height: 40)
+                        .overlay {
+                            Circle()
+                                .strokeBorder(isSelected ? .white.opacity(0.92) : .black.opacity(0.14), lineWidth: isSelected ? 3 : 1)
+                        }
+                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.34 : 0.14), radius: 6, x: 0, y: 3)
+                }
+                .buttonStyle(.plain)
+                .help(choice.name)
+            }
+
+            ZStack {
+                Circle()
+                    .fill(collectionColor.opacity(0.34))
+                    .frame(width: 40, height: 40)
+                    .overlay {
+                        Circle()
+                            .strokeBorder(theme.borderStrong, lineWidth: 1)
+                    }
+                Image(systemName: "plus")
+                    .font(.system(size: 23, weight: .semibold))
+                    .foregroundStyle(collectionColor)
+                    .allowsHitTesting(false)
+                ColorPicker("", selection: $collectionColor, supportsOpacity: false)
+                    .labelsHidden()
+                    .frame(width: 40, height: 40)
+                    .opacity(0.02)
+            }
+            .help("Custom color")
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var symbolBrowser: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(theme.textFaint)
+                TextField("Search SF Symbols", text: $symbolSearch)
+                    .textFieldStyle(.plain)
+                if !symbolSearch.isEmpty {
+                    Button {
+                        symbolSearch = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(theme.textFaint)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(theme.surface)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .strokeBorder(theme.border, lineWidth: 1)
+                    }
+            }
+
+            ForEach(displayedSymbolSections) { section in
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(section.title)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(theme.text)
+
+                    LazyVGrid(columns: symbolColumns, spacing: 16) {
+                        ForEach(section.symbols, id: \.self) { symbolName in
+                            symbolButton(symbolName)
+                        }
+                    }
+                }
+            }
+
+            if displayedSymbolSections.isEmpty {
+                Text("No matching symbols")
+                    .font(.callout)
+                    .foregroundStyle(theme.textMuted)
+                    .frame(maxWidth: .infinity, minHeight: 90)
+            }
+        }
+    }
+
+    private func symbolButton(_ symbolName: String) -> some View {
+        Button {
+            collectionIconName = symbolName
+        } label: {
+            let isSelected = previewIconName == symbolName
+            Image(systemName: symbolName)
+                .font(.system(size: 24, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(isSelected ? .white : theme.textMuted)
+                .frame(width: 44, height: 44)
+                .background {
+                    Circle()
+                        .fill(isSelected ? collectionColor : Color.clear)
+                }
+                .overlay {
+                    Circle()
+                        .strokeBorder(isSelected ? collectionColor.opacity(0.55) : Color.clear, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .help(symbolName)
+    }
+
+    private var subcollectionToggleSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle("Sub-Collection", isOn: $isSubcollection)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(theme.text)
+                .tint(theme.accent)
+            
+            if isSubcollection {
+                Picker("Parent", selection: $parentCollectionID) {
+                    Text("Select parent...").tag(nil as PersistentIdentifier?)
+                    ForEach(availableParentCollections) { collection in
+                        Text(collection.name).tag(collection.persistentModelID as PersistentIdentifier?)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .tint(theme.accent)
+            }
+        }
+    }
+    
+    private var availableParentCollections: [SnippetCollection] {
+        guard let editingID = editingCollectionID else {
+            return collections
+        }
+        // Exclude the collection itself and its descendants to prevent cycles
+        var excludedIDs = Set([editingID])
+        var queue = [editingID]
+        
+        while !queue.isEmpty {
+            let currentID = queue.removeFirst()
+            if let current = collections.first(where: { $0.persistentModelID == currentID }) {
+                let childIDs = current.children.map(\.persistentModelID)
+                excludedIDs.formUnion(childIDs)
+                queue.append(contentsOf: childIDs)
+            }
+        }
+        
+        return collections.filter { !excludedIDs.contains($0.persistentModelID) }
+    }
+
+    private var snippetMembershipSection: some View {
+        DisclosureGroup(isExpanded: $isSnippetPickerExpanded) {
+            if snippets.isEmpty {
+                Text("No snippets yet")
+                    .font(.callout)
+                    .foregroundStyle(theme.textMuted)
+                    .padding(.vertical, 8)
+            } else {
+                LazyVStack(alignment: .leading, spacing: 8) {
+                    ForEach(snippets) { snippet in
+                        snippetToggleRow(snippet)
+                        Divider()
+                    }
+                }
+                .padding(.top, 8)
+            }
+        } label: {
+            HStack {
+                Text("Snippets")
+                    .font(.system(size: 16, weight: .semibold))
+                Spacer()
+                Text("\(selectedSnippetIDs.count)")
+                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(theme.textMuted)
+            }
+        }
+    }
+
+    private func snippetToggleRow(_ snippet: Snippet) -> some View {
+        Button {
+            if selectedSnippetIDs.contains(snippet.persistentModelID) {
+                selectedSnippetIDs.remove(snippet.persistentModelID)
+            } else {
+                selectedSnippetIDs.insert(snippet.persistentModelID)
+            }
+        } label: {
+            HStack {
+                Image(systemName: selectedSnippetIDs.contains(snippet.persistentModelID) ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(selectedSnippetIDs.contains(snippet.persistentModelID) ? collectionColor : theme.textFaint)
+                Text(snippet.title.isEmpty ? "untitled" : snippet.title)
+                    .lineLimit(1)
+                Spacer()
+            }
+        }
+        .buttonStyle(.plain)
     }
 }

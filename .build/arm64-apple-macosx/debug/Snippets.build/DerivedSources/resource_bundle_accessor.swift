@@ -1,7 +1,7 @@
 import Foundation
 
 extension Foundation.Bundle {
-    static let module: Bundle = {
+    static nonisolated let module: Bundle = {
         let mainPath = Bundle.main.bundleURL.appendingPathComponent("Snippets_Snippets.bundle").path
         let buildPath = "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle"
 

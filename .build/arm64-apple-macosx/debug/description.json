@@ -1,6 +1,10 @@
 {
   "builtTestProducts" : [
-
+    {
+      "binaryPath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.xctest/Contents/MacOS/SnippetsPackageTests",
+      "packagePath" : "/Users/halilbagosi/snippets",
+      "productName" : "SnippetsPackageTests"
+    }
   ],
   "copyCommands" : {
     "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/Assets.xcassets" : {
@@ -14,6 +18,20 @@
         {
           "kind" : "directory",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/Assets.xcassets"
+        }
+      ]
+    },
+    "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/GlassBreakShaders.metal" : {
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/GlassBreakShaders.metal"
+        }
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets_Snippets.bundle/GlassBreakShaders.metal"
         }
       ]
     },
@@ -79,6 +97,22 @@
       "inputs" : [
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/App/AppEnvironment.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Core/Services/Protocols/MediaManaging.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Features/Editor/SnippetEditorViewModel.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Features/Gallery/SnippetGalleryViewModel.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Models/Collection.swift"
         },
         {
@@ -123,6 +157,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/CollectionIconView.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/DotGridBackground.swift"
         },
         {
@@ -139,6 +177,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/MetalShatterOverlay.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/MetalShatterRenderer.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SectionHeader.swift"
         },
         {
@@ -148,6 +194,10 @@
         {
           "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/StatusBar.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/ViewSnapshot.swift"
         },
         {
           "kind" : "file",
@@ -186,6 +236,10 @@
       "moduleName" : "Snippets",
       "moduleOutputPath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Modules/Snippets.swiftmodule",
       "objects" : [
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/AppEnvironment.swift.o",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MediaManaging.swift.o",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetEditorViewModel.swift.o",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetGalleryViewModel.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Collection.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MediaItem.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Snippet.swift.o",
@@ -197,13 +251,17 @@
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetsApp.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CodeEditor.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CodeView.swift.o",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CollectionIconView.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/DotGridBackground.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/EditorTabHeader.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/GlassCard.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/LanguageBadge.swift.o",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterOverlay.swift.o",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterRenderer.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SectionHeader.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetCard.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/StatusBar.swift.o",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ViewSnapshot.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ContentView.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetDetailView.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetEditorView.swift.o",
@@ -236,7 +294,7 @@
         "-plugin-path",
         "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
         "-sdk",
-        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
         "-F",
         "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
         "-I",
@@ -247,7 +305,7 @@
         "-Xcc",
         "-isysroot",
         "-Xcc",
-        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
         "-Xcc",
         "-F",
         "-Xcc",
@@ -261,6 +319,22 @@
       ],
       "outputFileMapPath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/output-file-map.json",
       "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/AppEnvironment.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MediaManaging.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetEditorViewModel.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetGalleryViewModel.swift.o"
+        },
         {
           "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Collection.swift.o"
@@ -307,6 +381,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CollectionIconView.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/DotGridBackground.swift.o"
         },
         {
@@ -323,6 +401,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterOverlay.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterRenderer.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SectionHeader.swift.o"
         },
         {
@@ -332,6 +418,10 @@
         {
           "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/StatusBar.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ViewSnapshot.swift.o"
         },
         {
           "kind" : "file",
@@ -360,6 +450,10 @@
       ],
       "prepareForIndexing" : false,
       "sources" : [
+        "/Users/halilbagosi/snippets/Sources/Snippets/App/AppEnvironment.swift",
+        "/Users/halilbagosi/snippets/Sources/Snippets/Core/Services/Protocols/MediaManaging.swift",
+        "/Users/halilbagosi/snippets/Sources/Snippets/Features/Editor/SnippetEditorViewModel.swift",
+        "/Users/halilbagosi/snippets/Sources/Snippets/Features/Gallery/SnippetGalleryViewModel.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Models/Collection.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Models/MediaItem.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Models/Snippet.swift",
@@ -371,13 +465,17 @@
         "/Users/halilbagosi/snippets/Sources/Snippets/SnippetsApp.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/CodeEditor.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/CodeView.swift",
+        "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/CollectionIconView.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/DotGridBackground.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/EditorTabHeader.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/GlassCard.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/LanguageBadge.swift",
+        "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/MetalShatterOverlay.swift",
+        "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/MetalShatterRenderer.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SectionHeader.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SnippetCard.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/StatusBar.swift",
+        "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/ViewSnapshot.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/ContentView.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetDetailView.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetEditorView.swift",
@@ -385,6 +483,205 @@
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/DerivedSources/resource_bundle_accessor.swift"
       ],
       "tempsPath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.SnippetsPackageTests-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.build/sources",
+      "importPath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.derived/runner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Modules/SnippetsTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "SnippetsPackageTests",
+      "moduleOutputPath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Modules/SnippetsPackageTests.swiftmodule",
+      "objects" : [
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.build/runner.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx26.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j8",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.build/include/SnippetsPackageTests-Swift.h",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "snippets"
+      ],
+      "outputFileMapPath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Modules/SnippetsPackageTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.derived/runner.swift"
+      ],
+      "tempsPath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.SnippetsTests-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/sources",
+      "importPath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Tests/SnippetsTests/SnippetEditorViewModelTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Tests/SnippetsTests/SnippetGalleryViewModelTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "SnippetsTests",
+      "moduleOutputPath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Modules/SnippetsTests.swiftmodule",
+      "objects" : [
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetEditorViewModelTests.swift.o",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetGalleryViewModelTests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx26.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j8",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "snippets"
+      ],
+      "outputFileMapPath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetEditorViewModelTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetGalleryViewModelTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Modules/SnippetsTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/halilbagosi/snippets/Tests/SnippetsTests/SnippetEditorViewModelTests.swift",
+        "/Users/halilbagosi/snippets/Tests/SnippetsTests/SnippetGalleryViewModelTests.swift"
+      ],
+      "tempsPath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build",
       "wholeModuleOptimization" : false
     }
   },
@@ -399,6 +696,10 @@
       "-package-name",
       "snippets",
       "-c",
+      "/Users/halilbagosi/snippets/Sources/Snippets/App/AppEnvironment.swift",
+      "/Users/halilbagosi/snippets/Sources/Snippets/Core/Services/Protocols/MediaManaging.swift",
+      "/Users/halilbagosi/snippets/Sources/Snippets/Features/Editor/SnippetEditorViewModel.swift",
+      "/Users/halilbagosi/snippets/Sources/Snippets/Features/Gallery/SnippetGalleryViewModel.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Models/Collection.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Models/MediaItem.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Models/Snippet.swift",
@@ -410,13 +711,17 @@
       "/Users/halilbagosi/snippets/Sources/Snippets/SnippetsApp.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/CodeEditor.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/CodeView.swift",
+      "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/CollectionIconView.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/DotGridBackground.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/EditorTabHeader.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/GlassCard.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/LanguageBadge.swift",
+      "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/MetalShatterOverlay.swift",
+      "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/MetalShatterRenderer.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SectionHeader.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SnippetCard.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/StatusBar.swift",
+      "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/ViewSnapshot.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/ContentView.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetDetailView.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetEditorView.swift",
@@ -449,7 +754,7 @@
       "-plugin-path",
       "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
       "-sdk",
-      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
       "-F",
       "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
       "-I",
@@ -460,7 +765,127 @@
       "-Xcc",
       "-isysroot",
       "-Xcc",
-      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "snippets",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "SnippetsPackageTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "SnippetsPackageTests",
+      "-package-name",
+      "snippets",
+      "-c",
+      "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.derived/runner.swift",
+      "-I",
+      "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx26.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j8",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.build/include/SnippetsPackageTests-Swift.h",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "snippets",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "SnippetsTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "SnippetsTests",
+      "-package-name",
+      "snippets",
+      "-c",
+      "/Users/halilbagosi/snippets/Tests/SnippetsTests/SnippetEditorViewModelTests.swift",
+      "/Users/halilbagosi/snippets/Tests/SnippetsTests/SnippetGalleryViewModelTests.swift",
+      "-I",
+      "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx26.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j8",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
       "-Xcc",
       "-F",
       "-Xcc",
@@ -478,13 +903,30 @@
   "targetDependencyMap" : {
     "Snippets" : [
 
+    ],
+    "SnippetsPackageTests" : [
+      "SnippetsTests",
+      "Snippets"
+    ],
+    "SnippetsTests" : [
+      "Snippets"
     ]
   },
   "testDiscoveryCommands" : {
 
   },
   "testEntryPointCommands" : {
+    "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.derived/runner.swift" : {
+      "inputs" : [
 
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.derived/runner.swift"
+        }
+      ]
+    }
   },
   "traitConfiguration" : {
     "default" : {
@@ -512,6 +954,22 @@
         {
           "kind" : "virtual",
           "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/App/AppEnvironment.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Core/Services/Protocols/MediaManaging.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Features/Editor/SnippetEditorViewModel.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Features/Gallery/SnippetGalleryViewModel.swift"
         },
         {
           "kind" : "file",
@@ -559,6 +1017,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/CollectionIconView.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/DotGridBackground.swift"
         },
         {
@@ -575,6 +1037,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/MetalShatterOverlay.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/MetalShatterRenderer.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SectionHeader.swift"
         },
         {
@@ -584,6 +1054,10 @@
         {
           "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/StatusBar.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/ViewSnapshot.swift"
         },
         {
           "kind" : "file",
@@ -617,6 +1091,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/AppEnvironment.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Clipboard.swift.o"
         },
         {
@@ -630,6 +1108,10 @@
         {
           "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Collection.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CollectionIconView.swift.o"
         },
         {
           "kind" : "file",
@@ -665,6 +1147,18 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MediaManaging.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterOverlay.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterRenderer.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SectionHeader.swift.o"
         },
         {
@@ -685,7 +1179,15 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetEditorViewModel.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetGalleryView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetGalleryViewModel.swift.o"
         },
         {
           "kind" : "file",
@@ -705,10 +1207,192 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ViewSnapshot.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/resource_bundle_accessor.swift.o"
         }
       ],
       "outputFilePath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.product/Objects.LinkFileList"
+    },
+    "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.derived/runner.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.build/sources"
+    },
+    "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/AppEnvironment.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Clipboard.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CodeEditor.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CodeView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Collection.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CollectionIconView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ContentView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/DotGridBackground.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/EditorTabHeader.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/GlassCard.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/LanguageBadge.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/LanguageDetector.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MediaItem.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MediaManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MediaManaging.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterOverlay.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterRenderer.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SectionHeader.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Snippet.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetCard.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetDetailView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetEditorView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetEditorViewModel.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetGalleryView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetGalleryViewModel.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetsApp.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/StatusBar.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SyntaxHighlighter.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Theme.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ViewSnapshot.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/resource_bundle_accessor.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetEditorViewModelTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/SnippetGalleryViewModelTests.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsPackageTests.product/Objects.LinkFileList"
+    },
+    "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Tests/SnippetsTests/SnippetEditorViewModelTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Tests/SnippetsTests/SnippetGalleryViewModelTests.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/SnippetsTests.build/sources"
     },
     "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
       "alwaysOutOfDate" : true,

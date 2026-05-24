@@ -2,6 +2,34 @@
   "": {
     "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/primary.swiftdeps"
   },
+  "/Users/halilbagosi/snippets/Sources/Snippets/App/AppEnvironment.swift": {
+    "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/AppEnvironment.d",
+    "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/AppEnvironment.swift.o",
+    "swiftmodule": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/AppEnvironment~partial.swiftmodule",
+    "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/AppEnvironment.swiftdeps",
+    "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/AppEnvironment.dia"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Core/Services/Protocols/MediaManaging.swift": {
+    "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MediaManaging.d",
+    "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MediaManaging.swift.o",
+    "swiftmodule": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MediaManaging~partial.swiftmodule",
+    "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MediaManaging.swiftdeps",
+    "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MediaManaging.dia"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Features/Editor/SnippetEditorViewModel.swift": {
+    "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetEditorViewModel.d",
+    "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetEditorViewModel.swift.o",
+    "swiftmodule": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetEditorViewModel~partial.swiftmodule",
+    "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetEditorViewModel.swiftdeps",
+    "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetEditorViewModel.dia"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Features/Gallery/SnippetGalleryViewModel.swift": {
+    "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetGalleryViewModel.d",
+    "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetGalleryViewModel.swift.o",
+    "swiftmodule": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetGalleryViewModel~partial.swiftmodule",
+    "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetGalleryViewModel.swiftdeps",
+    "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetGalleryViewModel.dia"
+  },
   "/Users/halilbagosi/snippets/Sources/Snippets/Models/Collection.swift": {
     "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Collection.d",
     "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Collection.swift.o",
@@ -79,6 +107,13 @@
     "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CodeView.swiftdeps",
     "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CodeView.dia"
   },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/CollectionIconView.swift": {
+    "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CollectionIconView.d",
+    "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CollectionIconView.swift.o",
+    "swiftmodule": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CollectionIconView~partial.swiftmodule",
+    "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CollectionIconView.swiftdeps",
+    "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CollectionIconView.dia"
+  },
   "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/DotGridBackground.swift": {
     "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/DotGridBackground.d",
     "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/DotGridBackground.swift.o",
@@ -107,6 +142,20 @@
     "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/LanguageBadge.swiftdeps",
     "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/LanguageBadge.dia"
   },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/MetalShatterOverlay.swift": {
+    "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterOverlay.d",
+    "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterOverlay.swift.o",
+    "swiftmodule": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterOverlay~partial.swiftmodule",
+    "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterOverlay.swiftdeps",
+    "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterOverlay.dia"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/MetalShatterRenderer.swift": {
+    "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterRenderer.d",
+    "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterRenderer.swift.o",
+    "swiftmodule": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterRenderer~partial.swiftmodule",
+    "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterRenderer.swiftdeps",
+    "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/MetalShatterRenderer.dia"
+  },
   "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SectionHeader.swift": {
     "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SectionHeader.d",
     "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SectionHeader.swift.o",
@@ -127,6 +176,13 @@
     "swiftmodule": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/StatusBar~partial.swiftmodule",
     "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/StatusBar.swiftdeps",
     "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/StatusBar.dia"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/ViewSnapshot.swift": {
+    "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ViewSnapshot.d",
+    "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ViewSnapshot.swift.o",
+    "swiftmodule": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ViewSnapshot~partial.swiftmodule",
+    "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ViewSnapshot.swiftdeps",
+    "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ViewSnapshot.dia"
   },
   "/Users/halilbagosi/snippets/Sources/Snippets/Views/ContentView.swift": {
     "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ContentView.d",

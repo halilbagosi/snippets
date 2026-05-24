@@ -58,6 +58,48 @@ enum SupportedLanguage: String, CaseIterable, Identifiable, Hashable {
         case .unknown: return "#9CA3AF"
         }
     }
+
+    var accentHexLight: String {
+        switch self {
+        case .glsl: return "#005EA8"
+        case .metal: return "#7E22CE"
+        case .hlsl: return "#0369A1"
+        case .swift: return "#9A3E00"
+        case .kotlin: return "#5B21B6"
+        case .rust: return "#92400E"
+        case .go: return "#0E7490"
+        case .python: return "#1D4ED8"
+        case .typescript: return "#1D4ED8"
+        case .javascript: return "#7A5D00"
+        case .react: return "#0072A3"
+        case .css: return "#9B1060"
+        case .html: return "#A00000"
+        case .json: return "#047857"
+        case .cpp: return "#4338CA"
+        case .unknown: return "#4B5563"
+        }
+    }
+
+    var accentHexSelectedFill: String {
+        switch self {
+        case .glsl: return "#0B63CE"
+        case .metal: return "#9333EA"
+        case .hlsl: return "#0369A1"
+        case .swift: return "#B45309"
+        case .kotlin: return "#7F5AF0"
+        case .rust: return "#B45309"
+        case .go: return "#0E7490"
+        case .python: return "#2563EB"
+        case .typescript: return "#2563EB"
+        case .javascript: return "#7A5D00"
+        case .react: return "#0072A3"
+        case .css: return "#BE185D"
+        case .html: return "#DC2626"
+        case .json: return "#047857"
+        case .cpp: return "#4F46E5"
+        case .unknown: return "#6B7280"
+        }
+    }
 }
 
 enum LanguageDetector {

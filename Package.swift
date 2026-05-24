@@ -8,7 +8,10 @@ let package = Package(
         .executableTarget(
             name: "Snippets",
             path: "Sources/Snippets",
-            resources: [.process("Resources")]
+            resources: [
+                .process("Resources"),
+                .process("Views/Components/GlassBreakShaders.metal")
+            ]
         )
     ]
 )
