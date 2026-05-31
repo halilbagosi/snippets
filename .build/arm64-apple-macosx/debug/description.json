@@ -217,6 +217,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/TrashView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/ext/Color.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/DerivedSources/resource_bundle_accessor.swift"
         },
         {
@@ -266,6 +274,8 @@
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetDetailView.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetEditorView.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetGalleryView.swift.o",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/TrashView.swift.o",
+        "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Color.swift.o",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/resource_bundle_accessor.swift.o"
       ],
       "otherArguments" : [
@@ -441,6 +451,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/TrashView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Color.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/resource_bundle_accessor.swift.o"
         },
         {
@@ -480,6 +498,8 @@
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetDetailView.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetEditorView.swift",
         "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetGalleryView.swift",
+        "/Users/halilbagosi/snippets/Sources/Snippets/Views/TrashView.swift",
+        "/Users/halilbagosi/snippets/Sources/Snippets/Views/ext/Color.swift",
         "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/DerivedSources/resource_bundle_accessor.swift"
       ],
       "tempsPath" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build",
@@ -726,6 +746,8 @@
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetDetailView.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetEditorView.swift",
       "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetGalleryView.swift",
+      "/Users/halilbagosi/snippets/Sources/Snippets/Views/TrashView.swift",
+      "/Users/halilbagosi/snippets/Sources/Snippets/Views/ext/Color.swift",
       "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/DerivedSources/resource_bundle_accessor.swift",
       "-I",
       "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Modules",
@@ -1077,6 +1099,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/TrashView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/Sources/Snippets/Views/ext/Color.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/DerivedSources/resource_bundle_accessor.swift"
         }
       ],
@@ -1112,6 +1142,10 @@
         {
           "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/CollectionIconView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Color.swift.o"
         },
         {
           "kind" : "file",
@@ -1204,6 +1238,10 @@
         {
           "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Theme.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/TrashView.swift.o"
         },
         {
           "kind" : "file",
@@ -1263,6 +1301,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Color.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/ContentView.swift.o"
         },
         {
@@ -1352,6 +1394,10 @@
         {
           "kind" : "file",
           "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Theme.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/TrashView.swift.o"
         },
         {
           "kind" : "file",

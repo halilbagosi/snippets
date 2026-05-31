@@ -478,16 +478,18 @@ struct SnippetGalleryView: View {
                         }
                     }
 
-                    FilterTag(
-                        label: selectedSearchCollections.isEmpty ? "collections:all" : "collections:\(selectedSearchCollections.count)",
-                        icon: "folder",
-                        accent: theme.textMuted,
-                        isSelected: !selectedSearchCollections.isEmpty
-                    ) {
-                        viewModel.isShowingCollectionFilter.toggle()
-                    }
-                    .popover(isPresented: $viewModel.isShowingCollectionFilter, arrowEdge: .bottom) {
-                        collectionFilterPopover
+                    if !isTrashMode {
+                        FilterTag(
+                            label: selectedSearchCollections.isEmpty ? "collections:all" : "collections:\(selectedSearchCollections.count)",
+                            icon: "folder",
+                            accent: theme.textMuted,
+                            isSelected: !selectedSearchCollections.isEmpty
+                        ) {
+                            viewModel.isShowingCollectionFilter.toggle()
+                        }
+                        .popover(isPresented: $viewModel.isShowingCollectionFilter, arrowEdge: .bottom) {
+                            collectionFilterPopover
+                        }
                     }
                     }
                 }
@@ -643,14 +645,18 @@ struct SnippetGalleryView: View {
                 }
                 ForEach(availableLanguages) { language in
                     let baseAccent = Color(hex: language.accentHex) ?? theme.accent
-                    let isReact = language.rawValue.lowercased() == "react"
-                    let accent = isReact ? baseAccent : baseAccent.saturation(1.5).brightness(0.1)
+                    let accent = baseAccent
+                        .saturation(2.0)
+                        .brightness(colorScheme == .dark ? 0.16 : 0.08)
+                    let selectedAccent = (Color(hex: language.accentHexSelectedFill) ?? accent)
+                        .saturation(1.7)
+                        .brightness(colorScheme == .dark ? 0.10 : 0.04)
                     FilterTag(
                         label: "lang:\(language.rawValue.lowercased())",
                         icon: language.symbolName,
                         accent: accent,
-                        foregroundAccent: Color(hex: language.accentHexLight) ?? theme.safeAccentText(accent),
-                        selectedFillAccent: Color(hex: language.accentHexSelectedFill) ?? accent,
+                        foregroundAccent: colorScheme == .dark ? accent : accent.blended(with: .black, ratio: 0.18),
+                        selectedFillAccent: selectedAccent,
                         isSelected: selectedLanguages.contains(language)
                     ) {
                         withAnimation(.snappy) {

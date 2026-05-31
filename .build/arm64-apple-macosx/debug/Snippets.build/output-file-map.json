@@ -212,6 +212,20 @@
     "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetGalleryView.swiftdeps",
     "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/SnippetGalleryView.dia"
   },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/TrashView.swift": {
+    "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/TrashView.d",
+    "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/TrashView.swift.o",
+    "swiftmodule": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/TrashView~partial.swiftmodule",
+    "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/TrashView.swiftdeps",
+    "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/TrashView.dia"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/ext/Color.swift": {
+    "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Color.d",
+    "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Color.swift.o",
+    "swiftmodule": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Color~partial.swiftmodule",
+    "swift-dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Color.swiftdeps",
+    "diagnostics": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/Color.dia"
+  },
   "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/DerivedSources/resource_bundle_accessor.swift": {
     "dependencies": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/resource_bundle_accessor.d",
     "object": "/Users/halilbagosi/snippets/.build/arm64-apple-macosx/debug/Snippets.build/resource_bundle_accessor.swift.o",

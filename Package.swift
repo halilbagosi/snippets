@@ -12,6 +12,10 @@ let package = Package(
                 .process("Resources"),
                 .process("Views/Components/GlassBreakShaders.metal")
             ]
+        ),
+        .testTarget(
+            name: "SnippetsTests",
+            dependencies: ["Snippets"]
         )
     ]
 )

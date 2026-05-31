@@ -147,6 +147,10 @@ struct ContentView: View {
         )
     }
 
+    private var trashedSnippetCount: Int {
+        allSnippets.filter { $0.deletedAt != nil }.count
+    }
+
     private var selectedSnippet: Snippet? {
         guard let id = selectedSnippetID else { return nil }
         return snippets.first(where: { $0.persistentModelID == id })
@@ -351,8 +355,10 @@ struct ContentView: View {
             frequentlyUsedSnippets: frequentlyUsedSnippets,
             availableLanguages: availableLanguages,
             sidebarFilteredLanguages: sidebarFilteredLanguages,
+            trashedSnippetCount: trashedSnippetCount,
             sidebarSearch: $sidebarSearch,
             selectedLanguages: $selectedLanguages,
+            selectedSearchCollections: $selectedSearchCollections,
             selectedSnippetID: $selectedSnippetID,
             sidebarSelectionContext: $sidebarSelectionContext,
             selectedCollectionID: $selectedCollectionID,
@@ -369,8 +375,7 @@ struct ContentView: View {
             onMoveSnippetToLibrary: { snippet in moveSnippetToLibrary(snippet) },
             onMoveSnippetToCollection: { snippet, collection in moveSnippet(snippet, to: collection) },
             onCopySnippetToCollection: { snippet, collection in copySnippet(snippet, to: collection) },
-            onHandleDrop: { items, collection in handleDrop(items: items, to: collection) },
-            onOpenTrash: { sidebarSelectionContext = .trash }
+            onHandleDrop: { items, collection in handleDrop(items: items, to: collection) }
         )
     }
 
@@ -400,26 +405,18 @@ struct ContentView: View {
                             languagesSection
                         }
 
-                        // Trash entry for legacy sidebar
-                        Button {
+                        sidebarRow(
+                            icon: "trash",
+                            title: "trash",
+                            count: trashedSnippetCount,
+                            isActive: sidebarSelectionContext == .trash,
+                            accent: .red
+                        ) {
                             sidebarSelectionContext = .trash
                             selectedSnippetID = nil
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "trash")
-                                    .font(Mono.font(size: 11, weight: .semibold))
-                                    .frame(width: 14)
-                                    .foregroundStyle(Color.red)
-                                Text("trash")
-                                    .font(Mono.font(size: 12, weight: .medium))
-                                    .foregroundStyle(theme.textMuted)
-                                Spacer()
-                                Text("\(allSnippets.filter { $0.deletedAt != nil }.count)")
-                                    .font(Mono.font(size: 10, weight: .semibold))
-                                    .foregroundStyle(theme.textFaint)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
+                            selectedCollectionID = nil
+                            selectedLanguages.removeAll()
+                            selectedSearchCollections.removeAll()
                         }
 
                         Spacer(minLength: 12)
@@ -523,12 +520,14 @@ struct ContentView: View {
                         icon: "square.grid.2x2",
                         title: "all snippets",
                         count: snippets.count,
-                        isActive: selectedLanguages.isEmpty && selectedSnippetID == nil && selectedCollectionID == nil,
+                        isActive: selectedLanguages.isEmpty && selectedSnippetID == nil && selectedCollectionID == nil && sidebarSelectionContext != .trash,
                         accent: theme.accent
                     ) {
                         selectedLanguages.removeAll()
+                        selectedSearchCollections.removeAll()
                         selectedSnippetID = nil
                         selectedCollectionID = nil
+                        sidebarSelectionContext = .allSnippets
                     }
                     .dropDestination(for: String.self) { items, _ in
                         return handleDrop(items: items, to: nil)
@@ -592,6 +591,7 @@ struct ContentView: View {
                         }
                         selectedSnippetID = nil
                         selectedCollectionID = nil
+                        sidebarSelectionContext = .allSnippets
                     }
                 }
                 if sidebarFilteredLanguages.isEmpty && !sidebarSearch.isEmpty {
@@ -687,9 +687,17 @@ struct ContentView: View {
     @ViewBuilder
     private func collectionRow(for collection: SnippetCollection) -> some View {
         let accent = collection.displayColor
-        let isActive = selectedCollectionID == collection.persistentModelID && selectedSnippetID == nil
+        let isActive = selectedCollectionID == collection.persistentModelID && selectedSnippetID == nil && sidebarSelectionContext == .collection(collection.persistentModelID)
         Button {
-            selectedCollectionID = (selectedCollectionID == collection.persistentModelID) ? nil : collection.persistentModelID
+            if selectedCollectionID == collection.persistentModelID && sidebarSelectionContext == .collection(collection.persistentModelID) {
+                selectedCollectionID = nil
+                sidebarSelectionContext = .allSnippets
+            } else {
+                selectedCollectionID = collection.persistentModelID
+                sidebarSelectionContext = .collection(collection.persistentModelID)
+            }
+            selectedSearchCollections.removeAll()
+            selectedLanguages.removeAll()
             selectedSnippetID = nil
         } label: {
             HStack(spacing: 8) {
@@ -934,6 +942,7 @@ struct ContentView: View {
         collection.updatedAt = .now
         try? modelContext.save()
         selectedCollectionID = collection.persistentModelID
+        sidebarSelectionContext = .collection(collection.persistentModelID)
         isLibrarySectionExpanded = true
         expandedCollections.insert(collection.persistentModelID)
     }
@@ -1028,6 +1037,9 @@ struct ContentView: View {
         if selectedCollectionID == collection.persistentModelID {
             selectedCollectionID = nil
         }
+        if sidebarSelectionContext == .collection(collection.persistentModelID) {
+            sidebarSelectionContext = .allSnippets
+        }
         modelContext.delete(collection)
         try? modelContext.save()
     }
@@ -1068,6 +1080,7 @@ private struct ModernSidebar: View {
         case language(String)
         case collection(PersistentIdentifier)
         case snippet(PersistentIdentifier, ContentView.SidebarSelectionContext)
+        case trash
     }
 
     let snippets: [Snippet]
@@ -1075,9 +1088,11 @@ private struct ModernSidebar: View {
     let frequentlyUsedSnippets: [Snippet]
     let availableLanguages: [SupportedLanguage]
     let sidebarFilteredLanguages: [SupportedLanguage]
+    let trashedSnippetCount: Int
 
     @Binding var sidebarSearch: String
     @Binding var selectedLanguages: Set<SupportedLanguage>
+    @Binding var selectedSearchCollections: Set<PersistentIdentifier>
     @Binding var selectedSnippetID: PersistentIdentifier?
     @Binding var sidebarSelectionContext: ContentView.SidebarSelectionContext?
     @Binding var selectedCollectionID: PersistentIdentifier?
@@ -1096,7 +1111,6 @@ private struct ModernSidebar: View {
     let onMoveSnippetToCollection: (Snippet, SnippetCollection) -> Void
     let onCopySnippetToCollection: (Snippet, SnippetCollection) -> Void
     let onHandleDrop: ([String], SnippetCollection?) -> Bool
-    let onOpenTrash: () -> Void
 
     private var topLevelCollections: [SnippetCollection] {
         collections.filter { $0.parent == nil }
@@ -1107,10 +1121,13 @@ private struct ModernSidebar: View {
     private var selection: Binding<Selection?> {
         Binding(
             get: {
+                if sidebarSelectionContext == .trash {
+                    return .trash
+                }
                 if let id = selectedSnippetID, let context = sidebarSelectionContext {
                     return .snippet(id, context)
                 }
-                if let id = selectedCollectionID { return .collection(id) }
+                if let id = selectedCollectionID, sidebarSelectionContext == .collection(id) { return .collection(id) }
                 if let lang = selectedLanguages.first, selectedLanguages.count == 1 { return .language(lang.rawValue) }
                 return .all
             },
@@ -1118,21 +1135,39 @@ private struct ModernSidebar: View {
                 switch newValue {
                 case .all, .none:
                     selectedLanguages.removeAll()
+                    selectedSearchCollections.removeAll()
                     selectedSnippetID = nil
                     selectedCollectionID = nil
+                    sidebarSelectionContext = .allSnippets
                 case .language(let raw):
                     if let lang = SupportedLanguage(rawValue: raw) {
                         selectedLanguages = [lang]
                     }
+                    selectedSearchCollections.removeAll()
                     selectedSnippetID = nil
                     selectedCollectionID = nil
+                    sidebarSelectionContext = .allSnippets
                 case .collection(let id):
                     selectedCollectionID = id
                     selectedLanguages.removeAll()
+                    selectedSearchCollections.removeAll()
                     selectedSnippetID = nil
+                    sidebarSelectionContext = .collection(id)
                 case .snippet(let id, let context):
                     selectedSnippetID = id
                     sidebarSelectionContext = context
+                    selectedSearchCollections.removeAll()
+                    if case .collection(let collectionID) = context {
+                        selectedCollectionID = collectionID
+                    } else {
+                        selectedCollectionID = nil
+                    }
+                case .trash:
+                    selectedLanguages.removeAll()
+                    selectedSearchCollections.removeAll()
+                    selectedSnippetID = nil
+                    selectedCollectionID = nil
+                    sidebarSelectionContext = .trash
                 }
             }
         )
@@ -1260,15 +1295,19 @@ private struct ModernSidebar: View {
             }
 
             Section {
-                Button {
-                    onOpenTrash()
-                } label: {
-                    Label {
+                Label {
+                    HStack {
                         Text("Trash")
-                    } icon: {
-                        Image(systemName: "trash")
+                        Spacer()
+                        Text("\(trashedSnippetCount)")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
                     }
+                } icon: {
+                    Image(systemName: "trash")
+                        .foregroundStyle(.red)
                 }
+                .tag(Selection.trash)
                 .foregroundStyle(.red)
             }
         }

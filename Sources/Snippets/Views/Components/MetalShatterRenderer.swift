@@ -95,17 +95,25 @@ final class MetalShatterRenderer: NSObject, MTKViewDelegate {
     }
 
     private func makeShaderLibrary() throws -> MTLLibrary {
+        #if SWIFT_PACKAGE
         if let library = try? device.makeDefaultLibrary(bundle: .module) {
             return library
         }
+        #endif
 
         if let library = device.makeDefaultLibrary() {
             return library
         }
 
+        #if SWIFT_PACKAGE
         guard let shaderURL = Bundle.module.url(forResource: "GlassBreakShaders", withExtension: "metal") else {
             throw RendererError.missingLibrary
         }
+        #else
+        guard let shaderURL = Bundle.main.url(forResource: "GlassBreakShaders", withExtension: "metal") else {
+            throw RendererError.missingLibrary
+        }
+        #endif
 
         let source = try String(contentsOf: shaderURL, encoding: .utf8)
         return try device.makeLibrary(source: source, options: nil)
