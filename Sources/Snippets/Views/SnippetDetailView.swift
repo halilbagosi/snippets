@@ -440,7 +440,7 @@ private struct LightboxVideoView: View {
     var body: some View {
         ZStack {
             Color.black
-            DetailAutoplayVideoView(fileName: fileName, videoGravity: .resizeAspect)
+            LoopingVideoPlayerView(fileName: fileName, videoGravity: .resizeAspect)
         }
         .frame(width: 800, height: 450)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -489,7 +489,7 @@ private struct VideoMediaView: View {
 
     var body: some View {
         ZStack {
-            DetailAutoplayVideoView(fileName: item.fileName, videoGravity: .resizeAspect)
+            LoopingVideoPlayerView(fileName: item.fileName, videoGravity: .resizeAspect)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -561,92 +561,6 @@ private struct HighlightedCodeView: NSViewRepresentable {
     }
 }
 
-private struct DetailAutoplayVideoView: NSViewRepresentable {
-    let fileName: String
-    var videoGravity: AVLayerVideoGravity = .resizeAspectFill
-
-    func makeNSView(context: Context) -> DetailPlayerContainerView {
-        let view = DetailPlayerContainerView()
-        view.configure(with: MediaManager.resolvedURL(for: fileName), videoGravity: videoGravity)
-        return view
-    }
-
-    func updateNSView(_ nsView: DetailPlayerContainerView, context: Context) {
-        nsView.configure(with: MediaManager.resolvedURL(for: fileName), videoGravity: videoGravity)
-    }
-
-    static func dismantleNSView(_ nsView: DetailPlayerContainerView, coordinator: ()) {
-        nsView.teardown()
-    }
-}
-
-final class DetailPlayerContainerView: NSView {
-    private var player: AVPlayer?
-    private var playerLayer: AVPlayerLayer?
-    private var loopObserver: NSObjectProtocol?
-    private var currentURL: URL?
-    private var currentGravity: AVLayerVideoGravity = .resizeAspectFill
-
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        wantsLayer = true
-        layer?.backgroundColor = NSColor.black.cgColor
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        wantsLayer = true
-        layer?.backgroundColor = NSColor.black.cgColor
-    }
-
-    func configure(with url: URL, videoGravity: AVLayerVideoGravity = .resizeAspectFill) {
-        if currentURL == url, currentGravity == videoGravity, player != nil { return }
-        teardown()
-        currentURL = url
-        currentGravity = videoGravity
-
-        let newPlayer = AVPlayer(url: url)
-        newPlayer.isMuted = true
-        newPlayer.actionAtItemEnd = .none
-
-        let newLayer = AVPlayerLayer(player: newPlayer)
-        newLayer.videoGravity = videoGravity
-        newLayer.frame = bounds
-        layer?.addSublayer(newLayer)
-
-        loopObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: newPlayer.currentItem,
-            queue: .main
-        ) { [weak newPlayer] _ in
-            newPlayer?.seek(to: .zero)
-            newPlayer?.play()
-        }
-
-        newPlayer.play()
-
-        player = newPlayer
-        playerLayer = newLayer
-    }
-
-    func teardown() {
-        player?.pause()
-        if let loopObserver {
-            NotificationCenter.default.removeObserver(loopObserver)
-        }
-        loopObserver = nil
-        playerLayer?.removeFromSuperlayer()
-        playerLayer = nil
-        player = nil
-        currentURL = nil
-        currentGravity = .resizeAspectFill
-    }
-
-    override func layout() {
-        super.layout()
-        playerLayer?.frame = bounds
-    }
-}
 #else
 private struct HighlightedCodeView: View {
     let code: String
@@ -656,15 +570,6 @@ private struct HighlightedCodeView: View {
 
     var body: some View {
         CodeView(code: code, showLineNumbers: true, fontSize: fontSize)
-    }
-}
-
-private struct DetailAutoplayVideoView: View {
-    let fileName: String
-    var body: some View {
-        Image(systemName: "play.rectangle.fill")
-            .font(.system(size: 32))
-            .foregroundStyle(.secondary)
     }
 }
 #endif

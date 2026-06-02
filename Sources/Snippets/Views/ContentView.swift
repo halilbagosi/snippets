@@ -41,7 +41,7 @@ struct ContentView: View {
     @State private var isAllSnippetsExpanded: Bool = false
     @State private var expandedCollections: Set<PersistentIdentifier> = []
     @State private var lastDeletedSnippet: DeletedSnippetSnapshot? = nil
-    
+
 
     private struct DeletedMediaSnapshot {
         let fileName: String
@@ -66,16 +66,18 @@ struct ContentView: View {
         collections.filter { $0.parent == nil }
     }
 
-    private var collectionNameMatches: [SnippetCollection] {
-        let needle = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !needle.isEmpty else { return [] }
-        return collections.filter { $0.name.lowercased().contains(needle) }
+    private var trimmedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var baseFilteredSnippets: [Snippet] {
         snippets.filter { snippet in
             if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
-            
+
+            let belongsDirectlyToCollection = { (colID: PersistentIdentifier) -> Bool in
+                snippet.collections.contains(where: { $0.persistentModelID == colID })
+            }
+
             let belongsToCollection = { (colID: PersistentIdentifier) -> Bool in
                 if let collection = collections.first(where: { $0.persistentModelID == colID }) {
                     let allowedIDs = collection.allDescendantIDs
@@ -85,43 +87,69 @@ struct ContentView: View {
             }
 
             if let selectedCollectionID {
-                if !belongsToCollection(selectedCollectionID) { return false }
+                if !belongsDirectlyToCollection(selectedCollectionID) { return false }
             }
-            
+
             if !selectedSearchCollections.isEmpty {
                 if !selectedSearchCollections.contains(where: { belongsToCollection($0) }) { return false }
             }
-            
+
             return true
         }
     }
 
-    private var snippetsInCollectionSearchSection: [Snippet] {
-        guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
-        var matchedIDs = Set<PersistentIdentifier>()
-        for col in collectionNameMatches {
-            matchedIDs.formUnion(col.allDescendantIDs)
-        }
-        return baseFilteredSnippets.filter { snippet in
-            snippet.collections.contains(where: { matchedIDs.contains($0.persistentModelID) })
+    private var searchFilteredSnippets: [Snippet] {
+        snippets.filter { snippet in
+            if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
+
+            guard !selectedSearchCollections.isEmpty else { return true }
+            return selectedSearchCollections.contains { collectionID in
+                guard let collection = collections.first(where: { $0.persistentModelID == collectionID }) else { return false }
+                let allowedIDs = collection.allDescendantIDs
+                return snippet.collections.contains { allowedIDs.contains($0.persistentModelID) }
+            }
         }
     }
 
-    private var snippetsInContentSearchSection: [Snippet] {
-        guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
-        let needle = searchText.lowercased()
-        let alreadyIncluded = Set(snippetsInCollectionSearchSection.map(\.persistentModelID))
-        return baseFilteredSnippets.filter { snippet in
-            let containsText =
-                snippet.title.lowercased().contains(needle) ||
-                snippet.snippetDescription.lowercased().contains(needle) ||
-                snippet.code.lowercased().contains(needle)
-            return containsText && !alreadyIncluded.contains(snippet.persistentModelID)
+    private var searchResultCollections: [SnippetCollection] {
+        let needle = trimmedSearchText.lowercased()
+        guard !needle.isEmpty else { return [] }
+
+        return collections.filter { collection in
+            collection.name.lowercased().contains(needle)
+        }
+    }
+
+    private var searchResultSnippets: [Snippet] {
+        let needle = trimmedSearchText.lowercased()
+        guard !needle.isEmpty else { return [] }
+
+        return searchFilteredSnippets.filter { snippet in
+            snippet.title.lowercased().contains(needle) ||
+            snippet.snippetDescription.lowercased().contains(needle) ||
+            snippet.code.lowercased().contains(needle) ||
+            snippet.language.lowercased().contains(needle) ||
+            snippet.collections.contains { $0.name.lowercased().contains(needle) }
         }
     }
 
     private var gallerySnippets: [Snippet] {
-        searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? baseFilteredSnippets : []
+        trimmedSearchText.isEmpty ? baseFilteredSnippets : []
+    }
+
+    private var gallerySubcollections: [SnippetCollection] {
+        guard
+            let selectedCollection,
+            sidebarSelectionContext == .collection(selectedCollection.persistentModelID),
+            trimmedSearchText.isEmpty
+        else { return [] }
+
+        return selectedCollection.children.sorted {
+            if $0.updatedAt != $1.updatedAt {
+                return $0.updatedAt > $1.updatedAt
+            }
+            return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
     }
 
     private var availableLanguages: [SupportedLanguage] {
@@ -194,14 +222,15 @@ struct ContentView: View {
                     VStack(spacing: 0) {
                         SnippetGalleryView(
                             snippets: gallerySnippets,
-                            collectionMatchSnippets: snippetsInCollectionSearchSection,
-                            contentMatchSnippets: snippetsInContentSearchSection,
-                            searchQuery: searchText.trimmingCharacters(in: .whitespacesAndNewlines),
+                            searchResultCollections: searchResultCollections,
+                            searchResultSnippets: searchResultSnippets,
+                            searchQuery: trimmedSearchText,
                             searchText: $searchText,
                             selectedLanguages: $selectedLanguages,
                             selectedSearchCollections: $selectedSearchCollections,
                             availableLanguages: availableLanguages,
                             availableCollections: collections,
+                            subcollections: gallerySubcollections,
                             onSelect: { snippet in
                                 withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
                                     selectedSnippetID = snippet.persistentModelID
@@ -212,7 +241,46 @@ struct ContentView: View {
                                     }
                                 }
                             },
+                            onSelectCollection: { collection in
+                                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                    selectedLanguages.removeAll()
+                                    selectedSearchCollections.removeAll()
+                                    selectedSnippetID = nil
+                                    selectedCollectionID = collection.persistentModelID
+                                    sidebarSelectionContext = .collection(collection.persistentModelID)
+                                }
+                            },
                             onNew: { isPresentingNew = true },
+                            onBack: selectedCollectionID != nil ? {
+                                if let id = selectedCollectionID, let collection = collections.first(where: { $0.persistentModelID == id }), let parent = collection.parent {
+                                    withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                        searchText = ""
+                                        selectedSnippetID = nil
+                                        selectedCollectionID = parent.persistentModelID
+                                        selectedSearchCollections.removeAll()
+                                        sidebarSelectionContext = .collection(parent.persistentModelID)
+                                    }
+                                } else {
+                                    withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                        searchText = ""
+                                        selectedSnippetID = nil
+                                        selectedCollectionID = nil
+                                        selectedSearchCollections.removeAll()
+                                        sidebarSelectionContext = .allSnippets
+                                    }
+                                }
+                            } : nil,
+                            onClearSelection: {
+                                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                    selectedSearchCollections.removeAll()
+                                    if selectedCollectionID == nil {
+                                        sidebarSelectionContext = .allSnippets
+                                    }
+                                }
+                            },
+                            onEditCollection: { collection in beginEditCollection(collection) },
+                            onDeleteCollection: { collection in delete(collection) },
+                            onEditSnippet: { snippet in editingSnippet = snippet },
                             onDelete: { snippet in delete(snippet) },
                             onUndoDelete: { restoreLastDeletedSnippet() }
                         )
@@ -323,7 +391,7 @@ struct ContentView: View {
                 segs.append(.init(icon: "paperclip", label: "\(snippet.mediaItems.count)"))
             }
         } else {
-            segs.append(.init(label: "\(baseFilteredSnippets.count) / \(snippets.count) snippets"))
+            segs.append(.init(label: "\(baseFilteredSnippets.count) / \(snippets.count)"))
             if !selectedLanguages.isEmpty {
                 let langsStr = selectedLanguages.map { $0.rawValue.lowercased() }.joined(separator: ", ")
                 segs.append(.init(label: "filter: \(langsStr)", tint: theme.accent))
@@ -332,7 +400,6 @@ struct ContentView: View {
                 segs.append(.init(label: "collection: \(selectedCollection.name.lowercased())", tint: selectedCollection.displayColor))
             }
         }
-        segs.append(.init(label: "utf-8"))
         return segs
     }
 
@@ -629,21 +696,20 @@ struct ContentView: View {
                 Image(systemName: icon)
                     .font(Mono.font(size: 11, weight: .semibold))
                     .frame(width: 14)
-                    .foregroundStyle(accent)
+                    .foregroundStyle(isActive ? .white : accent)
                 Text(title)
                     .font(Mono.font(size: 12, weight: isActive ? .semibold : .medium))
-                    .foregroundStyle(isActive ? theme.text : theme.textMuted)
-                    .lineLimit(1)
+                    .foregroundStyle(isActive ? .white : theme.textMuted)
                 Spacer(minLength: 4)
                 Text("\(count)")
                     .font(Mono.font(size: 10, weight: .semibold))
-                    .foregroundStyle(theme.textFaint)
+                    .foregroundStyle(isActive ? .white.opacity(0.8) : theme.textFaint)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(isActive ? accent.opacity(colorScheme == .dark ? 0.15 : 0.10) : Color.clear)
+                    .fill(isActive ? accent : Color.clear)
             }
             .contentShape(Rectangle())
         }
@@ -661,11 +727,11 @@ struct ContentView: View {
         } label: {
             HStack(spacing: 8) {
                 Circle()
-                    .fill(accent)
+                    .fill(isActive ? .white : accent)
                     .frame(width: 6, height: 6)
                 Text(snippet.title.isEmpty ? "untitled" : snippet.title)
                     .font(Mono.font(size: 11, weight: isActive ? .semibold : .medium))
-                    .foregroundStyle(isActive ? theme.text : theme.textMuted)
+                    .foregroundStyle(isActive ? .white : theme.textMuted)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Spacer(minLength: 4)
@@ -674,7 +740,7 @@ struct ContentView: View {
             .padding(.vertical, 5)
             .background {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(isActive ? accent.opacity(colorScheme == .dark ? 0.15 : 0.10) : Color.clear)
+                    .fill(isActive ? accent : Color.clear)
             }
             .contentShape(Rectangle())
         }
@@ -692,11 +758,12 @@ struct ContentView: View {
             if selectedCollectionID == collection.persistentModelID && sidebarSelectionContext == .collection(collection.persistentModelID) {
                 selectedCollectionID = nil
                 sidebarSelectionContext = .allSnippets
+                selectedSearchCollections.removeAll()
             } else {
                 selectedCollectionID = collection.persistentModelID
                 sidebarSelectionContext = .collection(collection.persistentModelID)
+                selectedSearchCollections.removeAll()
             }
-            selectedSearchCollections.removeAll()
             selectedLanguages.removeAll()
             selectedSnippetID = nil
         } label: {
@@ -704,22 +771,21 @@ struct ContentView: View {
                 Image(systemName: collection.displayIconName)
                     .font(Mono.font(size: 11, weight: .semibold))
                     .frame(width: 14)
-                    .foregroundStyle(accent)
-                
+                    .foregroundStyle(isActive ? .white : accent)
+
                 Text(collection.name.lowercased())
                     .font(Mono.font(size: 12, weight: isActive ? .semibold : .medium))
-                    .foregroundStyle(isActive ? theme.text : theme.textMuted)
-                    .lineLimit(1)
+                    .foregroundStyle(isActive ? .white : theme.textMuted)
                 Spacer(minLength: 4)
                 Text("\(collection.snippets.filter { $0.deletedAt == nil }.count)")
                     .font(Mono.font(size: 10, weight: .semibold))
-                    .foregroundStyle(theme.textFaint)
+                    .foregroundStyle(isActive ? .white.opacity(0.8) : theme.textFaint)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(isActive ? accent.opacity(colorScheme == .dark ? 0.15 : 0.10) : Color.clear)
+                    .fill(isActive ? accent : Color.clear)
             }
             .contentShape(Rectangle())
         }
@@ -985,11 +1051,11 @@ struct ContentView: View {
         } label: {
             HStack(spacing: 8) {
                 Circle()
-                    .fill(accent)
+                    .fill(isActive ? .white : accent)
                     .frame(width: 6, height: 6)
                 Text(snippet.title.isEmpty ? "untitled" : snippet.title)
                     .font(Mono.font(size: 11, weight: isActive ? .semibold : .medium))
-                    .foregroundStyle(isActive ? theme.text : theme.textMuted)
+                    .foregroundStyle(isActive ? .white : theme.textMuted)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Spacer(minLength: 4)
@@ -998,7 +1064,7 @@ struct ContentView: View {
             .padding(.vertical, 5)
             .background {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(isActive ? accent.opacity(colorScheme == .dark ? 0.15 : 0.10) : Color.clear)
+                    .fill(isActive ? accent : Color.clear)
             }
             .contentShape(Rectangle())
         }
@@ -1021,7 +1087,7 @@ struct ContentView: View {
     private func handleDrop(items: [String], to collection: SnippetCollection?) -> Bool {
         guard let first = items.first, let hash = Int(first) else { return false }
         guard let snippet = snippets.first(where: { $0.persistentModelID.hashValue == hash }) else { return false }
-        
+
         if let collection {
             moveSnippet(snippet, to: collection)
         } else {
@@ -1180,15 +1246,17 @@ private struct ModernSidebar: View {
                     ForEach(snippets) { snippet in
                         let language = SupportedLanguage(rawValue: snippet.language) ?? .unknown
                         let accent = Color(hex: language.accentHex) ?? .accentColor
+                        let isSnippetSelected = selection.wrappedValue == .snippet(snippet.persistentModelID, .allSnippets)
                         Label {
                             Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         } icon: {
                             Circle()
-                                .fill(accent)
+                                .fill(isSnippetSelected ? .white : accent)
                                 .frame(width: 8, height: 8)
                         }
+                        .foregroundStyle(isSnippetSelected ? .white : .primary)
                         .tag(Selection.snippet(snippet.persistentModelID, .allSnippets))
                         .draggable(String(snippet.persistentModelID.hashValue))
                         .contextMenu {
@@ -1208,17 +1276,20 @@ private struct ModernSidebar: View {
                         }
                     }
                 } label: {
+                    let isAllSelected = selection.wrappedValue == .all
                     Label {
                         HStack {
                             Text("All snippets")
                             Spacer()
                             Text("\(snippets.count)")
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(isAllSelected ? .white.opacity(0.7) : .secondary)
                                 .monospacedDigit()
                         }
                     } icon: {
                         Image(systemName: "square.grid.2x2")
+                            .foregroundStyle(isAllSelected ? .white : .accentColor)
                     }
+                    .foregroundStyle(isAllSelected ? .white : .primary)
                 }
                 .tag(Selection.all)
                 .dropDestination(for: String.self) { items, _ in return onHandleDrop(items, nil) }
@@ -1233,15 +1304,17 @@ private struct ModernSidebar: View {
                     ForEach(frequentlyUsedSnippets) { snippet in
                         let language = SupportedLanguage(rawValue: snippet.language) ?? .unknown
                         let accent = Color(hex: language.accentHex) ?? .accentColor
+                        let isFreqSelected = selection.wrappedValue == .snippet(snippet.persistentModelID, .frequentlyUsed)
                         Label {
                             Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         } icon: {
                             Circle()
-                                .fill(accent)
+                                .fill(isFreqSelected ? .white : accent)
                                 .frame(width: 8, height: 8)
                         }
+                        .foregroundStyle(isFreqSelected ? .white : .primary)
                         .tag(Selection.snippet(snippet.persistentModelID, .frequentlyUsed))
                         .contextMenu {
                             Button { onEditSnippet(snippet) } label: {
@@ -1271,18 +1344,20 @@ private struct ModernSidebar: View {
                     ForEach(sidebarFilteredLanguages) { language in
                         let count = snippets.filter { $0.language == language.rawValue }.count
                         let accent = Color(hex: language.accentHex) ?? .accentColor
+                        let isLangSelected = selection.wrappedValue == .language(language.rawValue)
                         Label {
                             HStack {
                                 Text(language.rawValue)
                                 Spacer()
                                 Text("\(count)")
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(isLangSelected ? .white.opacity(0.7) : .secondary)
                                     .monospacedDigit()
                             }
                         } icon: {
                             Image(systemName: language.symbolName)
-                                .foregroundStyle(accent)
+                                .foregroundStyle(isLangSelected ? .white : accent)
                         }
+                        .foregroundStyle(isLangSelected ? .white : .primary)
                         .tag(Selection.language(language.rawValue))
                     }
 
@@ -1305,10 +1380,10 @@ private struct ModernSidebar: View {
                     }
                 } icon: {
                     Image(systemName: "trash")
-                        .foregroundStyle(.red)
+                        .foregroundStyle(selection.wrappedValue == .trash ? .white : .red)
                 }
                 .tag(Selection.trash)
-                .foregroundStyle(.red)
+                .foregroundStyle(selection.wrappedValue == .trash ? .white : .red)
             }
         }
         .listStyle(.sidebar)
@@ -1324,7 +1399,7 @@ private struct ModernSidebar: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 7)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.glassProminent)
             .tint(theme.accent)
             .controlSize(.large)
             .clipShape(Capsule(style: .continuous))
@@ -1346,15 +1421,17 @@ private struct ModernSidebar: View {
             ForEach(collection.snippets.filter { $0.deletedAt == nil }) { snippet in
                 let language = SupportedLanguage(rawValue: snippet.language) ?? .unknown
                 let accent = Color(hex: language.accentHex) ?? .accentColor
+                let isCollSnippetSelected = selection.wrappedValue == .snippet(snippet.persistentModelID, .collection(collection.persistentModelID))
                 Label {
                     Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 } icon: {
                     Circle()
-                        .fill(accent)
+                        .fill(isCollSnippetSelected ? .white : accent)
                         .frame(width: 8, height: 8)
                 }
+                .foregroundStyle(isCollSnippetSelected ? .white : .primary)
                 .tag(Selection.snippet(snippet.persistentModelID, .collection(collection.persistentModelID)))
                 .draggable(String(snippet.persistentModelID.hashValue))
                 .contextMenu {
@@ -1374,18 +1451,20 @@ private struct ModernSidebar: View {
                 }
             }
         } label: {
+            let isCollSelected = selection.wrappedValue == .collection(collection.persistentModelID)
             Label {
                 HStack {
                     Text(collection.name)
                     Spacer()
                     Text("\(collection.snippets.filter { $0.deletedAt == nil }.count)")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(isCollSelected ? .white.opacity(0.7) : .secondary)
                         .monospacedDigit()
                 }
             } icon: {
                 Image(systemName: collection.displayIconName)
-                    .foregroundStyle(collection.displayColor)
+                    .foregroundStyle(isCollSelected ? .white : collection.displayColor)
             }
+            .foregroundStyle(isCollSelected ? .white : .primary)
         }
         .tag(Selection.collection(collection.persistentModelID))
         .contextMenu {
@@ -1396,20 +1475,61 @@ private struct ModernSidebar: View {
     }
 }
 
+private struct LiquidGlassToggle: View {
+    @Binding var isOn: Bool
+    var tint: Color
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        ZStack {
+            Capsule()
+                .fill(isOn ? tint.opacity(colorScheme == .dark ? 0.3 : 0.2) : Color.black.opacity(colorScheme == .dark ? 0.3 : 0.05))
+                .overlay(
+                    Capsule()
+                        .stroke(isOn ? tint.opacity(0.5) : (colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.1)), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+
+            if isOn {
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [tint.opacity(0.5), tint.opacity(0.0)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .blur(radius: 2)
+                    .padding(1)
+            }
+
+            Circle()
+                .fill(Color.white)
+                .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+                .padding(2)
+                .offset(x: isOn ? 10 : -10)
+        }
+        .frame(width: 44, height: 24)
+        .onTapGesture {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                isOn.toggle()
+            }
+        }
+    }
+}
+
 private struct CollectionEditorSheet: View {
     @Environment(\.colorScheme) private var colorScheme
 
     private struct SymbolSection: Identifiable {
         let title: String
         let symbols: [String]
-
         var id: String { title }
     }
 
     private struct ColorChoice: Identifiable {
         let name: String
         let hex: String
-
         var id: String { hex }
     }
 
@@ -1429,7 +1549,6 @@ private struct CollectionEditorSheet: View {
     @State private var symbolSearch: String = ""
     @State private var isSnippetPickerExpanded: Bool = false
 
-    private let symbolColumns = Array(repeating: GridItem(.flexible(minimum: 42, maximum: 56), spacing: 18), count: 7)
     private let palette: [ColorChoice] = [
         .init(name: "Red", hex: "#FF453A"),
         .init(name: "Orange", hex: "#FF9F0A"),
@@ -1440,6 +1559,7 @@ private struct CollectionEditorSheet: View {
         .init(name: "Pink", hex: "#FF375F"),
         .init(name: "Gray", hex: "#8E8E93")
     ]
+
     private let symbolSections: [SymbolSection] = [
         .init(title: "Code", symbols: [
             "curlybraces", "terminal", "chevron.left.forwardslash.chevron.right", "command",
@@ -1474,29 +1594,12 @@ private struct CollectionEditorSheet: View {
 
     private var theme: Theme { Theme.current(colorScheme) }
 
-    private var trimmedName: String {
-        collectionName.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var trimmedIconName: String {
-        collectionIconName.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var isSymbolValid: Bool {
-        SnippetCollection.isValidSFSymbolName(trimmedIconName)
-    }
-
-    private var previewIconName: String {
-        isSymbolValid ? trimmedIconName : SnippetCollection.defaultIconName
-    }
-
-    private var canSave: Bool {
-        !trimmedName.isEmpty && isSymbolValid
-    }
-
-    private var selectedColorHex: String {
-        collectionColor.hexString(fallback: SnippetCollection.defaultColorHex).lowercased()
-    }
+    private var trimmedName: String { collectionName.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var trimmedIconName: String { collectionIconName.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var isSymbolValid: Bool { SnippetCollection.isValidSFSymbolName(trimmedIconName) }
+    private var previewIconName: String { isSymbolValid ? trimmedIconName : SnippetCollection.defaultIconName }
+    private var canSave: Bool { !trimmedName.isEmpty && isSymbolValid }
+    private var selectedColorHex: String { collectionColor.hexString(fallback: SnippetCollection.defaultColorHex).lowercased() }
 
     private var displayedSymbolSections: [SymbolSection] {
         let needle = symbolSearch.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -1517,18 +1620,24 @@ private struct CollectionEditorSheet: View {
                     VStack(alignment: .leading, spacing: 20) {
                         previewHeader
                         colorStrip
-                        Divider()
+
                         subcollectionToggleSection
-                        Divider()
                         symbolBrowser
-                        Divider()
                         snippetMembershipSection
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 18)
-                    .padding(.bottom, 22)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 24)
+                    .padding(.bottom, 32)
                 }
             }
+            .background(
+                ZStack {
+                    theme.canvasDeep.ignoresSafeArea()
+                    DotGridBackground(gradientPalette: [collectionColor], lightModeStrength: 0.5)
+                        .opacity(0.15)
+                        .ignoresSafeArea()
+                }
+            )
             .navigationTitle(title)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -1540,50 +1649,55 @@ private struct CollectionEditorSheet: View {
                 }
             }
         }
-        .frame(minWidth: 620, minHeight: 740)
+        .frame(width: 440, height: 600)
     }
 
     private var previewHeader: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 12) {
             CollectionIconView(
                 iconName: previewIconName,
                 color: collectionColor,
-                size: 68,
+                size: 52,
                 isSelected: true
             )
-            .frame(height: 82)
+            .frame(height: 60)
 
             TextField("Collection name", text: $collectionName)
                 .textFieldStyle(.plain)
-                .font(.system(size: 24, weight: .bold))
+                .font(.system(size: 20, weight: .bold))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(theme.text)
-                .frame(maxWidth: 340)
+                .frame(maxWidth: 260)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(theme.surface.opacity(0.5))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(theme.border, lineWidth: 1))
+                )
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 8)
+        .padding(.top, 4)
     }
 
     private var colorStrip: some View {
-        HStack(spacing: 16) {
-            Image(systemName: "tag")
-                .font(.system(size: 25, weight: .medium))
-                .foregroundStyle(theme.textFaint)
-                .frame(width: 30)
-
+        HStack(spacing: 12) {
             ForEach(palette) { choice in
                 Button {
-                    collectionColor = Color(hex: choice.hex) ?? collectionColor
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        collectionColor = Color(hex: choice.hex) ?? collectionColor
+                    }
                 } label: {
                     let isSelected = selectedColorHex == choice.hex.lowercased()
                     Circle()
                         .fill(Color(hex: choice.hex) ?? theme.accent)
-                        .frame(width: 40, height: 40)
+                        .frame(width: 26, height: 26)
                         .overlay {
                             Circle()
-                                .strokeBorder(isSelected ? .white.opacity(0.92) : .black.opacity(0.14), lineWidth: isSelected ? 3 : 1)
+                                .strokeBorder(isSelected ? .white : .clear, lineWidth: 2)
                         }
-                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.34 : 0.14), radius: 6, x: 0, y: 3)
+                        .shadow(color: isSelected ? (Color(hex: choice.hex) ?? theme.accent).opacity(0.4) : .clear, radius: 4, x: 0, y: 2)
+                        .scaleEffect(isSelected ? 1.15 : 1.0)
                 }
                 .buttonStyle(.plain)
                 .help(choice.name)
@@ -1591,33 +1705,39 @@ private struct CollectionEditorSheet: View {
 
             ZStack {
                 Circle()
-                    .fill(collectionColor.opacity(0.34))
-                    .frame(width: 40, height: 40)
-                    .overlay {
-                        Circle()
-                            .strokeBorder(theme.borderStrong, lineWidth: 1)
-                    }
+                    .fill(theme.surface)
+                    .frame(width: 26, height: 26)
+                    .overlay(Circle().strokeBorder(theme.borderStrong, lineWidth: 1))
+
                 Image(systemName: "plus")
-                    .font(.system(size: 23, weight: .semibold))
-                    .foregroundStyle(collectionColor)
-                    .allowsHitTesting(false)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(theme.textMuted)
+
                 ColorPicker("", selection: $collectionColor, supportsOpacity: false)
                     .labelsHidden()
-                    .frame(width: 40, height: 40)
-                    .opacity(0.02)
+                    .frame(width: 26, height: 26)
+                    .opacity(0.015)
             }
             .help("Custom color")
         }
         .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(
+            Capsule()
+                .fill(theme.surface.opacity(0.6))
+                .overlay(Capsule().stroke(theme.border, lineWidth: 1))
+        )
     }
 
     private var symbolBrowser: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(theme.textFaint)
+                    .font(.system(size: 13))
                 TextField("Search SF Symbols", text: $symbolSearch)
                     .textFieldStyle(.plain)
+                    .font(.system(size: 13))
                 if !symbolSearch.isEmpty {
                     Button {
                         symbolSearch = ""
@@ -1628,38 +1748,45 @@ private struct CollectionEditorSheet: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
             .background {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(theme.surface)
                     .overlay {
-                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .strokeBorder(theme.border, lineWidth: 1)
                     }
             }
 
             ForEach(displayedSymbolSections) { section in
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
                     Text(section.title)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(theme.text)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(theme.textMuted)
 
-                    LazyVGrid(columns: symbolColumns, spacing: 16) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.adaptive(minimum: 30, maximum: 38), spacing: 8), count: 8), spacing: 8) {
                         ForEach(section.symbols, id: \.self) { symbolName in
                             symbolButton(symbolName)
                         }
                     }
                 }
+                .padding(.top, 4)
             }
 
             if displayedSymbolSections.isEmpty {
                 Text("No matching symbols")
-                    .font(.callout)
+                    .font(.system(size: 13))
                     .foregroundStyle(theme.textMuted)
-                    .frame(maxWidth: .infinity, minHeight: 90)
+                    .frame(maxWidth: .infinity, minHeight: 60)
             }
         }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(theme.surface.opacity(0.4))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(theme.border, lineWidth: 1))
+        )
     }
 
     private func symbolButton(_ symbolName: String) -> some View {
@@ -1668,52 +1795,69 @@ private struct CollectionEditorSheet: View {
         } label: {
             let isSelected = previewIconName == symbolName
             Image(systemName: symbolName)
-                .font(.system(size: 24, weight: .semibold))
+                .font(.system(size: 14, weight: .medium))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(isSelected ? .white : theme.textMuted)
-                .frame(width: 44, height: 44)
+                .frame(width: 32, height: 32)
                 .background {
                     Circle()
-                        .fill(isSelected ? collectionColor : Color.clear)
+                        .fill(isSelected ? collectionColor : theme.surface.opacity(0.5))
                 }
                 .overlay {
                     Circle()
-                        .strokeBorder(isSelected ? collectionColor.opacity(0.55) : Color.clear, lineWidth: 1)
+                        .strokeBorder(isSelected ? collectionColor.opacity(0.8) : theme.border.opacity(0.5), lineWidth: 1)
                 }
+                .shadow(color: isSelected ? collectionColor.opacity(0.4) : .clear, radius: 4, x: 0, y: 2)
         }
         .buttonStyle(.plain)
         .help(symbolName)
     }
 
     private var subcollectionToggleSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Toggle("Sub-Collection", isOn: $isSubcollection)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(theme.text)
-                .tint(theme.accent)
-            
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Sub-Collection")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(theme.text)
+                Spacer()
+                LiquidGlassToggle(isOn: $isSubcollection, tint: collectionColor)
+            }
+
             if isSubcollection {
-                Picker("Parent", selection: $parentCollectionID) {
-                    Text("Select parent...").tag(nil as PersistentIdentifier?)
-                    ForEach(availableParentCollections) { collection in
-                        Text(collection.name).tag(collection.persistentModelID as PersistentIdentifier?)
+                HStack {
+                    Text("Parent")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(theme.textMuted)
+                    Spacer()
+                    Picker("", selection: $parentCollectionID) {
+                        Text("Select parent...").tag(nil as PersistentIdentifier?)
+                        ForEach(availableParentCollections) { collection in
+                            Text(collection.name).tag(collection.persistentModelID as PersistentIdentifier?)
+                        }
                     }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .tint(collectionColor)
+                    .frame(maxWidth: 200)
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .tint(theme.accent)
+                .padding(.top, 4)
             }
         }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(theme.surface.opacity(0.4))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(theme.border, lineWidth: 1))
+        )
     }
-    
+
     private var availableParentCollections: [SnippetCollection] {
         guard let editingID = editingCollectionID else {
             return collections
         }
-        // Exclude the collection itself and its descendants to prevent cycles
         var excludedIDs = Set([editingID])
         var queue = [editingID]
-        
+
         while !queue.isEmpty {
             let currentID = queue.removeFirst()
             if let current = collections.first(where: { $0.persistentModelID == currentID }) {
@@ -1722,7 +1866,7 @@ private struct CollectionEditorSheet: View {
                 queue.append(contentsOf: childIDs)
             }
         }
-        
+
         return collections.filter { !excludedIDs.contains($0.persistentModelID) }
     }
 
@@ -1730,14 +1874,13 @@ private struct CollectionEditorSheet: View {
         DisclosureGroup(isExpanded: $isSnippetPickerExpanded) {
             if snippets.isEmpty {
                 Text("No snippets yet")
-                    .font(.callout)
+                    .font(.system(size: 13))
                     .foregroundStyle(theme.textMuted)
                     .padding(.vertical, 8)
             } else {
-                LazyVStack(alignment: .leading, spacing: 8) {
+                LazyVStack(alignment: .leading, spacing: 6) {
                     ForEach(snippets) { snippet in
                         snippetToggleRow(snippet)
-                        Divider()
                     }
                 }
                 .padding(.top, 8)
@@ -1745,30 +1888,64 @@ private struct CollectionEditorSheet: View {
         } label: {
             HStack {
                 Text("Snippets")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(theme.text)
                 Spacer()
                 Text("\(selectedSnippetIDs.count)")
-                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(theme.textMuted)
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(collectionColor))
             }
         }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(theme.surface.opacity(0.4))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(theme.border, lineWidth: 1))
+        )
+        .tint(theme.textMuted)
     }
 
     private func snippetToggleRow(_ snippet: Snippet) -> some View {
         Button {
-            if selectedSnippetIDs.contains(snippet.persistentModelID) {
-                selectedSnippetIDs.remove(snippet.persistentModelID)
-            } else {
-                selectedSnippetIDs.insert(snippet.persistentModelID)
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                if selectedSnippetIDs.contains(snippet.persistentModelID) {
+                    selectedSnippetIDs.remove(snippet.persistentModelID)
+                } else {
+                    selectedSnippetIDs.insert(snippet.persistentModelID)
+                }
             }
         } label: {
-            HStack {
-                Image(systemName: selectedSnippetIDs.contains(snippet.persistentModelID) ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(selectedSnippetIDs.contains(snippet.persistentModelID) ? collectionColor : theme.textFaint)
+            let isSelected = selectedSnippetIDs.contains(snippet.persistentModelID)
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? collectionColor : theme.surface)
+                        .frame(width: 18, height: 18)
+                        .overlay(Circle().stroke(isSelected ? collectionColor : theme.borderStrong, lineWidth: 1))
+
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+
                 Text(snippet.title.isEmpty ? "untitled" : snippet.title)
+                    .font(.system(size: 13, weight: isSelected ? .medium : .regular))
+                    .foregroundStyle(isSelected ? theme.text : theme.textMuted)
                     .lineLimit(1)
+
                 Spacer()
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isSelected ? collectionColor.opacity(0.1) : Color.clear)
+            )
         }
         .buttonStyle(.plain)
     }

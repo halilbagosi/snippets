@@ -8,12 +8,9 @@ struct LanguageBadge: View {
     let language: SupportedLanguage
     var compact: Bool = false
 
-    private var accent: Color { Color(hex: language.accentHex) ?? .accentColor }
-    private var resolvedAccent: Color {
-        colorScheme == .dark
-            ? accent
-            : (Color(hex: language.accentHexLight) ?? accent)
-    }
+    private var baseAccent: Color { Color(hex: language.accentHex) ?? Theme.current(colorScheme).accent }
+    private var accent: Color { baseAccent.saturation(3.0).brightness(0.22) }
+    private var resolvedAccent: Color { accent }
 
     var body: some View {
         let theme = Theme.current(colorScheme)
@@ -30,10 +27,10 @@ struct LanguageBadge: View {
         .foregroundStyle(resolvedAccent)
         .background {
             RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .fill(accent.opacity(colorScheme == .dark ? 0.16 : 0.14))
+                .fill(accent.opacity(colorScheme == .dark ? 0.18 : 0.16))
                 .overlay {
                     RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .strokeBorder(resolvedAccent.opacity(colorScheme == .dark ? 0.32 : 0.45), lineWidth: 1)
+                        .strokeBorder(resolvedAccent.opacity(colorScheme == .dark ? 0.42 : 0.45), lineWidth: 1)
                 }
         }
         .accessibilityLabel(language.rawValue)

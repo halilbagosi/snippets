@@ -99,7 +99,7 @@ struct SnippetCard: View {
 
     var body: some View {
         let theme = Theme.current(colorScheme)
-        let languageAccent = theme.accentColor(for: language)
+        let languageAccent = theme.accentColor(for: language).saturation(10)
         let effectiveIsHovered = isSelectionMode ? false : isHovered
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
@@ -266,7 +266,7 @@ struct SnippetCard: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .scaleEffect(effectiveIsHovered ? 1.01 : 1.0)
         .rotation3DEffect(
             .degrees(isHovered ? -Double(hoverVector.dy) * 5.5 : 0),
@@ -330,7 +330,7 @@ struct SnippetCard: View {
     }
 }
 
-private struct CardHoverShaderOverlay: View {
+struct CardHoverShaderOverlay: View {
     let accent: Color
     let isActive: Bool
     let hoverPoint: UnitPoint
@@ -384,7 +384,7 @@ private struct CardHoverShaderOverlay: View {
     }
 }
 
-private struct CardPreviewShaderOverlay: View {
+struct CardPreviewShaderOverlay: View {
     let accent: Color
     let isActive: Bool
     let hoverPoint: UnitPoint
@@ -571,109 +571,8 @@ private struct CardVideoPreview: View {
 
     var body: some View {
         ZStack {
-            AutoplayingVideoView(fileName: item.fileName, videoGravity: .resizeAspect)
+            LoopingVideoPlayerView(fileName: item.fileName, videoGravity: .resizeAspect)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
-
-#if canImport(AppKit)
-private struct AutoplayingVideoView: NSViewRepresentable {
-    let fileName: String
-    var videoGravity: AVLayerVideoGravity = .resizeAspectFill
-
-    func makeNSView(context: Context) -> PlayerContainerView {
-        let view = PlayerContainerView()
-        let url = MediaManager.resolvedURL(for: fileName)
-        view.configure(with: url, videoGravity: videoGravity)
-        return view
-    }
-
-    func updateNSView(_ nsView: PlayerContainerView, context: Context) {
-        let url = MediaManager.resolvedURL(for: fileName)
-        nsView.configure(with: url, videoGravity: videoGravity)
-    }
-
-    static func dismantleNSView(_ nsView: PlayerContainerView, coordinator: ()) {
-        nsView.teardown()
-    }
-}
-
-final class PlayerContainerView: NSView {
-    private var player: AVPlayer?
-    private var playerLayer: AVPlayerLayer?
-    private var loopObserver: NSObjectProtocol?
-    private var currentURL: URL?
-    private var currentGravity: AVLayerVideoGravity = .resizeAspectFill
-
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        wantsLayer = true
-        layer?.backgroundColor = NSColor.black.cgColor
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        wantsLayer = true
-        layer?.backgroundColor = NSColor.black.cgColor
-    }
-
-    func configure(with url: URL, videoGravity: AVLayerVideoGravity = .resizeAspectFill) {
-        if currentURL == url, currentGravity == videoGravity, player != nil { return }
-        teardown()
-        currentURL = url
-        currentGravity = videoGravity
-
-        let newPlayer = AVPlayer(url: url)
-        newPlayer.isMuted = true
-        newPlayer.actionAtItemEnd = .none
-
-        let newLayer = AVPlayerLayer(player: newPlayer)
-        newLayer.videoGravity = videoGravity
-        newLayer.frame = bounds
-        layer?.addSublayer(newLayer)
-
-        loopObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: newPlayer.currentItem,
-            queue: .main
-        ) { [weak newPlayer] _ in
-            newPlayer?.seek(to: .zero)
-            newPlayer?.play()
-        }
-
-        newPlayer.play()
-
-        player = newPlayer
-        playerLayer = newLayer
-    }
-
-    func teardown() {
-        player?.pause()
-        if let loopObserver {
-            NotificationCenter.default.removeObserver(loopObserver)
-        }
-        loopObserver = nil
-        playerLayer?.removeFromSuperlayer()
-        playerLayer = nil
-        player = nil
-        currentURL = nil
-        currentGravity = .resizeAspectFill
-    }
-
-    override func layout() {
-        super.layout()
-        playerLayer?.frame = bounds
-    }
-}
-#else
-private struct AutoplayingVideoView: View {
-    let fileName: String
-    var videoGravity: AVLayerVideoGravity = .resizeAspectFill
-    var body: some View {
-        Image(systemName: "play.rectangle.fill")
-            .font(.system(size: 28))
-            .foregroundStyle(.secondary)
-    }
-}
-#endif

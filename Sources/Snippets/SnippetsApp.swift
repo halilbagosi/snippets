@@ -14,9 +14,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        configureWindows(NSApp.windows)
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(50))
             NSApp.activate(ignoringOtherApps: true)
+            configureWindows(NSApp.windows)
             for window in NSApp.windows {
                 window.makeKeyAndOrderFront(nil)
             }
@@ -24,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        configureWindows(sender.windows)
         for window in sender.windows {
             window.makeKeyAndOrderFront(nil)
         }
@@ -32,6 +35,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+
+    private func configureWindows(_ windows: [NSWindow]) {
+        for window in windows {
+            window.styleMask.formUnion([.titled, .closable, .miniaturizable, .resizable])
+            window.collectionBehavior.insert(.fullScreenPrimary)
+            window.collectionBehavior.insert(.managed)
+            window.minSize = NSSize(width: 1100, height: 720)
+            window.standardWindowButton(.zoomButton)?.isEnabled = true
+        }
+    }
 }
 #endif
 
@@ -67,6 +80,12 @@ struct SnippetsApp: App {
         .commands {
             CommandGroup(replacing: .newItem) { }
             CommandGroup(replacing: .help) { }
+            CommandGroup(after: .windowArrangement) {
+                Button("Toggle Full Screen") {
+                    NSApp.keyWindow?.toggleFullScreen(nil)
+                }
+                .keyboardShortcut("f", modifiers: [.control, .command])
+            }
         }
         #endif
         .modelContainer(sharedModelContainer)

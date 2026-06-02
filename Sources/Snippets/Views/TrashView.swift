@@ -42,21 +42,22 @@ struct TrashView: View {
                     Color(hex: "#8E0011") ?? .red,
                     Color(hex: "#5C0008") ?? .red
                 ],
-                lightModeStrength: 0.94
+                lightModeStrength: 0.55
             )
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 SnippetGalleryView(
                     snippets: trimmedSearchText.isEmpty ? trashedSnippets : [],
-                    collectionMatchSnippets: [],
-                    contentMatchSnippets: trimmedSearchText.isEmpty ? [] : matchingTrashedSnippets,
+                    searchResultCollections: [],
+                    searchResultSnippets: trimmedSearchText.isEmpty ? [] : matchingTrashedSnippets,
                     searchQuery: trimmedSearchText,
                     searchText: $searchText,
                     selectedLanguages: $selectedLanguages,
                     selectedSearchCollections: $selectedSearchCollections,
                     availableLanguages: [],
                     availableCollections: [],
+                    subcollections: [],
                     onSelect: { _ in },
                     onNew: nil,
                     onDelete: nil,
@@ -76,7 +77,6 @@ struct TrashView: View {
             .init(icon: "trash", label: "trash"),
             .init(label: "\(trashedSnippets.count) items"),
             .init(label: "auto-delete in 30 days", tint: .red),
-            .init(label: "utf-8")
         ]
     }
 

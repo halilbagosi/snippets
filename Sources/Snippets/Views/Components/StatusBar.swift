@@ -27,18 +27,18 @@ struct StatusBar: View {
                 }
             }
             Spacer(minLength: 0)
-            HStack(spacing: 6) {
-                Circle().fill(theme.accent).frame(width: 7, height: 7)
-                Text("ready")
-                    .font(Mono.font(size: 11, weight: .medium))
-                    .foregroundStyle(theme.textMuted)
-            }
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 8)
         .background {
             Rectangle()
-                .fill(theme.surfaceElevated)
+                .fill(.clear)
+                .liquidGlassSurface(
+                    in: Rectangle(),
+                    borderOpacity: colorScheme == .dark ? 0.08 : 0.20,
+                    shadowRadius: 0,
+                    shadowY: 0
+                )
                 .overlay(alignment: .top) {
                     Rectangle().fill(theme.border).frame(height: 1)
                 }

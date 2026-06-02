@@ -12,31 +12,35 @@ final class SnippetGalleryViewModel {
 
     func hasAnyResults(
         snippets: [Snippet],
-        collectionMatchSnippets: [Snippet],
-        contentMatchSnippets: [Snippet]
+        searchResultCollections: [SnippetCollection],
+        searchResultSnippets: [Snippet],
+        searchQuery: String
     ) -> Bool {
-        !snippets.isEmpty || !collectionMatchSnippets.isEmpty || !contentMatchSnippets.isEmpty
+        if searchQuery.isEmpty {
+            return !snippets.isEmpty
+        }
+
+        return !searchResultCollections.isEmpty || !searchResultSnippets.isEmpty
     }
 
     func visibleSnippetIDs(
         snippets: [Snippet],
-        collectionMatchSnippets: [Snippet],
-        contentMatchSnippets: [Snippet]
+        searchResultSnippets: [Snippet],
+        searchQuery: String
     ) -> Set<PersistentIdentifier> {
-        Set((snippets + collectionMatchSnippets + contentMatchSnippets).map(\.persistentModelID))
+        Set((searchQuery.isEmpty ? snippets : searchResultSnippets).map(\.persistentModelID))
     }
 
     func displaySnippets(
         snippets: [Snippet],
-        collectionMatchSnippets: [Snippet],
-        contentMatchSnippets: [Snippet],
+        searchResultSnippets: [Snippet],
         searchQuery: String
     ) -> [Snippet] {
         if searchQuery.isEmpty {
             return snippets
         }
 
-        return collectionMatchSnippets + contentMatchSnippets
+        return searchResultSnippets
     }
 
     func ordered(_ snippets: [Snippet]) -> [Snippet] {

@@ -10,7 +10,7 @@ let package = Package(
             path: "Sources/Snippets",
             resources: [
                 .process("Resources"),
-                .process("Views/Components/GlassBreakShaders.metal")
+                .process("Views/Components/GenieShaders.metal")
             ]
         ),
         .testTarget(
