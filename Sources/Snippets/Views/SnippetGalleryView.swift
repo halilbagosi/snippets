@@ -620,8 +620,7 @@ struct SnippetGalleryView: View {
                                 Label("Edit snippet", systemImage: "pencil")
                             }
                             Button(role: .destructive) {
-                                draggingSnippetID = snippet.persistentModelID
-                                minimize(snippet, from: CGPoint(x: trashFrame.midX, y: trashFrame.midY))
+                                onDelete?(snippet)
                             } label: {
                                 Label("Delete snippet", systemImage: "trash")
                             }

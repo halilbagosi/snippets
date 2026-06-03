@@ -56,11 +56,17 @@ struct SnippetCard: View {
     private func performCopy() {
         Clipboard.copy(snippet.code)
         snippet.copyCount += 1
-        didCopy = true
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            didCopy = true
+        }
         copyResetTask?.cancel()
         copyResetTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 1_400_000_000)
-            if !Task.isCancelled { didCopy = false }
+            if !Task.isCancelled {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    didCopy = false
+                }
+            }
         }
     }
 
@@ -70,23 +76,26 @@ struct SnippetCard: View {
             HStack(spacing: 5) {
                 Image(systemName: didCopy ? "checkmark" : "doc.on.doc")
                     .font(Mono.font(size: 10, weight: .bold))
+                    .contentTransition(.symbolEffect(.replace))
                 Text(didCopy ? "copied" : "code")
                     .font(Mono.font(size: 10, weight: .semibold))
             }
             .foregroundStyle(didCopy ? languageAccent : theme.textMuted)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background {
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(didCopy ? languageAccent.opacity(colorScheme == .dark ? 0.20 : 0.15) : theme.surface.opacity(0.85))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .strokeBorder(didCopy ? languageAccent.opacity(0.48) : theme.border, lineWidth: 1)
-                    }
-            }
+            .background(Color.clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .background {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(didCopy ? languageAccent.opacity(colorScheme == .dark ? 0.20 : 0.15) : .white.opacity(colorScheme == .dark ? 0.05 : 0.4))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .strokeBorder(.white.opacity(colorScheme == .dark ? 0.12 : 0.35), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(colorScheme == .dark ? 0.15 : 0.05), radius: 2, y: 1)
+        }
         .help("Copy snippet code")
         .accessibilityLabel(didCopy ? "Copied" : "Copy code")
     }
@@ -230,6 +239,19 @@ struct SnippetCard: View {
                         .opacity(isHovered ? 1 : 0)
                         .animation(.easeOut(duration: 0.12), value: isHovered)
                 }
+                .overlay {
+                    CardHoverShaderOverlay(
+                        accent: languageAccent,
+                        isActive: effectiveIsHovered,
+                        hoverPoint: hoverUnitPoint,
+                        hoverVector: hoverVector,
+                        colorScheme: colorScheme
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .opacity(effectiveIsHovered ? 1 : 0)
+                    .animation(.easeOut(duration: 0.12), value: effectiveIsHovered)
+                    .allowsHitTesting(false)
+                }
         }
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -237,19 +259,6 @@ struct SnippetCard: View {
                     isSelected ? languageAccent.opacity(0.85) : .white.opacity(colorScheme == .dark ? 0.14 : 0.40),
                     lineWidth: isSelected ? 1.35 : 1
                 )
-        }
-        .overlay {
-            CardHoverShaderOverlay(
-                accent: languageAccent,
-                isActive: effectiveIsHovered,
-                hoverPoint: hoverUnitPoint,
-                hoverVector: hoverVector,
-                colorScheme: colorScheme
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .opacity(effectiveIsHovered ? 1 : 0)
-            .animation(.easeOut(duration: 0.12), value: effectiveIsHovered)
-            .allowsHitTesting(false)
         }
         .background {
             GeometryReader { proxy in

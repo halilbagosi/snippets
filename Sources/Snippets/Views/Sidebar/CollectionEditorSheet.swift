@@ -222,11 +222,6 @@ struct CollectionEditorSheet: View {
                         Circle().stroke(.white.opacity(colorScheme == .dark ? 0.12 : 0.25), lineWidth: 1)
                     }
 
-                ColorPicker("Custom Color", selection: $collectionColor, supportsOpacity: false)
-                    .labelsHidden()
-                    .scaleEffect(3.0)
-                    .opacity(0.015)
-
                 Image(systemName: "plus")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.white)
@@ -234,6 +229,15 @@ struct CollectionEditorSheet: View {
                     .allowsHitTesting(false)
             }
             .frame(width: 38, height: 38)
+            .overlay {
+                ColorPicker("", selection: $collectionColor, supportsOpacity: false)
+                    .labelsHidden()
+                    .scaleEffect(5.0)
+                    .position(x: 19, y: 19)
+                    .opacity(0.015)
+            }
+            .contentShape(Circle())
+            .clipShape(Circle())
             .help("Custom color")
         }
         .frame(maxWidth: .infinity)

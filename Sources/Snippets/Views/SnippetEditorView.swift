@@ -67,7 +67,7 @@ struct SnippetEditorView: View {
                 editorStatusBar
             }
         }
-        .frame(minWidth: 820, minHeight: 660)
+        .frame(minWidth: 640, minHeight: 480)
         .onAppear {
             viewModel.load(mode: mode)
             Task { @MainActor in
@@ -104,14 +104,12 @@ struct SnippetEditorView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(theme.surface)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .strokeBorder(theme.border, lineWidth: 1)
-                    }
-            }
+            .liquidGlassSurface(
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+                tint: (Color(hex: effectiveLanguage.accentHex) ?? theme.accent).opacity(0.1),
+                shadowRadius: 4,
+                shadowY: 2
+            )
 
             Spacer(minLength: 8)
 
@@ -123,12 +121,14 @@ struct SnippetEditorView: View {
                     .foregroundStyle(theme.textMuted)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
-                    .background {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .strokeBorder(theme.border, lineWidth: 1)
-                    }
             }
             .buttonStyle(.plain)
+            .liquidGlassSurface(
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+                interactive: true,
+                shadowRadius: 4,
+                shadowY: 2
+            )
             .keyboardShortcut(.cancelAction)
 
             Button {
@@ -144,23 +144,28 @@ struct SnippetEditorView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
                 .background {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(canSave ? theme.accent : theme.inset)
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(canSave ? theme.accent : Color.clear)
                 }
             }
             .buttonStyle(.plain)
+            .liquidGlassSurface(
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+                tint: canSave ? theme.accent.opacity(0.2) : nil,
+                interactive: true,
+                shadowRadius: 4,
+                shadowY: 2
+            )
             .disabled(!canSave)
             .keyboardShortcut(.return, modifiers: .command)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background {
-            Rectangle()
-                .fill(theme.surfaceElevated)
-                .overlay(alignment: .bottom) {
-                    Rectangle().fill(theme.border).frame(height: 1)
-                }
-        }
+        .liquidGlassSurface(
+            in: UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 14, bottomTrailingRadius: 14, topTrailingRadius: 0, style: .continuous),
+            shadowRadius: 8,
+            shadowY: 4
+        )
     }
 
     private var titleSection: some View {
@@ -266,23 +271,16 @@ struct SnippetEditorView: View {
                 .foregroundStyle(Color(hex: effectiveLanguage.accentHex) ?? theme.accent)
             ))
             ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(theme.canvasDeep)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(codeFocused ? theme.accent.opacity(0.6) : theme.border, lineWidth: 1)
-                    }
-
                 CodeEditor(
                     text: $viewModel.code,
                     isFocused: $codeFocused,
                     language: effectiveLanguage,
                     theme: theme,
                     fontSize: 13,
-                    minHeight: 240
+                    minHeight: 160
                 )
                 .padding(2)
-                .frame(minHeight: 260)
+                .frame(minHeight: 180)
 
                 if viewModel.code.isEmpty && !codeFocused {
                     Text("// paste or type your code here…")
@@ -291,6 +289,20 @@ struct SnippetEditorView: View {
                         .padding(.leading, 56)
                         .padding(.top, 14)
                         .allowsHitTesting(false)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .liquidGlassSurface(
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                tint: (Color(hex: effectiveLanguage.accentHex) ?? theme.accent).opacity(0.06),
+                borderOpacity: codeFocused ? 0.45 : nil,
+                shadowRadius: 8,
+                shadowY: 4
+            )
+            .overlay {
+                if codeFocused {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(theme.accent.opacity(0.5), lineWidth: 1)
                 }
             }
         }
@@ -367,17 +379,14 @@ struct SnippetEditorView: View {
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .foregroundStyle(theme.text)
-                        .background {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(theme.surface)
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .strokeBorder(theme.border, lineWidth: 1)
-                                }
-                        }
                     }
                     .buttonStyle(.plain)
+                    .liquidGlassSurface(
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                        interactive: true,
+                        shadowRadius: 4,
+                        shadowY: 2
+                    )
 
                     if !viewModel.mediaItems.isEmpty {
                         Text("\(viewModel.mediaItems.count) attached")
@@ -411,12 +420,20 @@ struct SnippetEditorView: View {
     }
 
     private func fieldBackground(focused: Bool) -> some View {
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
-            .fill(theme.surface)
-            .overlay {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(.clear)
+                .liquidGlassSurface(
+                    in: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                    borderOpacity: focused ? 0.5 : nil,
+                    shadowRadius: focused ? 6 : 3,
+                    shadowY: focused ? 3 : 1
+                )
+            if focused {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(focused ? theme.accent.opacity(0.6) : theme.border, lineWidth: 1)
+                    .stroke(theme.accent.opacity(0.5), lineWidth: 1)
             }
+        }
     }
 
     private func save() {

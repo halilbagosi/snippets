@@ -13,7 +13,7 @@ struct SnippetDetailView: View {
     let onClose: () -> Void
 
     @State private var didCopy: Bool = false
-    @State private var showDeleteConfirmation: Bool = false
+
     @State private var lightboxMedia: MediaItem? = nil
     @State private var isCopyPressed: Bool = false
     @State private var isEditPressed: Bool = false
@@ -70,30 +70,18 @@ struct SnippetDetailView: View {
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(theme.text)
                     .frame(width: 30, height: 30)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .overlay {
-                        Circle()
-                            .strokeBorder(.white.opacity(colorScheme == .dark ? 0.22 : 0.34), lineWidth: 1)
-                    }
+                    .liquidGlassSurface(
+                        in: Circle(),
+                        shadowRadius: 12,
+                        shadowY: 6
+                    )
             }
             .buttonStyle(.plain)
-            .shadow(color: .black.opacity(colorScheme == .dark ? 0.28 : 0.12), radius: 12, x: 0, y: 6)
             .padding(.top, 14)
             .padding(.trailing, 14)
             .accessibilityLabel("Close snippet")
         }
-        .confirmationDialog(
-            "Delete this snippet?",
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Delete Snippet", role: .destructive) {
-                onDelete()
-            }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("This permanently removes the snippet and all attached media.")
-        }
+
         .sheet(isPresented: showMediaLightbox, onDismiss: { lightboxMedia = nil }) {
             if let item = lightboxMedia {
                 MediaAttachmentLightbox(item: item)
@@ -136,10 +124,16 @@ struct SnippetDetailView: View {
                 Label(didCopy ? "Copied" : "Copy Code", systemImage: didCopy ? "checkmark" : "doc.on.doc")
                     .padding(.horizontal, actionBarButtonHorizontalPadding)
                     .frame(height: actionBarButtonLabelHeight)
+                    .foregroundStyle(didCopy ? Color.blue : Color.blue.opacity(0.85))
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.regular)
-            .clipShape(Capsule())
+            .buttonStyle(.plain)
+            .liquidGlassSurface(
+                in: Capsule(),
+                tint: didCopy ? Color.blue.opacity(0.25) : Color.blue.opacity(0.12),
+                interactive: true,
+                shadowRadius: 4,
+                shadowY: 2
+            )
             .scaleEffect(isCopyPressed ? 0.95 : 1.0)
             .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isCopyPressed)
             .simultaneousGesture(pressGesture(isPressed: $isCopyPressed))
@@ -148,10 +142,15 @@ struct SnippetDetailView: View {
                 Label("Edit", systemImage: "pencil")
                     .padding(.horizontal, actionBarButtonHorizontalPadding)
                     .frame(height: actionBarButtonLabelHeight)
+                    .foregroundStyle(theme.text)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.regular)
-            .clipShape(Capsule())
+            .buttonStyle(.plain)
+            .liquidGlassSurface(
+                in: Capsule(),
+                interactive: true,
+                shadowRadius: 4,
+                shadowY: 2
+            )
             .scaleEffect(isEditPressed ? 0.95 : 1.0)
             .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isEditPressed)
             .simultaneousGesture(pressGesture(isPressed: $isEditPressed))
@@ -159,20 +158,27 @@ struct SnippetDetailView: View {
             Spacer()
 
             Button(role: .destructive) {
-                showDeleteConfirmation = true
+                onDelete()
             } label: {
                 Label("Delete", systemImage: "trash")
                     .padding(.horizontal, actionBarButtonHorizontalPadding)
                     .frame(height: actionBarButtonLabelHeight)
+                    .foregroundStyle(.red)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.regular)
-            .tint(.red)
-            .clipShape(Capsule())
+            .buttonStyle(.plain)
+            .liquidGlassSurface(
+                in: Capsule(),
+                tint: Color.red.opacity(0.12),
+                interactive: true,
+                shadowRadius: 4,
+                shadowY: 2
+            )
             .scaleEffect(isDeletePressed ? 0.95 : 1.0)
             .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isDeletePressed)
             .simultaneousGesture(pressGesture(isPressed: $isDeletePressed))
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     private func pressGesture(isPressed: Binding<Bool>) -> some Gesture {
@@ -196,14 +202,11 @@ struct SnippetDetailView: View {
                 .foregroundStyle(theme.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
-                .background {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(theme.surface)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .strokeBorder(theme.border, lineWidth: 1)
-                        }
-                }
+                .liquidGlassSurface(
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                    shadowRadius: 6,
+                    shadowY: 3
+                )
         }
     }
 
@@ -216,7 +219,14 @@ struct SnippetDetailView: View {
                 theme: theme,
                 fontSize: 13
             )
-                .frame(minHeight: 240, maxHeight: 520)
+            .frame(minHeight: 240, maxHeight: 520)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .liquidGlassSurface(
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                tint: (Color(hex: language.accentHex) ?? theme.accent).opacity(0.08),
+                shadowRadius: 10,
+                shadowY: 5
+            )
         }
     }
 
@@ -249,14 +259,11 @@ struct SnippetDetailView: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: layout.stripHeight)
-            .background {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(theme.canvasDeep)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .strokeBorder(theme.border, lineWidth: 1)
-                    }
-            }
+            .liquidGlassSurface(
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                shadowRadius: 8,
+                shadowY: 4
+            )
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
     }
@@ -284,14 +291,11 @@ struct SnippetDetailView: View {
         .font(Mono.font(size: 11, weight: .medium))
         .padding(.horizontal, 9)
         .padding(.vertical, 5)
-        .background {
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .fill(theme.surface)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .strokeBorder(theme.border, lineWidth: 1)
-                }
-        }
+        .liquidGlassSurface(
+            in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+            shadowRadius: 4,
+            shadowY: 2
+        )
     }
 }
 

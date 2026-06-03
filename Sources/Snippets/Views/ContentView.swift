@@ -50,6 +50,7 @@ struct ContentView: View {
     @State private var lastDeletedItem: DeletedItem? = nil
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @AppStorage("suppressCollectionDeleteWarning") private var suppressCollectionDeleteWarning = false
+    @AppStorage("suppressSnippetDeleteWarning") private var suppressSnippetDeleteWarning = false
 
 
     private struct DeletedMediaSnapshot {
@@ -544,6 +545,44 @@ struct ContentView: View {
     }
 
     private func delete(_ snippet: Snippet) {
+        if suppressSnippetDeleteWarning {
+            performDeleteSnippet(snippet)
+            return
+        }
+
+        #if canImport(AppKit)
+        let alert = NSAlert()
+        alert.messageText = "Delete this snippet?"
+        alert.informativeText = "This will move \"\(snippet.title.isEmpty ? "Untitled" : snippet.title)\" to the trash. You can restore it within 30 days."
+        alert.alertStyle = .warning
+
+        _ = alert.addButton(withTitle: "Delete Snippet")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons.first?.hasDestructiveAction = true
+
+        alert.showsSuppressionButton = true
+        alert.suppressionButton?.title = "Do not ask again"
+
+        let handler = { @MainActor (response: NSApplication.ModalResponse) in
+            if response == .alertFirstButtonReturn {
+                if alert.suppressionButton?.state == .on {
+                    self.suppressSnippetDeleteWarning = true
+                }
+                self.performDeleteSnippet(snippet)
+            }
+        }
+
+        if let window = NSApp.keyWindow {
+            alert.beginSheetModal(for: window, completionHandler: handler)
+        } else {
+            handler(alert.runModal())
+        }
+        #else
+        performDeleteSnippet(snippet)
+        #endif
+    }
+
+    private func performDeleteSnippet(_ snippet: Snippet) {
         lastDeletedItem = .snippet(snippet.persistentModelID)
 
         if selectedSnippetID == snippet.persistentModelID {
@@ -701,39 +740,55 @@ struct ContentView: View {
             #if canImport(AppKit)
             let alert = NSAlert()
             alert.messageText = "Delete Collection?"
-            alert.informativeText = "Deleting this collection will move it to Recently Deleted. Its snippets will be moved to All Snippets and its sub-collections will become root-level collections. You can restore it from Recently Deleted within 30 days."
+            alert.informativeText = "What would you like to do with this collection and its contents?"
             alert.alertStyle = .warning
             
-            let deleteButton = alert.addButton(withTitle: "Delete")
-            deleteButton.hasDestructiveAction = true
+            _ = alert.addButton(withTitle: "Delete Collection Only")
+            let deleteWithContentsButton = alert.addButton(withTitle: "Delete Collection & Contents")
+            deleteWithContentsButton.hasDestructiveAction = true
             alert.addButton(withTitle: "Cancel")
             
             alert.showsSuppressionButton = true
             alert.suppressionButton?.title = "Do not ask again"
             
+            let handler = { @MainActor (response: NSApplication.ModalResponse) in
+                if response == .alertFirstButtonReturn {
+                    if alert.suppressionButton?.state == .on {
+                        self.suppressCollectionDeleteWarning = true
+                    }
+                    self.performDelete(collection, permanent: permanent)
+                } else if response == .alertSecondButtonReturn {
+                    if alert.suppressionButton?.state == .on {
+                        self.suppressCollectionDeleteWarning = true
+                    }
+                    self.deleteCollectionContentsRecursively(collection, permanent: permanent)
+                    self.performDelete(collection, permanent: permanent)
+                }
+            }
+
             if let window = NSApplication.shared.windows.first(where: { $0.isKeyWindow }) {
                 alert.beginSheetModal(for: window) { sheetResponse in
-                    if sheetResponse == .alertFirstButtonReturn {
-                        if alert.suppressionButton?.state == .on {
-                            suppressCollectionDeleteWarning = true
-                        }
-                        self.performDelete(collection, permanent: permanent)
-                    }
+                    handler(sheetResponse)
                 }
                 return
             } else {
                 let response = alert.runModal()
-                if response == .alertFirstButtonReturn {
-                    if alert.suppressionButton?.state == .on {
-                        suppressCollectionDeleteWarning = true
-                    }
-                    performDelete(collection, permanent: permanent)
-                }
+                handler(response)
                 return
             }
             #endif
         }
         performDelete(collection, permanent: permanent)
+    }
+
+    private func deleteCollectionContentsRecursively(_ collection: SnippetCollection, permanent: Bool) {
+        for snippet in collection.snippets {
+            self.performDeleteSnippet(snippet)
+        }
+        for child in collection.children {
+            deleteCollectionContentsRecursively(child, permanent: permanent)
+            self.performDelete(child, permanent: permanent)
+        }
     }
 
     private func performDelete(_ collection: SnippetCollection, permanent: Bool) {
