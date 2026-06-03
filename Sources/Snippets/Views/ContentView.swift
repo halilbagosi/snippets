@@ -41,6 +41,7 @@ struct ContentView: View {
     @State private var isAllSnippetsExpanded: Bool = false
     @State private var expandedCollections: Set<PersistentIdentifier> = []
     @State private var lastDeletedSnippet: DeletedSnippetSnapshot? = nil
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
 
     private struct DeletedMediaSnapshot {
@@ -63,7 +64,9 @@ struct ContentView: View {
     }
 
     private var topLevelCollections: [SnippetCollection] {
-        collections.filter { $0.parent == nil }
+        collections
+            .filter { $0.parent == nil }
+            .sorted(by: collectionSort)
     }
 
     private var trimmedSearchText: String {
@@ -138,18 +141,17 @@ struct ContentView: View {
     }
 
     private var gallerySubcollections: [SnippetCollection] {
-        guard
-            let selectedCollection,
-            sidebarSelectionContext == .collection(selectedCollection.persistentModelID),
-            trimmedSearchText.isEmpty
-        else { return [] }
+        guard trimmedSearchText.isEmpty else { return [] }
 
-        return selectedCollection.children.sorted {
-            if $0.updatedAt != $1.updatedAt {
-                return $0.updatedAt > $1.updatedAt
-            }
-            return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        if
+            let selectedCollection,
+            sidebarSelectionContext == .collection(selectedCollection.persistentModelID)
+        {
+            return selectedCollection.children.sorted(by: collectionSort)
         }
+
+        guard selectedCollectionID == nil, sidebarSelectionContext != .trash else { return [] }
+        return topLevelCollections
     }
 
     private var availableLanguages: [SupportedLanguage] {
@@ -189,6 +191,13 @@ struct ContentView: View {
         return collections.first(where: { $0.persistentModelID == id })
     }
 
+    private func collectionSort(_ lhs: SnippetCollection, _ rhs: SnippetCollection) -> Bool {
+        if lhs.updatedAt != rhs.updatedAt {
+            return lhs.updatedAt > rhs.updatedAt
+        }
+        return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+    }
+
     private var backgroundPalette: [Color] {
         var colors: [Color] = []
         var seenHex = Set<String>()
@@ -206,12 +215,18 @@ struct ContentView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 360)
         } detail: {
             if sidebarSelectionContext == .trash {
                 TrashView()
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        StatusBar(
+                            segments: currentStatusSegments,
+                            contentLeadingInset: 0
+                        )
+                    }
             } else {
                 ZStack {
                     Group {
@@ -252,23 +267,7 @@ struct ContentView: View {
                             },
                             onNew: { isPresentingNew = true },
                             onBack: selectedCollectionID != nil ? {
-                                if let id = selectedCollectionID, let collection = collections.first(where: { $0.persistentModelID == id }), let parent = collection.parent {
-                                    withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
-                                        searchText = ""
-                                        selectedSnippetID = nil
-                                        selectedCollectionID = parent.persistentModelID
-                                        selectedSearchCollections.removeAll()
-                                        sidebarSelectionContext = .collection(parent.persistentModelID)
-                                    }
-                                } else {
-                                    withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
-                                        searchText = ""
-                                        selectedSnippetID = nil
-                                        selectedCollectionID = nil
-                                        selectedSearchCollections.removeAll()
-                                        sidebarSelectionContext = .allSnippets
-                                    }
-                                }
+                                navigateBackFromCollection()
                             } : nil,
                             onClearSelection: {
                                 withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
@@ -287,8 +286,6 @@ struct ContentView: View {
                         .blur(radius: selectedSnippet == nil ? 0 : 2)
                         .saturation(selectedSnippet == nil ? 1.0 : 0.95)
                         .allowsHitTesting(selectedSnippet == nil)
-
-                        StatusBar(segments: detailStatusSegments())
                     }
 
                     if let snippet = selectedSnippet {
@@ -339,8 +336,15 @@ struct ContentView: View {
                     }
                 }
                 .animation(.spring(response: 0.4, dampingFraction: 0.88), value: selectedSnippetID)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    StatusBar(
+                        segments: currentStatusSegments,
+                        contentLeadingInset: 0
+                    )
+                }
             }
-        } // Closing missing brace for `detail: {`
+        }
+
         .task {
             performTrashCleanup()
         }
@@ -361,14 +365,13 @@ struct ContentView: View {
         }
         .sheet(isPresented: $isPresentingCollectionEditor) {
             CollectionEditorSheet(
-                title: editingCollection == nil ? "New collection" : "Edit collection",
                 collectionName: $collectionDraftName,
                 collectionColor: $collectionDraftColor,
                 collectionIconName: $collectionDraftIconName,
                 selectedSnippetIDs: $collectionDraftSnippetIDs,
                 parentCollectionID: $collectionDraftParentID,
                 isSubcollection: $isSubcollectionDraft,
-                editingCollectionID: editingCollection?.persistentModelID,
+                editingCollection: $editingCollection,
                 snippets: snippets,
                 collections: collections,
                 onCancel: { isPresentingCollectionEditor = false },
@@ -378,6 +381,19 @@ struct ContentView: View {
     }
 
     private var theme: Theme { Theme.current(colorScheme) }
+
+
+    private var currentStatusSegments: [StatusBar.Segment] {
+        sidebarSelectionContext == .trash ? trashStatusSegments : detailStatusSegments()
+    }
+
+    private var trashStatusSegments: [StatusBar.Segment] {
+        [
+            .init(icon: "trash", label: "trash"),
+            .init(label: "\(trashedSnippetCount) items"),
+            .init(label: "auto-delete in 30 days", tint: .red),
+        ]
+    }
 
     private func detailStatusSegments() -> [StatusBar.Segment] {
         var segs: [StatusBar.Segment] = []
@@ -401,6 +417,40 @@ struct ContentView: View {
             }
         }
         return segs
+    }
+
+    private func navigateBackFromCollection() {
+        guard let id = selectedCollectionID else { return }
+        let parentID = parentCollectionID(for: id)
+
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+            searchText = ""
+            selectedSnippetID = nil
+            selectedSearchCollections.removeAll()
+
+            if let parentID {
+                selectedCollectionID = parentID
+                sidebarSelectionContext = .collection(parentID)
+            } else {
+                selectedCollectionID = nil
+                sidebarSelectionContext = .allSnippets
+            }
+        }
+    }
+
+    private func parentCollectionID(for collectionID: PersistentIdentifier) -> PersistentIdentifier? {
+        if let parentID = collections
+            .first(where: { $0.persistentModelID == collectionID })?
+            .parent?
+            .persistentModelID {
+            return parentID
+        }
+
+        return collections
+            .first { parent in
+                parent.children.contains { $0.persistentModelID == collectionID }
+            }?
+            .persistentModelID
     }
 
     @ViewBuilder
@@ -1388,21 +1438,23 @@ private struct ModernSidebar: View {
         }
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
-        .searchable(
-            text: $sidebarSearch,
-            placement: .sidebar,
-            prompt: Text("Filter languages")
-        )
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .safeAreaInset(edge: .top, spacing: 0) {
             Button(action: onNew) {
                 Label("New Collection", systemImage: "plus")
+                    .font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 7)
+                    .padding(.vertical, 8)
             }
-            .buttonStyle(.glassProminent)
-            .tint(theme.accent)
-            .controlSize(.large)
-            .clipShape(Capsule(style: .continuous))
+            .buttonStyle(.plain)
+            .foregroundStyle(theme.text)
+            .liquidGlassSurface(
+                in: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                tint: theme.accent,
+                interactive: true,
+                borderOpacity: colorScheme == .dark ? 0.22 : 0.40,
+                shadowRadius: 6,
+                shadowY: 3
+            )
             .keyboardShortcut("n", modifiers: [.command, .shift])
             .padding(12)
         }
@@ -1475,51 +1527,12 @@ private struct ModernSidebar: View {
     }
 }
 
-private struct LiquidGlassToggle: View {
-    @Binding var isOn: Bool
-    var tint: Color
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        ZStack {
-            Capsule()
-                .fill(isOn ? tint.opacity(colorScheme == .dark ? 0.3 : 0.2) : Color.black.opacity(colorScheme == .dark ? 0.3 : 0.05))
-                .overlay(
-                    Capsule()
-                        .stroke(isOn ? tint.opacity(0.5) : (colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.1)), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
-
-            if isOn {
-                Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [tint.opacity(0.5), tint.opacity(0.0)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .blur(radius: 2)
-                    .padding(1)
-            }
-
-            Circle()
-                .fill(Color.white)
-                .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
-                .padding(2)
-                .offset(x: isOn ? 10 : -10)
-        }
-        .frame(width: 44, height: 24)
-        .onTapGesture {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                isOn.toggle()
-            }
-        }
-    }
-}
-
 private struct CollectionEditorSheet: View {
     @Environment(\.colorScheme) private var colorScheme
+
+    var title: String {
+        editingCollection == nil ? "New collection" : "Edit collection"
+    }
 
     private struct SymbolSection: Identifiable {
         let title: String
@@ -1533,14 +1546,15 @@ private struct CollectionEditorSheet: View {
         var id: String { hex }
     }
 
-    let title: String
+
     @Binding var collectionName: String
     @Binding var collectionColor: Color
     @Binding var collectionIconName: String
     @Binding var selectedSnippetIDs: Set<PersistentIdentifier>
     @Binding var parentCollectionID: PersistentIdentifier?
     @Binding var isSubcollection: Bool
-    let editingCollectionID: PersistentIdentifier?
+    @Binding var editingCollection: SnippetCollection?
+    
     let snippets: [Snippet]
     let collections: [SnippetCollection]
     let onCancel: () -> Void
@@ -1618,26 +1632,26 @@ private struct CollectionEditorSheet: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        previewHeader
-                        colorStrip
-
-                        subcollectionToggleSection
-                        symbolBrowser
-                        snippetMembershipSection
+                        glassPreviewHeader
+                        glassColorStrip
+                        
+                        glassSubcollectionToggleSection
+                        glassSnippetMembershipSection
+                        glassSymbolBrowser
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 24)
                     .padding(.bottom, 32)
                 }
             }
-            .background(
+            .background {
                 ZStack {
-                    theme.canvasDeep.ignoresSafeArea()
+                    Color.clear.ignoresSafeArea()
                     DotGridBackground(gradientPalette: [collectionColor], lightModeStrength: 0.5)
-                        .opacity(0.15)
+                        .opacity(colorScheme == .dark ? 0.12 : 0.10)
                         .ignoresSafeArea()
                 }
-            )
+            }
             .navigationTitle(title)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -1646,58 +1660,82 @@ private struct CollectionEditorSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save", action: onSave)
                         .disabled(!canSave)
+                        .tint(collectionColor)
                 }
             }
         }
-        .frame(width: 440, height: 600)
+        .frame(width: 480, height: 640)
     }
 
-    private var previewHeader: some View {
-        VStack(spacing: 12) {
-            CollectionIconView(
-                iconName: previewIconName,
-                color: collectionColor,
-                size: 52,
-                isSelected: true
-            )
-            .frame(height: 60)
+    // MARK: - Liquid Glass Preview Header
+
+    private var glassPreviewHeader: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(collectionColor.opacity(colorScheme == .dark ? 0.15 : 0.10))
+                    .frame(width: 80, height: 80)
+                    .blur(radius: 12)
+
+                CollectionIconView(
+                    iconName: previewIconName,
+                    color: collectionColor,
+                    size: 56,
+                    isSelected: true
+                )
+            }
+            .frame(height: 68)
 
             TextField("Collection name", text: $collectionName)
                 .textFieldStyle(.plain)
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: 22, weight: .bold, design: .rounded))
                 .multilineTextAlignment(.center)
-                .foregroundStyle(theme.text)
-                .frame(maxWidth: 260)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(theme.surface.opacity(0.5))
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(theme.border, lineWidth: 1))
-                )
+                .padding(.horizontal, 18)
+                .padding(.vertical, 10)
+                .frame(maxWidth: 280)
+                .background {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(.white.opacity(colorScheme == .dark ? 0.12 : 0.3), lineWidth: 1)
+                        }
+                }
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 4)
+        .padding(.vertical, 8)
     }
 
-    private var colorStrip: some View {
-        HStack(spacing: 12) {
+    // MARK: - Liquid Glass Color Strip
+
+    private var glassColorStrip: some View {
+        HStack(spacing: 10) {
             ForEach(palette) { choice in
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.72)) {
                         collectionColor = Color(hex: choice.hex) ?? collectionColor
                     }
                 } label: {
                     let isSelected = selectedColorHex == choice.hex.lowercased()
-                    Circle()
-                        .fill(Color(hex: choice.hex) ?? theme.accent)
-                        .frame(width: 26, height: 26)
-                        .overlay {
+                    ZStack {
+                        Circle()
+                            .fill(Color(hex: choice.hex) ?? theme.accent)
+                            .frame(width: 28, height: 28)
+
+                        if isSelected {
                             Circle()
-                                .strokeBorder(isSelected ? .white : .clear, lineWidth: 2)
+                                .strokeBorder(.white, lineWidth: 2.5)
+                                .frame(width: 28, height: 28)
+
+                            Circle()
+                                .fill((Color(hex: choice.hex) ?? theme.accent).opacity(0.35))
+                                .frame(width: 38, height: 38)
+                                .blur(radius: 6)
                         }
-                        .shadow(color: isSelected ? (Color(hex: choice.hex) ?? theme.accent).opacity(0.4) : .clear, radius: 4, x: 0, y: 2)
-                        .scaleEffect(isSelected ? 1.15 : 1.0)
+                    }
+                    .frame(width: 38, height: 38)
+                    .scaleEffect(isSelected ? 1.08 : 1.0)
+                    .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isSelected)
                 }
                 .buttonStyle(.plain)
                 .help(choice.name)
@@ -1705,35 +1743,45 @@ private struct CollectionEditorSheet: View {
 
             ZStack {
                 Circle()
-                    .fill(theme.surface)
-                    .frame(width: 26, height: 26)
-                    .overlay(Circle().strokeBorder(theme.borderStrong, lineWidth: 1))
+                    .fill(collectionColor)
+                    .frame(width: 28, height: 28)
+                    .overlay {
+                        Circle().stroke(.white.opacity(colorScheme == .dark ? 0.12 : 0.25), lineWidth: 1)
+                    }
+
+                ColorPicker("Custom Color", selection: $collectionColor, supportsOpacity: false)
+                    .labelsHidden()
+                    .frame(width: 28, height: 28)
+                    .opacity(0.015)
+                    .clipShape(Circle())
 
                 Image(systemName: "plus")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(theme.textMuted)
-
-                ColorPicker("", selection: $collectionColor, supportsOpacity: false)
-                    .labelsHidden()
-                    .frame(width: 26, height: 26)
-                    .opacity(0.015)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.3), radius: 1, y: 1)
+                    .allowsHitTesting(false)
             }
+            .frame(width: 38, height: 38)
             .help("Custom color")
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
-        .background(
-            Capsule()
-                .fill(theme.surface.opacity(0.6))
-                .overlay(Capsule().stroke(theme.border, lineWidth: 1))
+        .padding(.vertical, 12)
+        .padding(.horizontal, 8)
+        .liquidGlassSurface(
+            in: Capsule(style: .continuous),
+            tint: collectionColor.opacity(0.15),
+            shadowRadius: 8,
+            shadowY: 4
         )
     }
 
-    private var symbolBrowser: some View {
+    // MARK: - Liquid Glass Symbol Browser
+
+    private var glassSymbolBrowser: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(theme.textFaint)
+                    .foregroundStyle(.secondary)
                     .font(.system(size: 13))
                 TextField("Search SF Symbols", text: $symbolSearch)
                     .textFieldStyle(.plain)
@@ -1743,94 +1791,119 @@ private struct CollectionEditorSheet: View {
                         symbolSearch = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(theme.textFaint)
+                            .foregroundStyle(.tertiary)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
             .background {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(theme.surface)
+                    .fill(.ultraThinMaterial)
                     .overlay {
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(theme.border, lineWidth: 1)
+                            .stroke(.white.opacity(colorScheme == .dark ? 0.08 : 0.2), lineWidth: 1)
                     }
             }
 
             ForEach(displayedSymbolSections) { section in
                 VStack(alignment: .leading, spacing: 10) {
                     Text(section.title)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(theme.textMuted)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .tracking(0.5)
 
-                    LazyVGrid(columns: Array(repeating: GridItem(.adaptive(minimum: 30, maximum: 38), spacing: 8), count: 8), spacing: 8) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.adaptive(minimum: 32, maximum: 40), spacing: 8), count: 8), spacing: 8) {
                         ForEach(section.symbols, id: \.self) { symbolName in
-                            symbolButton(symbolName)
+                            glassSymbolButton(symbolName)
                         }
                     }
                 }
-                .padding(.top, 4)
+                .padding(.top, 6)
             }
 
             if displayedSymbolSections.isEmpty {
                 Text("No matching symbols")
                     .font(.system(size: 13))
-                    .foregroundStyle(theme.textMuted)
+                    .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 60)
             }
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(theme.surface.opacity(0.4))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(theme.border, lineWidth: 1))
+        .padding(16)
+        .liquidGlassSurface(
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            shadowRadius: 8,
+            shadowY: 4
         )
     }
 
-    private func symbolButton(_ symbolName: String) -> some View {
+    private func glassSymbolButton(_ symbolName: String) -> some View {
         Button {
-            collectionIconName = symbolName
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                collectionIconName = symbolName
+            }
         } label: {
             let isSelected = previewIconName == symbolName
             Image(systemName: symbolName)
                 .font(.system(size: 14, weight: .medium))
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(isSelected ? .white : theme.textMuted)
-                .frame(width: 32, height: 32)
+                .foregroundStyle(isSelected ? .white : .secondary)
+                .frame(width: 34, height: 34)
                 .background {
-                    Circle()
-                        .fill(isSelected ? collectionColor : theme.surface.opacity(0.5))
+                    if isSelected {
+                        Circle()
+                            .fill(collectionColor)
+                            .shadow(color: collectionColor.opacity(0.5), radius: 6, x: 0, y: 2)
+                    } else {
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                    }
                 }
                 .overlay {
                     Circle()
-                        .strokeBorder(isSelected ? collectionColor.opacity(0.8) : theme.border.opacity(0.5), lineWidth: 1)
+                        .stroke(
+                            isSelected
+                                ? collectionColor.opacity(0.6)
+                                : .white.opacity(colorScheme == .dark ? 0.06 : 0.15),
+                            lineWidth: 1
+                        )
                 }
-                .shadow(color: isSelected ? collectionColor.opacity(0.4) : .clear, radius: 4, x: 0, y: 2)
+                .scaleEffect(isSelected ? 1.1 : 1.0)
         }
         .buttonStyle(.plain)
         .help(symbolName)
     }
 
-    private var subcollectionToggleSection: some View {
+    // MARK: - Liquid Glass Subcollection Toggle
+
+    private var glassSubcollectionToggleSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Sub-Collection")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(theme.text)
+                Label {
+                    Text("Sub-Collection")
+                        .font(.system(size: 14, weight: .semibold))
+                } icon: {
+                    Image(systemName: "arrow.turn.down.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(collectionColor)
+                }
                 Spacer()
-                LiquidGlassToggle(isOn: $isSubcollection, tint: collectionColor)
+                Toggle("", isOn: $isSubcollection)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .tint(collectionColor)
             }
 
             if isSubcollection {
                 HStack {
-                    Text("Parent")
+                    Text("Collection")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(theme.textMuted)
+                        .foregroundStyle(.secondary)
                     Spacer()
                     Picker("", selection: $parentCollectionID) {
-                        Text("Select parent...").tag(nil as PersistentIdentifier?)
+                        Text("Select collection…").tag(nil as PersistentIdentifier?)
                         ForEach(availableParentCollections) { collection in
                             Text(collection.name).tag(collection.persistentModelID as PersistentIdentifier?)
                         }
@@ -1841,18 +1914,20 @@ private struct CollectionEditorSheet: View {
                     .frame(maxWidth: 200)
                 }
                 .padding(.top, 4)
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(theme.surface.opacity(0.4))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(theme.border, lineWidth: 1))
+        .padding(16)
+        .liquidGlassSurface(
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            shadowRadius: 8,
+            shadowY: 4
         )
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isSubcollection)
     }
 
     private var availableParentCollections: [SnippetCollection] {
-        guard let editingID = editingCollectionID else {
+        guard let editingID = editingCollection?.persistentModelID else {
             return collections
         }
         var excludedIDs = Set([editingID])
@@ -1870,45 +1945,73 @@ private struct CollectionEditorSheet: View {
         return collections.filter { !excludedIDs.contains($0.persistentModelID) }
     }
 
-    private var snippetMembershipSection: some View {
-        DisclosureGroup(isExpanded: $isSnippetPickerExpanded) {
-            if snippets.isEmpty {
-                Text("No snippets yet")
-                    .font(.system(size: 13))
-                    .foregroundStyle(theme.textMuted)
-                    .padding(.vertical, 8)
-            } else {
-                LazyVStack(alignment: .leading, spacing: 6) {
-                    ForEach(snippets) { snippet in
-                        snippetToggleRow(snippet)
-                    }
+    // MARK: - Liquid Glass Snippet Membership
+
+    private var glassSnippetMembershipSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.spring(response: 0.40, dampingFraction: 0.82)) {
+                    isSnippetPickerExpanded.toggle()
                 }
-                .padding(.top, 8)
+            } label: {
+                HStack {
+                    Label {
+                        Text("Snippets")
+                            .font(.system(size: 14, weight: .semibold))
+                    } icon: {
+                        Image(systemName: "doc.text")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(collectionColor)
+                    }
+                    Spacer()
+                    Text("\(selectedSnippetIDs.count)")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3)
+                        .background {
+                            Capsule()
+                                .fill(collectionColor)
+                                .shadow(color: collectionColor.opacity(0.3), radius: 4, x: 0, y: 2)
+                        }
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(isSnippetPickerExpanded ? 90 : 0))
+                }
+                .contentShape(Rectangle())
             }
-        } label: {
-            HStack {
-                Text("Snippets")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(theme.text)
-                Spacer()
-                Text("\(selectedSnippetIDs.count)")
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(Capsule().fill(collectionColor))
+            .buttonStyle(.plain)
+
+            if isSnippetPickerExpanded {
+                if snippets.isEmpty {
+                    Text("No snippets yet")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 12)
+                        .padding(.top, 4)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 6) {
+                        ForEach(snippets) { snippet in
+                            glassSnippetToggleRow(snippet)
+                        }
+                    }
+                    .padding(.top, 16)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(theme.surface.opacity(0.4))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(theme.border, lineWidth: 1))
+        .padding(16)
+        .liquidGlassSurface(
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            shadowRadius: 8,
+            shadowY: 4
         )
-        .tint(theme.textMuted)
     }
 
-    private func snippetToggleRow(_ snippet: Snippet) -> some View {
+    private func glassSnippetToggleRow(_ snippet: Snippet) -> some View {
         Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 if selectedSnippetIDs.contains(snippet.persistentModelID) {
@@ -1922,30 +2025,48 @@ private struct CollectionEditorSheet: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(isSelected ? collectionColor : theme.surface)
-                        .frame(width: 18, height: 18)
-                        .overlay(Circle().stroke(isSelected ? collectionColor : theme.borderStrong, lineWidth: 1))
+                        .fill(isSelected ? AnyShapeStyle(collectionColor) : AnyShapeStyle(.thickMaterial))
+                        .frame(width: 20, height: 20)
+                        .overlay {
+                            Circle()
+                                .stroke(
+                                    isSelected
+                                        ? collectionColor
+                                        : .white.opacity(colorScheme == .dark ? 0.1 : 0.2),
+                                    lineWidth: 1
+                                )
+                        }
 
                     if isSelected {
                         Image(systemName: "checkmark")
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(.white)
+                            .transition(.scale.combined(with: .opacity))
                     }
                 }
 
                 Text(snippet.title.isEmpty ? "untitled" : snippet.title)
                     .font(.system(size: 13, weight: isSelected ? .medium : .regular))
-                    .foregroundStyle(isSelected ? theme.text : theme.textMuted)
+                    .foregroundStyle(isSelected ? .primary : .secondary)
                     .lineLimit(1)
 
                 Spacer()
+
+                if isSelected {
+                    let lang = SupportedLanguage(rawValue: snippet.language) ?? .unknown
+                    Text(lang.rawValue.lowercased())
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .transition(.opacity)
+                }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? collectionColor.opacity(0.1) : Color.clear)
-            )
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(isSelected ? collectionColor.opacity(colorScheme == .dark ? 0.12 : 0.08) : Color.clear)
+            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

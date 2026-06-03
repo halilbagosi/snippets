@@ -66,18 +66,8 @@ struct TrashView: View {
                     onRestore: restore,
                     onPermanentDelete: permanentlyDelete
                 )
-
-                StatusBar(segments: statusSegments)
             }
         }
-    }
-
-    private var statusSegments: [StatusBar.Segment] {
-        [
-            .init(icon: "trash", label: "trash"),
-            .init(label: "\(trashedSnippets.count) items"),
-            .init(label: "auto-delete in 30 days", tint: .red),
-        ]
     }
 
     private func restore(_ snippet: Snippet) {

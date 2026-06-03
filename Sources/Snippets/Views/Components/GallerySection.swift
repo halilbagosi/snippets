@@ -59,7 +59,7 @@ struct GallerySectionHeader: View {
 
     var body: some View {
         Button {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
+            withAnimation(.interactiveSpring(response: 0.28, dampingFraction: 0.96, blendDuration: 0.06)) {
                 isExpanded.toggle()
             }
         } label: {
@@ -138,7 +138,7 @@ struct CollapsibleSectionContent<Content: View>: View {
                 }
             }
             .opacity(isExpanded ? 1 : 0)
-            .scaleEffect(y: isExpanded ? 1 : 0.992, anchor: .top)
+            .offset(y: isExpanded ? 0 : -6)
             .frame(height: isExpanded ? measuredHeight : 0, alignment: .top)
             .allowsHitTesting(isExpanded)
             .accessibilityHidden(!isExpanded)

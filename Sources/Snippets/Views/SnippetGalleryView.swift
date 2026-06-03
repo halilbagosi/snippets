@@ -51,6 +51,7 @@ struct SnippetGalleryView: View {
     @State private var unminimizeProgress: CGFloat = 1.0
     @State private var cardSizes: [PersistentIdentifier: CGSize] = [:]
     @State private var genieSnapshots: [PersistentIdentifier: NSImage] = [:]
+    @State private var collectionFilterSearchText = ""
 #if canImport(AppKit)
     @State private var keyEventMonitor: Any? = nil
 #endif
@@ -58,7 +59,7 @@ struct SnippetGalleryView: View {
     private let columns = [GridItem(.adaptive(minimum: 420, maximum: 640), spacing: 20)]
     private let subcollectionColumns = [GridItem(.adaptive(minimum: 440, maximum: 680), spacing: 16)]
     private var sectionCollapseAnimation: Animation {
-        .interactiveSpring(response: 0.42, dampingFraction: 0.9, blendDuration: 0.12)
+        .interactiveSpring(response: 0.34, dampingFraction: 0.96, blendDuration: 0.08)
     }
     private var hasVisibleSubcollections: Bool {
         !isTrashMode && searchQuery.isEmpty && !subcollections.isEmpty
@@ -87,6 +88,39 @@ struct SnippetGalleryView: View {
             searchResultSnippets: searchResultSnippets,
             searchQuery: searchQuery
         )
+    }
+    private var collectionFilterQuery: String {
+        collectionFilterSearchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+    private var collectionFilterMatches: [SnippetCollection] {
+        guard !collectionFilterQuery.isEmpty else { return availableCollections }
+        return availableCollections.filter { collection in
+            collection.name.lowercased().contains(collectionFilterQuery)
+        }
+    }
+    private var selectedCollectionFilterMatches: [SnippetCollection] {
+        collectionFilterMatches.filter { selectedSearchCollections.contains($0.persistentModelID) }
+    }
+    private var unselectedCollectionFilterMatches: [SnippetCollection] {
+        collectionFilterMatches.filter { !selectedSearchCollections.contains($0.persistentModelID) }
+    }
+    private var collectionFilterSectionCount: Int {
+        var count = 0
+        if !selectedCollectionFilterMatches.isEmpty { count += 1 }
+        if !unselectedCollectionFilterMatches.isEmpty { count += 1 }
+        return count
+    }
+    private var collectionFilterListHeight: CGFloat {
+        if collectionFilterMatches.isEmpty { return 76 }
+
+        let rowHeight: CGFloat = 34
+        let sectionHeaderHeight: CGFloat = 26
+        let sectionSpacing: CGFloat = collectionFilterSectionCount > 1 ? 8 : 0
+        let contentHeight = CGFloat(collectionFilterMatches.count) * rowHeight
+            + CGFloat(collectionFilterSectionCount) * sectionHeaderHeight
+            + sectionSpacing
+
+        return min(contentHeight, 360)
     }
 
     var body: some View {
@@ -169,7 +203,7 @@ struct SnippetGalleryView: View {
 
             fab
                 .padding(.trailing, 32)
-                .padding(.bottom, 28)
+                .padding(.bottom, 24)
         }
         .coordinateSpace(name: "galleryDragSpace")
         .onAppear {
@@ -290,14 +324,17 @@ struct SnippetGalleryView: View {
                     )
                     .frame(maxWidth: .infinity)
                     .opacity(hasAnimatedCards ? 1 : 0)
-                    .offset(y: hasAnimatedCards ? 0 : 16)
+                    .offset(y: hasAnimatedCards ? 0 : 6)
                     .animation(
-                        .spring(response: 0.45, dampingFraction: 0.86)
-                            .delay(min(Double(index) * 0.03, 0.24)),
+                        .spring(response: 0.32, dampingFraction: 0.94)
+                            .delay(min(Double(index) * 0.02, 0.12)),
                         value: hasAnimatedCards
                     )
                 }
             }
+            .padding(.horizontal, 18)
+            .padding(.top, 18)
+            .padding(.bottom, 16)
         }
     }
 
@@ -499,7 +536,7 @@ struct SnippetGalleryView: View {
                     .opacity(1.0)
                     .opacity(hasAnimatedCards ? 1 : 0)
                     .offset(dragOffset(for: snippet))
-                    .offset(y: hasAnimatedCards ? 0 : 16)
+                    .offset(y: hasAnimatedCards ? 0 : 8)
                     .rotationEffect(.degrees(draggingSnippetID == snippet.persistentModelID ? Double(dragTranslation.width / 42) : 0))
                     .zIndex(
                         draggingSnippetID == snippet.persistentModelID ? 4 :
@@ -508,8 +545,8 @@ struct SnippetGalleryView: View {
                         pressedSnippetID == snippet.persistentModelID ? 2 : 0
                     )
                     .animation(
-                        .spring(response: 0.45, dampingFraction: 0.86)
-                            .delay(min(Double(index) * 0.03, 0.24)),
+                        .spring(response: 0.34, dampingFraction: 0.92)
+                            .delay(min(Double(index) * 0.02, 0.12)),
                         value: hasAnimatedCards
                     )
                     .animation(.spring(response: 0.22, dampingFraction: 0.75), value: pressedSnippetID)
@@ -557,11 +594,9 @@ struct SnippetGalleryView: View {
                     }
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 14)
-        .padding(.bottom, 10)
-        .padding(.horizontal, -14)
-        .padding(.top, -14)
+        .padding(.horizontal, 18)
+        .padding(.top, 18)
+        .padding(.bottom, 18)
     }
 
     private var topBar: some View {
@@ -581,14 +616,19 @@ struct SnippetGalleryView: View {
                                     shadowRadius: 5,
                                     shadowY: 2
                                 )
+                                .padding(8)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .contentShape(Rectangle())
+                        .transition(.scale(scale: 0.85, anchor: .leading).combined(with: .opacity))
                     }
 
                     searchBar
                         .frame(maxWidth: .infinity)
 
+                        .animation(.spring(response: 0.45, dampingFraction: 0.85), value: onBack != nil)
+                    
                     HStack(spacing: 8) {
                         FilterTag(
                             label: viewModel.isSelectMode ? "done" : "select",
@@ -707,48 +747,48 @@ struct SnippetGalleryView: View {
 
     private var collectionFilterPopover: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Filter by Collections")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(theme.text)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-
-            Divider()
-
-            let rowHeight: CGFloat = 32
-            let visibleRows = min(CGFloat(max(availableCollections.count, 1)), 5.5)
-            let scrollHeight = visibleRows * rowHeight + 16
+            collectionFilterSearchField
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 5)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(availableCollections) { collection in
-                        Button {
-                            if selectedSearchCollections.contains(collection.persistentModelID) {
-                                selectedSearchCollections.remove(collection.persistentModelID)
-                            } else {
-                                selectedSearchCollections.insert(collection.persistentModelID)
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: selectedSearchCollections.contains(collection.persistentModelID) ? "checkmark.square.fill" : "square")
-                                    .foregroundStyle(selectedSearchCollections.contains(collection.persistentModelID) ? theme.accent : theme.textFaint)
-                                Text(collection.name)
-                                    .foregroundStyle(theme.text)
-                                Spacer()
-                            }
-                            .contentShape(Rectangle())
-                            .padding(.horizontal, 16)
-                            .frame(height: rowHeight)
+                VStack(alignment: .leading, spacing: 8) {
+                    if !selectedCollectionFilterMatches.isEmpty {
+                        collectionFilterSection(
+                            "Selected",
+                            collections: selectedCollectionFilterMatches
+                        )
+                    }
+
+                    if !unselectedCollectionFilterMatches.isEmpty {
+                        collectionFilterSection(
+                            selectedCollectionFilterMatches.isEmpty ? "Collections" : "All Collections",
+                            collections: unselectedCollectionFilterMatches
+                        )
+                    }
+
+                    if collectionFilterMatches.isEmpty {
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                            Text(collectionFilterQuery.isEmpty ? "No collections" : "No matches")
                         }
-                        .buttonStyle(.plain)
+                        .font(Sans.font(size: 13, weight: .medium))
+                        .foregroundStyle(theme.textMuted)
+                        .frame(maxWidth: .infinity, minHeight: 68)
                     }
                 }
-                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 9)
             }
-            .frame(height: scrollHeight)
+            .frame(height: collectionFilterListHeight)
+            .scrollClipDisabled()
 
             if !selectedSearchCollections.isEmpty {
-                Divider()
+                Rectangle()
+                    .fill(.white.opacity(colorScheme == .dark ? 0.12 : 0.34))
+                    .frame(height: 1)
+
                 Button {
                     if let onClearSelection = onClearSelection {
                         onClearSelection()
@@ -756,24 +796,137 @@ struct SnippetGalleryView: View {
                         selectedSearchCollections.removeAll()
                     }
                 } label: {
-                    Text("Clear Selection")
-                        .font(.system(size: 13))
-                        .foregroundStyle(theme.textMuted)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 36)
-                        .contentShape(Rectangle())
+                    HStack(spacing: 8) {
+                        Image(systemName: "xmark.circle")
+                        Text("Clear Selection")
+                        Spacer()
+                        Text("\(selectedSearchCollections.count)")
+                            .monospacedDigit()
+                    }
+                    .font(Sans.font(size: 13, weight: .semibold))
+                    .foregroundStyle(theme.textMuted)
+                    .padding(.horizontal, 14)
+                    .frame(height: 42)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
         }
-        .frame(width: 240)
+        .frame(width: 330)
         .liquidGlassSurface(
-            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
-            borderOpacity: colorScheme == .dark ? 0.18 : 0.34,
-            shadowRadius: 16,
-            shadowY: 10
+            in: RoundedRectangle(cornerRadius: 20, style: .continuous),
+            borderOpacity: colorScheme == .dark ? 0.14 : 0.28,
+            shadowRadius: 20,
+            shadowY: 12
         )
-        .padding(4)
+        .padding(6)
+        .onDisappear {
+            collectionFilterSearchText = ""
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var collectionFilterSearchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .font(Sans.font(size: 13, weight: .semibold))
+                .foregroundStyle(theme.textMuted)
+                .frame(width: 16)
+
+            TextField("Filter", text: $collectionFilterSearchText)
+                .textFieldStyle(.plain)
+                .font(Sans.font(size: 15, weight: .semibold))
+                .foregroundStyle(theme.text)
+
+            if !collectionFilterSearchText.isEmpty {
+                Button {
+                    collectionFilterSearchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(Sans.font(size: 12, weight: .semibold))
+                        .foregroundStyle(theme.textFaint)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 30)
+        .background {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(theme.surface.opacity(colorScheme == .dark ? 0.26 : 0.30))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(.white.opacity(colorScheme == .dark ? 0.10 : 0.34), lineWidth: 1)
+                }
+        }
+    }
+
+    private func collectionFilterSection(_ title: String, collections: [SnippetCollection]) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(Sans.font(size: 13, weight: .semibold))
+                .foregroundStyle(theme.textMuted)
+                .padding(.horizontal, 12)
+                .padding(.top, 2)
+                .padding(.bottom, 3)
+
+            ForEach(collections) { collection in
+                collectionFilterRow(collection)
+            }
+        }
+    }
+
+    private func collectionFilterRow(_ collection: SnippetCollection) -> some View {
+        let isSelected = selectedSearchCollections.contains(collection.persistentModelID)
+        let accent = collection.displayColor
+        let activeCount = collection.snippets.filter { $0.deletedAt == nil }.count
+
+        return Button {
+            withAnimation(.snappy(duration: 0.16)) {
+                if isSelected {
+                    selectedSearchCollections.remove(collection.persistentModelID)
+                } else {
+                    selectedSearchCollections.insert(collection.persistentModelID)
+                }
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark")
+                    .font(Sans.font(size: 13, weight: .semibold))
+                    .foregroundStyle(isSelected ? theme.text : .clear)
+                    .frame(width: 18)
+
+                CollectionIconView(
+                    iconName: collection.displayIconName,
+                    color: accent,
+                    size: 14,
+                    isSelected: false
+                )
+                .frame(width: 22, height: 22)
+
+                Text(collection.name)
+                    .font(Sans.font(size: 14, weight: isSelected ? .semibold : .medium))
+                    .foregroundStyle(theme.text)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+
+                Spacer(minLength: 8)
+
+                Text("\(activeCount)")
+                    .font(Mono.font(size: 11, weight: .semibold))
+                    .foregroundStyle(theme.textMuted)
+                    .monospacedDigit()
+            }
+            .padding(.leading, 12)
+            .padding(.trailing, 12)
+            .frame(height: 34)
+            .contentShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .background {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(isSelected ? accent.opacity(colorScheme == .dark ? 0.18 : 0.12) : Color.clear)
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private var searchBar: some View {
@@ -875,18 +1028,6 @@ struct SnippetGalleryView: View {
         }
         .scrollClipDisabled()
         .frame(height: 68)
-        .mask {
-            LinearGradient(
-                stops: [
-                    .init(color: .clear, location: 0),
-                    .init(color: .black, location: 0.06),
-                    .init(color: .black, location: 0.94),
-                    .init(color: .clear, location: 1)
-                ],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        }
     }
 
     private var emptyState: some View {
@@ -922,10 +1063,10 @@ struct SnippetGalleryView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 11)
-                .foregroundStyle(theme.text)
+                .foregroundStyle(.white)
                 .liquidGlassSurface(
                     in: Capsule(style: .continuous),
-                    tint: theme.accent,
+                    tint: .green,
                     interactive: true,
                     borderOpacity: colorScheme == .dark ? 0.26 : 0.46,
                     shadowRadius: fabHovered ? 16 : 10,
@@ -1020,12 +1161,6 @@ private struct SnippetCollectionCard: View {
     @State private var cardSize: CGSize = .zero
     @State private var didAppear = false
 
-    private static let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd/MM HH:mm"
-        return formatter
-    }()
-
     private var activeSnippets: [Snippet] {
         var seenIDs = Set<PersistentIdentifier>()
         var collected: [Snippet] = []
@@ -1063,12 +1198,19 @@ private struct SnippetCollectionCard: View {
         )
     }
 
+    private var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: collection.createdAt)
+    }
+
     var body: some View {
         let theme = Theme.current(colorScheme)
         let accent = collection.displayColor
         let effectiveIsHovered = isSelectionMode ? false : isHovered
-        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
-        let iconShape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        let iconShape = RoundedRectangle(cornerRadius: 10, style: .continuous)
         let snippetSummary = "\(activeSnippets.count) Snippet\(activeSnippets.count == 1 ? "" : "s")"
 
         HStack(spacing: 14) {
@@ -1076,29 +1218,37 @@ private struct SnippetCollectionCard: View {
                 CollectionIconView(
                     iconName: collection.displayIconName,
                     color: accent,
-                    size: 23,
-                    isSelected: effectiveIsHovered
+                    size: 22,
+                    isSelected: false
                 )
             }
-            .frame(width: 54, height: 54)
-            .liquidGlassSurface(
-                in: iconShape,
-                tint: accent,
-                borderOpacity: colorScheme == .dark ? 0.22 : 0.40,
-                shadowRadius: 6,
-                shadowY: 3
-            )
+            .frame(width: 50, height: 50)
+            .background {
+                iconShape
+                    .fill(accent.opacity(colorScheme == .dark ? 0.15 : 0.10))
+                    .overlay {
+                        iconShape
+                            .strokeBorder(accent.opacity(colorScheme == .dark ? 0.30 : 0.24), lineWidth: 1)
+                    }
+            }
 
-            Text(collection.name)
-                .font(Sans.font(size: 19, weight: .medium))
-                .foregroundStyle(theme.text)
-                .lineLimit(1)
-                .minimumScaleFactor(0.68)
-                .layoutPriority(1)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(collection.name)
+                    .font(Sans.font(size: 17, weight: .semibold))
+                    .foregroundStyle(theme.text)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.68)
+                    .layoutPriority(1)
+                    
+                Text("Created at: \(formattedDate)")
+                    .font(Mono.font(size: 10, weight: .medium))
+                    .foregroundStyle(theme.textFaint)
+            }
 
             Spacer(minLength: 8)
 
             VStack(alignment: .trailing, spacing: 9) {
+                
                 HStack(spacing: 7) {
                     Image(systemName: "square.stack.3d.up")
                         .font(Sans.font(size: 14, weight: .semibold))
@@ -1112,20 +1262,14 @@ private struct SnippetCollectionCard: View {
                 .fixedSize(horizontal: true, vertical: false)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .liquidGlassSurface(
-                    in: RoundedRectangle(cornerRadius: 11, style: .continuous),
-                    tint: accent,
-                    borderOpacity: colorScheme == .dark ? 0.24 : 0.42,
-                    shadowRadius: 6,
-                    shadowY: 3
-                )
-
-                Text("Created at \(Self.dateFormatter.string(from: collection.createdAt))")
-                    .font(Sans.font(size: 12, weight: .regular))
-                    .foregroundStyle(theme.textMuted)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.76)
-                    .fixedSize(horizontal: true, vertical: false)
+                .background {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(theme.surface.opacity(colorScheme == .dark ? 0.72 : 0.82))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .strokeBorder(theme.border, lineWidth: 1)
+                        }
+                }
             }
             .frame(minWidth: 130, alignment: .trailing)
             .layoutPriority(2)
@@ -1135,19 +1279,37 @@ private struct SnippetCollectionCard: View {
         .padding(.vertical, 12)
         .frame(minHeight: 100)
         .contentShape(shape)
-        .liquidGlassSurface(
-            in: shape,
-            tint: effectiveIsHovered ? accent : nil,
-            interactive: true,
-            borderOpacity: colorScheme == .dark ? 0.20 : 0.46,
-            shadowRadius: effectiveIsHovered ? 22 : 15,
-            shadowY: effectiveIsHovered ? 12 : 8
-        )
+        .background {
+            shape
+                .fill(theme.surface.opacity(colorScheme == .dark ? 0.40 : 0.30))
+                .overlay {
+                    shape
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    .white.opacity(colorScheme == .dark ? 0.08 : 0.24),
+                                    theme.surface.opacity(colorScheme == .dark ? 0.58 : 0.42),
+                                    accent.opacity(0.02)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+                .overlay {
+                    shape
+                        .fill(accent.opacity(colorScheme == .dark ? 0.10 : 0.07))
+                        .opacity(effectiveIsHovered ? 1 : 0)
+                        .animation(.easeOut(duration: 0.14), value: effectiveIsHovered)
+                }
+        }
         .overlay {
             shape
-                .stroke(
-                    accent.opacity(effectiveIsHovered ? (colorScheme == .dark ? 0.52 : 0.42) : 0),
-                    lineWidth: effectiveIsHovered ? 1.2 : 0
+                .strokeBorder(
+                    effectiveIsHovered
+                        ? accent.opacity(colorScheme == .dark ? 0.45 : 0.34)
+                        : .white.opacity(colorScheme == .dark ? 0.14 : 0.40),
+                    lineWidth: 1
                 )
                 .allowsHitTesting(false)
         }
@@ -1167,37 +1329,30 @@ private struct SnippetCollectionCard: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .clipShape(shape)
-        .scaleEffect(effectiveIsHovered ? 1.006 : 1.0)
+        .scaleEffect(effectiveIsHovered ? 1.002 : 1.0)
         .rotation3DEffect(
-            .degrees(isHovered ? -Double(hoverVector.dy) * 1.4 : 0),
+            .degrees(isHovered ? -Double(hoverVector.dy) * 0.6 : 0),
             axis: (x: 1, y: 0, z: 0),
             perspective: 0.72
         )
         .rotation3DEffect(
-            .degrees(isHovered ? Double(hoverVector.dx) * 1.8 : 0),
+            .degrees(isHovered ? Double(hoverVector.dx) * 0.8 : 0),
             axis: (x: 0, y: 1, z: 0),
             perspective: 0.72
         )
         .offset(
-            x: isHovered ? hoverVector.dx * 1.2 : 0,
-            y: isHovered ? hoverVector.dy * 1.0 : 0
+            x: isHovered ? hoverVector.dx * 0.6 : 0,
+            y: isHovered ? hoverVector.dy * 0.5 : 0
         )
         .opacity(didAppear ? 1 : 0)
-        .offset(y: didAppear ? 0 : 10)
-        .shadow(
-            color: accent.opacity(effectiveIsHovered ? (colorScheme == .dark ? 0.22 : 0.12) : 0),
-            radius: effectiveIsHovered ? 14 : 0,
-            x: 0,
-            y: effectiveIsHovered ? 8 : 0
-        )
+        .offset(y: didAppear ? 0 : 6)
         .contentShape(shape)
         .onTapGesture {
             guard !isSelectionMode else { return }
             onOpen()
         }
         .onAppear {
-            withAnimation(.spring(response: 0.42, dampingFraction: 0.84)) {
+            withAnimation(.spring(response: 0.30, dampingFraction: 0.94)) {
                 didAppear = true
             }
         }
@@ -1215,15 +1370,15 @@ private struct SnippetCollectionCard: View {
                     }
                 }
             case .ended:
-                withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.94)) {
                     isHovered = false
                     hoverLocation = hoverCenter
                 }
             }
         }
-        .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isHovered)
-        .animation(.interactiveSpring(response: 0.24, dampingFraction: 0.74), value: hoverLocation)
-        .accessibilityLabel("\(collection.name), \(snippetSummary), created at \(Self.dateFormatter.string(from: collection.createdAt))")
+        .animation(.spring(response: 0.26, dampingFraction: 0.94), value: isHovered)
+        .animation(.interactiveSpring(response: 0.20, dampingFraction: 0.86), value: hoverLocation)
+        .accessibilityLabel("\(collection.name), \(snippetSummary)")
         .accessibilityAddTraits(.isButton)
         .accessibilityAction {
             guard !isSelectionMode else { return }

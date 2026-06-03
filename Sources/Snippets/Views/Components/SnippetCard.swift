@@ -21,12 +21,6 @@ struct SnippetCard: View {
     @State private var didAppear: Bool = false
     @State private var isShowingActionDialog: Bool = false
 
-    private static let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd/MM HH:mm"
-        return formatter
-    }()
-
     private var language: SupportedLanguage {
         SupportedLanguage(rawValue: snippet.language) ?? .unknown
     }
@@ -97,16 +91,27 @@ struct SnippetCard: View {
         .accessibilityLabel(didCopy ? "Copied" : "Copy code")
     }
 
+    private var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: snippet.createdAt)
+    }
+
     var body: some View {
         let theme = Theme.current(colorScheme)
         let languageAccent = theme.accentColor(for: language).saturation(10)
         let effectiveIsHovered = isSelectionMode ? false : isHovered
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
-                Text(snippet.title.isEmpty ? "untitled" : snippet.title)
-                    .font(Sans.font(size: 15, weight: .semibold))
-                    .foregroundStyle(theme.text)
-                    .lineLimit(1)
+                HStack(alignment: .top) {
+                    Text(snippet.title.isEmpty ? "untitled" : snippet.title)
+                        .font(Sans.font(size: 15, weight: .semibold))
+                        .foregroundStyle(theme.text)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                }
 
                 if !snippet.snippetDescription.isEmpty {
                     Text(snippet.snippetDescription)
@@ -194,9 +199,9 @@ struct SnippetCard: View {
                     }
                     .foregroundStyle(deletionBadgeColor)
                 } else {
-                    Text("Created at: \(Self.dateFormatter.string(from: snippet.createdAt))")
-                        .font(Mono.font(size: 10))
-                        .foregroundStyle(theme.textMuted)
+                    Text("Created at: \(formattedDate)")
+                        .font(Mono.font(size: 10, weight: .medium))
+                        .foregroundStyle(theme.textFaint)
                 }
             }
             .padding(.horizontal, 14)
@@ -231,10 +236,6 @@ struct SnippetCard: View {
                 .strokeBorder(
                     isSelected ? languageAccent.opacity(0.85) : .white.opacity(colorScheme == .dark ? 0.14 : 0.40),
                     lineWidth: isSelected ? 1.35 : 1
-                )
-                .shadow(
-                    color: languageAccent.opacity(effectiveIsHovered ? (colorScheme == .dark ? 0.56 : 0.35) : 0),
-                    radius: isHovered ? 18 : 0
                 )
         }
         .overlay {
@@ -284,12 +285,6 @@ struct SnippetCard: View {
         )
         .opacity(didAppear ? 1 : 0)
         .offset(y: didAppear ? 0 : 10)
-        .shadow(
-            color: .black.opacity(colorScheme == .dark ? (effectiveIsHovered ? 0.32 : 0.22) : (effectiveIsHovered ? 0.09 : 0.06)),
-            radius: effectiveIsHovered ? 24 : 18,
-            x: 0,
-            y: effectiveIsHovered ? 12 : 8
-        )
         .onAppear {
             withAnimation(.spring(response: 0.42, dampingFraction: 0.84)) {
                 didAppear = true
