@@ -7,6 +7,8 @@ struct GallerySection<Content: View>: View {
     let count: Int
     let icon: String
     let tint: Color
+    var actionIcon: String? = nil
+    var action: (() -> Void)? = nil
     @Binding var isExpanded: Bool
     var animation: Animation = .interactiveSpring(response: 0.42, dampingFraction: 0.9, blendDuration: 0.12)
     let content: Content
@@ -16,6 +18,8 @@ struct GallerySection<Content: View>: View {
         count: Int,
         icon: String,
         tint: Color,
+        actionIcon: String? = nil,
+        action: (() -> Void)? = nil,
         isExpanded: Binding<Bool>,
         animation: Animation = .interactiveSpring(response: 0.42, dampingFraction: 0.9, blendDuration: 0.12),
         @ViewBuilder content: () -> Content
@@ -24,6 +28,8 @@ struct GallerySection<Content: View>: View {
         self.count = count
         self.icon = icon
         self.tint = tint
+        self.actionIcon = actionIcon
+        self.action = action
         self._isExpanded = isExpanded
         self.animation = animation
         self.content = content()
@@ -36,6 +42,8 @@ struct GallerySection<Content: View>: View {
                 count: count,
                 icon: icon,
                 tint: tint,
+                actionIcon: actionIcon,
+                action: action,
                 isExpanded: $isExpanded
             )
 
@@ -53,59 +61,76 @@ struct GallerySectionHeader: View {
     let count: Int
     let icon: String
     let tint: Color
+    var actionIcon: String? = nil
+    var action: (() -> Void)? = nil
     @Binding var isExpanded: Bool
 
     private var theme: Theme { Theme.current(colorScheme) }
 
     var body: some View {
-        Button {
-            withAnimation(.interactiveSpring(response: 0.28, dampingFraction: 0.96, blendDuration: 0.06)) {
-                isExpanded.toggle()
+        HStack(spacing: 9) {
+            Button {
+                withAnimation(.interactiveSpring(response: 0.28, dampingFraction: 0.96, blendDuration: 0.06)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 9) {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(Sans.font(size: 11, weight: .semibold))
+                        .foregroundStyle(theme.textMuted)
+                        .frame(width: 14)
+
+                    Image(systemName: icon)
+                        .font(Sans.font(size: 13, weight: .semibold))
+                        .foregroundStyle(tint)
+                        .frame(width: 16)
+
+                    Text(title)
+                        .font(Sans.font(size: 15, weight: .semibold))
+                        .foregroundStyle(theme.text)
+
+                    Text("\(count)")
+                        .font(Mono.font(size: 11, weight: .semibold))
+                        .foregroundStyle(theme.textMuted)
+                        .monospacedDigit()
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background {
+                            Capsule(style: .continuous)
+                                .fill(tint.opacity(colorScheme == .dark ? 0.16 : 0.11))
+                        }
+                }
+                .contentShape(Rectangle())
             }
-        } label: {
-            HStack(spacing: 9) {
-                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                    .font(Sans.font(size: 11, weight: .semibold))
-                    .foregroundStyle(theme.textMuted)
-                    .frame(width: 14)
+            .buttonStyle(.plain)
 
-                Image(systemName: icon)
-                    .font(Sans.font(size: 13, weight: .semibold))
-                    .foregroundStyle(tint)
-                    .frame(width: 16)
-
-                Text(title)
-                    .font(Sans.font(size: 15, weight: .semibold))
-                    .foregroundStyle(theme.text)
-
-                Text("\(count)")
-                    .font(Mono.font(size: 11, weight: .semibold))
-                    .foregroundStyle(theme.textMuted)
-                    .monospacedDigit()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background {
-                        Capsule(style: .continuous)
-                            .fill(tint.opacity(colorScheme == .dark ? 0.16 : 0.11))
-                    }
-
-                Rectangle()
-                    .fill(theme.border)
-                    .frame(height: 1)
+            Rectangle()
+                .fill(theme.border)
+                .frame(height: 1)
+            
+            if let actionIcon, let action {
+                Button(action: action) {
+                    Image(systemName: actionIcon)
+                        .font(Sans.font(size: 14, weight: .semibold))
+                        .foregroundStyle(theme.textMuted)
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .liquidGlassSurface(
-                in: RoundedRectangle(cornerRadius: 10, style: .continuous),
-                tint: tint,
-                interactive: true,
-                borderOpacity: colorScheme == .dark ? 0.14 : 0.30,
-                shadowRadius: 5,
-                shadowY: 2
-            )
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .liquidGlassSurface(
+            in: RoundedRectangle(cornerRadius: 10, style: .continuous),
+            tint: tint,
+            interactive: true,
+            borderOpacity: colorScheme == .dark ? 0.14 : 0.30,
+            shadowRadius: 5,
+            shadowY: 2
+        )
+        .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title), \(count), \(isExpanded ? "expanded" : "collapsed")")
         .accessibilityAddTraits(.isButton)
     }

@@ -10,7 +10,23 @@ struct LanguageBadge: View {
 
     private var baseAccent: Color { Color(hex: language.accentHex) ?? Theme.current(colorScheme).accent }
     private var accent: Color { baseAccent.saturation(3.0).brightness(0.22) }
-    private var resolvedAccent: Color { accent }
+    private var selectedFillAccent: Color {
+        (Color(hex: language.accentHexSelectedFill) ?? accent)
+            .saturation(2.5)
+            .brightness(0.15)
+    }
+    
+    private var foregroundAccent: Color {
+        colorScheme == .dark ? accent : accent.blended(with: .black, ratio: 0.18)
+    }
+
+    private var resolvedForeground: Color {
+        colorScheme == .dark ? .white : foregroundAccent
+    }
+
+    private var resolvedFill: Color {
+        selectedFillAccent
+    }
 
     var body: some View {
         let theme = Theme.current(colorScheme)
@@ -24,13 +40,13 @@ struct LanguageBadge: View {
         }
         .padding(.horizontal, compact ? 7 : 9)
         .padding(.vertical, compact ? 3 : 4)
-        .foregroundStyle(resolvedAccent)
+        .foregroundStyle(resolvedForeground)
         .background {
             RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .fill(accent.opacity(colorScheme == .dark ? 0.18 : 0.16))
+                .fill(resolvedFill.opacity(colorScheme == .dark ? 0.20 : 0.12))
                 .overlay {
                     RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .strokeBorder(resolvedAccent.opacity(colorScheme == .dark ? 0.42 : 0.45), lineWidth: 1)
+                        .stroke(accent.opacity(0.50), lineWidth: 1)
                 }
         }
         .accessibilityLabel(language.rawValue)

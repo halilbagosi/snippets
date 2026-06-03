@@ -63,6 +63,15 @@ final class SnippetGalleryViewModel {
         }
     }
 
+    func toggleSelection(for collection: SnippetCollection) {
+        let id = collection.persistentModelID
+        if selectedForAction.contains(id) {
+            selectedForAction.remove(id)
+        } else {
+            selectedForAction.insert(id)
+        }
+    }
+
     func toggleSelectAll(for snippets: [Snippet]) {
         let ids = Set(snippets.map(\.persistentModelID))
         if selectedForAction == ids, !ids.isEmpty {
@@ -74,6 +83,10 @@ final class SnippetGalleryViewModel {
 
     func selectedSnippets(from snippets: [Snippet]) -> [Snippet] {
         snippets.filter { selectedForAction.contains($0.persistentModelID) }
+    }
+
+    func selectedCollections(from collections: [SnippetCollection]) -> [SnippetCollection] {
+        collections.filter { selectedForAction.contains($0.persistentModelID) }
     }
 
     func clearSelectionAndExitSelectMode() {

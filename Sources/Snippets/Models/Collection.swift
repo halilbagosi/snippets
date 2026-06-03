@@ -12,6 +12,7 @@ final class SnippetCollection {
     var iconName: String = SnippetCollection.defaultIconName
     var createdAt: Date
     var updatedAt: Date
+    var deletedAt: Date?
 
     var snippets: [Snippet]
 
@@ -28,12 +29,23 @@ final class SnippetCollection {
         return ids
     }
 
+    var isDeleted: Bool {
+        deletedAt != nil
+    }
+
+    var daysUntilPermanentDeletion: Int {
+        guard let deletedAt else { return 30 }
+        let elapsed = Calendar.current.dateComponents([.day], from: deletedAt, to: Date.now).day ?? 0
+        return max(30 - elapsed, 0)
+    }
+
     init(
         name: String,
         colorHex: String = SnippetCollection.defaultColorHex,
         iconName: String = SnippetCollection.defaultIconName,
         createdAt: Date = .now,
         updatedAt: Date = .now,
+        deletedAt: Date? = nil,
         snippets: [Snippet] = [],
         parent: SnippetCollection? = nil,
         children: [SnippetCollection] = []
@@ -43,6 +55,7 @@ final class SnippetCollection {
         self.iconName = iconName
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.deletedAt = deletedAt
         self.snippets = snippets
         self.parent = parent
         self.children = children

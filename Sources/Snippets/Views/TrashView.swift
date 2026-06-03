@@ -9,6 +9,9 @@ struct TrashView: View {
     @Query(filter: #Predicate<Snippet> { $0.deletedAt != nil }, sort: [SortDescriptor(\Snippet.deletedAt, order: .reverse)])
     private var trashedSnippets: [Snippet]
 
+    @Query(filter: #Predicate<SnippetCollection> { $0.deletedAt != nil }, sort: [SortDescriptor(\SnippetCollection.deletedAt, order: .reverse)])
+    private var trashedCollections: [SnippetCollection]
+
     @State private var searchText = ""
     @State private var selectedLanguages = Set<SupportedLanguage>()
     @State private var selectedSearchCollections = Set<PersistentIdentifier>()
@@ -57,14 +60,16 @@ struct TrashView: View {
                     selectedSearchCollections: $selectedSearchCollections,
                     availableLanguages: [],
                     availableCollections: [],
-                    subcollections: [],
+                    subcollections: trashedCollections,
                     onSelect: { _ in },
                     onNew: nil,
                     onDelete: nil,
                     onUndoDelete: nil,
                     isTrashMode: true,
                     onRestore: restore,
-                    onPermanentDelete: permanentlyDelete
+                    onPermanentDelete: permanentlyDelete,
+                    onRestoreCollection: restoreCollection,
+                    onPermanentDeleteCollection: permanentlyDeleteCollection
                 )
             }
         }
@@ -82,6 +87,17 @@ struct TrashView: View {
         }
 
         modelContext.delete(snippet)
+        try? modelContext.save()
+    }
+
+    private func restoreCollection(_ collection: SnippetCollection) {
+        collection.deletedAt = nil
+        collection.updatedAt = .now
+        try? modelContext.save()
+    }
+
+    private func permanentlyDeleteCollection(_ collection: SnippetCollection) {
+        modelContext.delete(collection)
         try? modelContext.save()
     }
 }

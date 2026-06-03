@@ -199,7 +199,7 @@ struct SnippetCard: View {
                     }
                     .foregroundStyle(deletionBadgeColor)
                 } else {
-                    Text("Created at: \(formattedDate)")
+                    Text("Created on: \(formattedDate)")
                         .font(Mono.font(size: 10, weight: .medium))
                         .foregroundStyle(theme.textFaint)
                 }
@@ -312,10 +312,8 @@ struct SnippetCard: View {
         }
         .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isHovered)
         .animation(.interactiveSpring(response: 0.24, dampingFraction: 0.74), value: hoverLocation)
-        .onTapGesture(count: 2) {
-            if inTrashView {
-                isShowingActionDialog = true
-            }
+        .trashDoubleTap(inTrash: inTrashView) {
+            isShowingActionDialog = true
         }
         .confirmationDialog("Snippet", isPresented: $isShowingActionDialog, titleVisibility: .visible) {
             Button("Put back") { onRestore?() }
@@ -569,5 +567,16 @@ private struct CardVideoPreview: View {
             LoopingVideoPlayerView(fileName: item.fileName, videoGravity: .resizeAspect)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func trashDoubleTap(inTrash: Bool, action: @escaping () -> Void) -> some View {
+        if inTrash {
+            self.onTapGesture(count: 2, perform: action)
+        } else {
+            self
+        }
     }
 }

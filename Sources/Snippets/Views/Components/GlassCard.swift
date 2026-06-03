@@ -51,7 +51,7 @@ private struct LiquidGlassSurfaceModifier<S: Shape>: ViewModifier {
                     .allowsHitTesting(false)
             }
             .shadow(
-                color: .black.opacity(colorScheme == .dark ? 0.24 : 0.10),
+                color: (shadowRadius > 0 || shadowY > 0) ? .black.opacity(colorScheme == .dark ? 0.24 : 0.10) : .clear,
                 radius: shadowRadius,
                 x: 0,
                 y: shadowY
