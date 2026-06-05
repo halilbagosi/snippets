@@ -328,7 +328,7 @@ struct SnippetGalleryView: View {
     }
 
     private func subcollectionGrid(_ source: [SnippetCollection]) -> some View {
-        GlassEffectContainer(spacing: 18) {
+        LiquidGlassContainer(spacing: 18) {
             LazyVGrid(columns: subcollectionColumns, spacing: 14) {
                 ForEach(Array(source.enumerated()), id: \.element.persistentModelID) { index, collection in
                     ZStack {
@@ -733,7 +733,7 @@ struct SnippetGalleryView: View {
     }
 
     private var topBar: some View {
-        GlassEffectContainer(spacing: 10) {
+        LiquidGlassContainer(spacing: 10) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
                     if let onBack {
@@ -1122,7 +1122,7 @@ struct SnippetGalleryView: View {
 
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            GlassEffectContainer(spacing: 8) {
+            LiquidGlassContainer(spacing: 8) {
                 HStack(spacing: 8) {
                     FilterTag(
                         label: "lang:all",

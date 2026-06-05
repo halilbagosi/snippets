@@ -19,7 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try? await Task.sleep(for: .milliseconds(50))
             NSApp.activate(ignoringOtherApps: true)
             configureWindows(NSApp.windows)
-            for window in NSApp.windows {
+            for window in NSApp.windows where window.canBecomeMain {
                 window.makeKeyAndOrderFront(nil)
             }
         }
@@ -27,7 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
         configureWindows(sender.windows)
-        for window in sender.windows {
+        for window in sender.windows where window.canBecomeMain {
             window.makeKeyAndOrderFront(nil)
         }
         sender.activate(ignoringOtherApps: true)
@@ -37,7 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
     private func configureWindows(_ windows: [NSWindow]) {
-        for window in windows {
+        for window in windows where window.canBecomeMain {
             window.styleMask.formUnion([.titled, .closable, .miniaturizable, .resizable])
             window.collectionBehavior.insert(.fullScreenPrimary)
             window.collectionBehavior.insert(.managed)

@@ -22,6 +22,7 @@ struct CollectionEditorSheet: View {
 
     @Binding var collectionName: String
     @Binding var collectionColor: Color
+    @Binding var collectionColorDark: Color?
     @Binding var collectionIconName: String
     @Binding var selectedSnippetIDs: Set<PersistentIdentifier>
     @Binding var parentCollectionID: PersistentIdentifier?
@@ -37,14 +38,14 @@ struct CollectionEditorSheet: View {
     @State private var isSnippetPickerExpanded: Bool = false
 
     private let palette: [ColorChoice] = [
-        .init(name: "Red", hex: "#FF453A"),
-        .init(name: "Orange", hex: "#FF9F0A"),
-        .init(name: "Yellow", hex: "#FFD60A"),
-        .init(name: "Green", hex: "#30D158"),
-        .init(name: "Blue", hex: "#0A84FF"),
-        .init(name: "Purple", hex: "#BF5AF2"),
-        .init(name: "Pink", hex: "#FF375F"),
-        .init(name: "Gray", hex: "#8E8E93")
+        .init(name: "Red", hex: "#DC2626"),
+        .init(name: "Orange", hex: "#EA580C"),
+        .init(name: "Yellow", hex: "#CA8A04"),
+        .init(name: "Green", hex: "#16A34A"),
+        .init(name: "Blue", hex: "#2563EB"),
+        .init(name: "Purple", hex: "#9333EA"),
+        .init(name: "Pink", hex: "#DB2777"),
+        .init(name: "Gray", hex: "#4B5563")
     ]
 
     private let symbolSections: [SymbolSection] = [
@@ -86,7 +87,27 @@ struct CollectionEditorSheet: View {
     private var isSymbolValid: Bool { SnippetCollection.isValidSFSymbolName(trimmedIconName) }
     private var previewIconName: String { isSymbolValid ? trimmedIconName : SnippetCollection.defaultIconName }
     private var canSave: Bool { !trimmedName.isEmpty && isSymbolValid }
-    private var selectedColorHex: String { collectionColor.hexString(fallback: SnippetCollection.defaultColorHex).lowercased() }
+    private var activeColor: Color {
+        colorScheme == .dark ? (collectionColorDark ?? collectionColor) : collectionColor
+    }
+
+    private var activeColorBinding: Binding<Color> {
+        Binding {
+            activeColor
+        } set: { newColor in
+            if colorScheme == .dark {
+                collectionColorDark = newColor
+                // Reset light to match so contrast suggestion can re-trigger
+                collectionColor = newColor
+            } else {
+                collectionColor = newColor
+                // Reset dark to nil so contrast suggestion can re-trigger
+                collectionColorDark = nil
+            }
+        }
+    }
+
+    private var selectedColorHex: String { activeColor.hexString(fallback: SnippetCollection.defaultColorHex).lowercased() }
 
     private var displayedSymbolSections: [SymbolSection] {
         let needle = symbolSearch.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -100,6 +121,91 @@ struct CollectionEditorSheet: View {
         }
     }
 
+    private enum ContrastSuggestion {
+        case suggestForDark(Color)
+        case suggestForLight(Color)
+        case none
+    }
+
+    private var contrastSuggestion: ContrastSuggestion {
+        let current = activeColor
+        if colorScheme == .light {
+            // Check if the current light color has poor contrast in dark mode
+            if current.contrastRatio(with: Color(white: 0.1)) < 2.5 {
+                return .suggestForDark(current.brightness(0.3).saturation(0.8))
+            }
+        } else {
+            // Check if the current dark color has poor contrast in light mode
+            if current.contrastRatio(with: Color.white) < 2.5 {
+                return .suggestForLight(current.brightness(-0.25).saturation(1.2))
+            }
+        }
+        return .none
+    }
+
+    @ViewBuilder
+    private var glassContrastWarning: some View {
+        switch contrastSuggestion {
+        case .suggestForDark(let suggested):
+            warningView(
+                text: "This color looks great in Light Mode, but has poor contrast in Dark Mode.",
+                suggestionText: "Apply Lighter Version to Dark Mode",
+                suggestedColor: suggested
+            ) {
+                collectionColorDark = suggested
+            }
+        case .suggestForLight(let suggested):
+            warningView(
+                text: "This color looks great in Dark Mode, but has poor contrast in Light Mode.",
+                suggestionText: "Apply Darker Version to Light Mode",
+                suggestedColor: suggested
+            ) {
+                let currentDark = collectionColorDark ?? collectionColor
+                collectionColor = suggested
+                collectionColorDark = currentDark
+            }
+        case .none:
+            EmptyView()
+        }
+    }
+
+    private func warningView(text: String, suggestionText: String, suggestedColor: Color, action: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                Text(text)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    action()
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(suggestedColor)
+                        .frame(width: 12, height: 12)
+                        .overlay(Circle().stroke(.white.opacity(0.3), lineWidth: 1))
+                    Text(suggestionText)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.primary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.secondary.opacity(0.1))
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, -12)
+        .padding(.bottom, -4)
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -107,6 +213,8 @@ struct CollectionEditorSheet: View {
                     VStack(alignment: .leading, spacing: 20) {
                         glassPreviewHeader
                         glassColorStrip
+
+                        glassContrastWarning
                         
                         glassSubcollectionToggleSection
                         glassSnippetMembershipSection
@@ -120,7 +228,7 @@ struct CollectionEditorSheet: View {
             .background {
                 ZStack {
                     Color.clear.ignoresSafeArea()
-                    DotGridBackground(gradientPalette: [collectionColor], lightModeStrength: 0.5)
+                    DotGridBackground(gradientPalette: [activeColor], lightModeStrength: 0.5)
                         .opacity(colorScheme == .dark ? 0.12 : 0.10)
                         .ignoresSafeArea()
                 }
@@ -133,7 +241,7 @@ struct CollectionEditorSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save", action: onSave)
                         .disabled(!canSave)
-                        .tint(collectionColor)
+                        .tint(activeColor)
                 }
             }
         }
@@ -143,29 +251,21 @@ struct CollectionEditorSheet: View {
     // MARK: - Liquid Glass Preview Header
 
     private var glassPreviewHeader: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(collectionColor.opacity(colorScheme == .dark ? 0.15 : 0.10))
-                    .frame(width: 80, height: 80)
-                    .blur(radius: 12)
-
-                CollectionIconView(
-                    iconName: previewIconName,
-                    color: collectionColor,
-                    size: 56,
-                    isSelected: true
-                )
+        HStack(spacing: 16) {
+            if collectionColorDark != nil {
+                HStack(spacing: 8) {
+                    previewIcon(color: collectionColor, isDark: false)
+                    previewIcon(color: collectionColorDark!, isDark: true)
+                }
+            } else {
+                previewIcon(color: activeColor, isDark: colorScheme == .dark)
             }
-            .frame(height: 68)
 
             TextField("Collection name", text: $collectionName)
                 .textFieldStyle(.plain)
                 .font(.system(size: 22, weight: .bold, design: .rounded))
-                .multilineTextAlignment(.center)
                 .padding(.horizontal, 18)
                 .padding(.vertical, 10)
-                .frame(maxWidth: 280)
                 .background {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(.ultraThinMaterial)
@@ -184,12 +284,16 @@ struct CollectionEditorSheet: View {
     private var glassColorStrip: some View {
         HStack(spacing: 10) {
             ForEach(palette) { choice in
+                let isSelected = selectedColorHex == choice.hex.lowercased()
                 Button {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.72)) {
-                        collectionColor = Color(hex: choice.hex) ?? collectionColor
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        if let newColor = Color(hex: choice.hex) {
+                            // Palette colors set a single color for both modes
+                            collectionColor = newColor
+                            collectionColorDark = nil
+                        }
                     }
                 } label: {
-                    let isSelected = selectedColorHex == choice.hex.lowercased()
                     ZStack {
                         Circle()
                             .fill(Color(hex: choice.hex) ?? theme.accent)
@@ -215,12 +319,18 @@ struct CollectionEditorSheet: View {
             }
 
             ZStack {
+                ColorPicker("", selection: activeColorBinding, supportsOpacity: false)
+                    .labelsHidden()
+                    .opacity(0.015)
+                    .clipShape(Circle())
+
                 Circle()
-                    .fill(collectionColor)
+                    .fill(activeColor)
                     .frame(width: 28, height: 28)
                     .overlay {
                         Circle().stroke(.white.opacity(colorScheme == .dark ? 0.12 : 0.25), lineWidth: 1)
                     }
+                    .allowsHitTesting(false)
 
                 Image(systemName: "plus")
                     .font(.system(size: 13, weight: .bold))
@@ -229,13 +339,6 @@ struct CollectionEditorSheet: View {
                     .allowsHitTesting(false)
             }
             .frame(width: 38, height: 38)
-            .overlay {
-                ColorPicker("", selection: $collectionColor, supportsOpacity: false)
-                    .labelsHidden()
-                    .scaleEffect(5.0)
-                    .position(x: 19, y: 19)
-                    .opacity(0.015)
-            }
             .contentShape(Circle())
             .clipShape(Circle())
             .help("Custom color")
@@ -245,7 +348,7 @@ struct CollectionEditorSheet: View {
         .padding(.horizontal, 8)
         .liquidGlassSurface(
             in: Capsule(style: .continuous),
-            tint: collectionColor.opacity(0.15),
+            tint: activeColor.opacity(0.15),
             shadowRadius: 8,
             shadowY: 4
         )
@@ -309,10 +412,30 @@ struct CollectionEditorSheet: View {
         }
         .padding(16)
         .liquidGlassSurface(
-            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
-            shadowRadius: 8,
-            shadowY: 4
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            shadowRadius: 12,
+            shadowY: 6
         )
+    }
+
+    private func previewIcon(color: Color, isDark: Bool) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(isDark ? Color(white: 0.15) : Color.white)
+
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(color.opacity(isDark ? 0.15 : 0.1))
+            
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(color.opacity(isDark ? 0.3 : 0.2), lineWidth: 1)
+            
+            Image(systemName: SnippetCollection.isValidSFSymbolName(collectionIconName) ? collectionIconName : SnippetCollection.defaultIconName)
+                .font(.system(size: 24, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(color)
+                .shadow(color: color.opacity(0.4), radius: 8, x: 0, y: 4)
+        }
+        .frame(width: 56, height: 56)
     }
 
     private func glassSymbolButton(_ symbolName: String) -> some View {
@@ -330,8 +453,8 @@ struct CollectionEditorSheet: View {
                 .background {
                     if isSelected {
                         Circle()
-                            .fill(collectionColor)
-                            .shadow(color: collectionColor.opacity(0.5), radius: 6, x: 0, y: 2)
+                            .fill(activeColor)
+                            .shadow(color: activeColor.opacity(0.5), radius: 6, x: 0, y: 2)
                     } else {
                         Circle()
                             .fill(.ultraThinMaterial)
@@ -341,7 +464,7 @@ struct CollectionEditorSheet: View {
                     Circle()
                         .stroke(
                             isSelected
-                                ? collectionColor.opacity(0.6)
+                                ? activeColor.opacity(0.6)
                                 : .white.opacity(colorScheme == .dark ? 0.06 : 0.15),
                             lineWidth: 1
                         )
@@ -363,13 +486,13 @@ struct CollectionEditorSheet: View {
                 } icon: {
                     Image(systemName: "arrow.turn.down.right")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(collectionColor)
+                        .foregroundStyle(activeColor)
                 }
                 Spacer()
                 Toggle("", isOn: $isSubcollection.animation(.spring(response: 0.35, dampingFraction: 0.8)))
                     .labelsHidden()
                     .toggleStyle(.switch)
-                    .tint(collectionColor)
+                    .tint(activeColor)
             }
 
             if isSubcollection {
@@ -386,7 +509,7 @@ struct CollectionEditorSheet: View {
                     }
                     .labelsHidden()
                     .pickerStyle(.menu)
-                    .tint(collectionColor)
+                    .tint(activeColor)
                     .frame(maxWidth: 200)
                 }
                 .padding(.top, 4)
@@ -394,11 +517,14 @@ struct CollectionEditorSheet: View {
             }
         }
         .padding(16)
-        .liquidGlassSurface(
-            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
-            shadowRadius: 8,
-            shadowY: 4
-        )
+        .background {
+            Color.clear
+                .liquidGlassSurface(
+                    in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                    shadowRadius: 8,
+                    shadowY: 4
+                )
+        }
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isSubcollection)
     }
 
@@ -437,7 +563,7 @@ struct CollectionEditorSheet: View {
                     } icon: {
                         Image(systemName: "doc.text")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(collectionColor)
+                            .foregroundStyle(activeColor)
                     }
                     Spacer()
                     Text("\(selectedSnippetIDs.count)")
@@ -447,8 +573,8 @@ struct CollectionEditorSheet: View {
                         .padding(.vertical, 3)
                         .background {
                             Capsule()
-                                .fill(collectionColor)
-                                .shadow(color: collectionColor.opacity(0.3), radius: 4, x: 0, y: 2)
+                                .fill(activeColor)
+                                .shadow(color: activeColor.opacity(0.3), radius: 4, x: 0, y: 2)
                         }
                     
                     Image(systemName: "chevron.right")
@@ -480,11 +606,14 @@ struct CollectionEditorSheet: View {
             }
         }
         .padding(16)
-        .liquidGlassSurface(
-            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
-            shadowRadius: 8,
-            shadowY: 4
-        )
+        .background {
+            Color.clear
+                .liquidGlassSurface(
+                    in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                    shadowRadius: 8,
+                    shadowY: 4
+                )
+        }
     }
 
     private func glassSnippetToggleRow(_ snippet: Snippet) -> some View {
@@ -501,13 +630,13 @@ struct CollectionEditorSheet: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(isSelected ? AnyShapeStyle(collectionColor) : AnyShapeStyle(.thickMaterial))
+                        .fill(isSelected ? AnyShapeStyle(activeColor) : AnyShapeStyle(.thickMaterial))
                         .frame(width: 20, height: 20)
                         .overlay {
                             Circle()
                                 .stroke(
                                     isSelected
-                                        ? collectionColor
+                                        ? activeColor
                                         : .white.opacity(colorScheme == .dark ? 0.1 : 0.2),
                                     lineWidth: 1
                                 )
@@ -540,7 +669,7 @@ struct CollectionEditorSheet: View {
             .padding(.vertical, 7)
             .background {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(isSelected ? collectionColor.opacity(colorScheme == .dark ? 0.12 : 0.08) : Color.clear)
+                    .fill(isSelected ? activeColor.opacity(colorScheme == .dark ? 0.12 : 0.08) : Color.clear)
             }
             .contentShape(Rectangle())
         }

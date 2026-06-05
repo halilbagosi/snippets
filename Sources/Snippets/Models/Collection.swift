@@ -9,6 +9,7 @@ final class SnippetCollection {
 
     var name: String
     var colorHex: String = SnippetCollection.defaultColorHex
+    var colorHexDark: String?
     var iconName: String = SnippetCollection.defaultIconName
     var createdAt: Date
     var updatedAt: Date
@@ -42,6 +43,7 @@ final class SnippetCollection {
     init(
         name: String,
         colorHex: String = SnippetCollection.defaultColorHex,
+        colorHexDark: String? = nil,
         iconName: String = SnippetCollection.defaultIconName,
         createdAt: Date = .now,
         updatedAt: Date = .now,
@@ -52,6 +54,7 @@ final class SnippetCollection {
     ) {
         self.name = name
         self.colorHex = colorHex
+        self.colorHexDark = colorHexDark
         self.iconName = iconName
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -59,5 +62,12 @@ final class SnippetCollection {
         self.snippets = snippets
         self.parent = parent
         self.children = children
+    }
+
+    func resolvedColorHex(isDark: Bool) -> String {
+        if isDark, let darkHex = colorHexDark {
+            return darkHex
+        }
+        return colorHex
     }
 }

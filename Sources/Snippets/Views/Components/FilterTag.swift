@@ -41,6 +41,7 @@ struct FilterTag: View {
                     .font(Mono.font(size: 10, weight: .semibold))
                 Text(label)
                     .font(Mono.font(size: 11, weight: .semibold))
+                    .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)

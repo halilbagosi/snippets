@@ -24,6 +24,7 @@ struct ContentView: View {
     @State private var editingCollection: SnippetCollection? = nil
     @State private var collectionDraftName: String = ""
     @State private var collectionDraftColor: Color = Color(hex: SnippetCollection.defaultColorHex) ?? .accentColor
+    @State private var collectionDraftColorDark: Color? = nil
     @State private var collectionDraftIconName: String = SnippetCollection.defaultIconName
     @State private var collectionDraftSnippetIDs: Set<PersistentIdentifier> = []
     @State private var collectionDraftParentID: PersistentIdentifier? = nil
@@ -381,6 +382,7 @@ struct ContentView: View {
             CollectionEditorSheet(
                 collectionName: $collectionDraftName,
                 collectionColor: $collectionDraftColor,
+                collectionColorDark: $collectionDraftColorDark,
                 collectionIconName: $collectionDraftIconName,
                 selectedSnippetIDs: $collectionDraftSnippetIDs,
                 parentCollectionID: $collectionDraftParentID,
@@ -635,6 +637,7 @@ struct ContentView: View {
         editingCollection = nil
         collectionDraftName = ""
         collectionDraftColor = Color(hex: SnippetCollection.defaultColorHex) ?? theme.accent
+        collectionDraftColorDark = nil
         collectionDraftIconName = SnippetCollection.defaultIconName
         collectionDraftSnippetIDs = []
         collectionDraftParentID = nil
@@ -645,7 +648,8 @@ struct ContentView: View {
     private func beginEditCollection(_ collection: SnippetCollection) {
         editingCollection = collection
         collectionDraftName = collection.name
-        collectionDraftColor = collection.displayColor
+        collectionDraftColor = Color(hex: collection.colorHex) ?? Color(hex: SnippetCollection.defaultColorHex) ?? theme.accent
+        collectionDraftColorDark = collection.colorHexDark.flatMap { Color(hex: $0) }
         collectionDraftIconName = collection.displayIconName
         collectionDraftSnippetIDs = Set(collection.snippets.map(\.persistentModelID))
         collectionDraftParentID = collection.parent?.persistentModelID
@@ -656,6 +660,7 @@ struct ContentView: View {
     private func resetCollectionDraft() {
         collectionDraftName = ""
         collectionDraftColor = Color(hex: SnippetCollection.defaultColorHex) ?? theme.accent
+        collectionDraftColorDark = nil
         collectionDraftIconName = SnippetCollection.defaultIconName
         collectionDraftSnippetIDs = []
         collectionDraftParentID = nil
@@ -670,6 +675,8 @@ struct ContentView: View {
         }
         guard !trimmed.isEmpty else { return }
         let colorHex = collectionDraftColor.hexString(fallback: SnippetCollection.defaultColorHex)
+        let colorHexDark = collectionDraftColorDark?.hexString(fallback: "")
+        let finalColorHexDark = colorHexDark?.isEmpty == false ? colorHexDark : nil
         let iconName = SnippetCollection.validSFSymbolName(collectionDraftIconName)
         let collection: SnippetCollection
         if let editingCollection {
@@ -678,7 +685,7 @@ struct ContentView: View {
         } else if let existing = collections.first(where: { $0.name.caseInsensitiveCompare(trimmed) == .orderedSame && $0.parent?.persistentModelID == collectionDraftParentID }) {
             collection = existing
         } else {
-            collection = SnippetCollection(name: trimmed, colorHex: colorHex, iconName: iconName)
+            collection = SnippetCollection(name: trimmed, colorHex: colorHex, colorHexDark: finalColorHexDark, iconName: iconName)
             modelContext.insert(collection)
         }
 
@@ -688,6 +695,7 @@ struct ContentView: View {
             collection.parent = nil
         }
         collection.colorHex = colorHex
+        collection.colorHexDark = finalColorHexDark
         collection.iconName = iconName
 
         let selectedIDs = collectionDraftSnippetIDs
@@ -706,10 +714,13 @@ struct ContentView: View {
         collection.snippets = snippets.filter { selectedIDs.contains($0.persistentModelID) }
         collection.updatedAt = .now
         try? modelContext.save()
-        selectedCollectionID = collection.persistentModelID
-        sidebarSelectionContext = .collection(collection.persistentModelID)
-        isLibrarySectionExpanded = true
-        expandedCollections.insert(collection.persistentModelID)
+        
+        if editingCollection == nil {
+            selectedCollectionID = collection.persistentModelID
+            sidebarSelectionContext = .collection(collection.persistentModelID)
+            isLibrarySectionExpanded = true
+            expandedCollections.insert(collection.persistentModelID)
+        }
     }
 
 
@@ -846,4 +857,3 @@ struct ContentView: View {
         try? modelContext.save()
     }
 }
-

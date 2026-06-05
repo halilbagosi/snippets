@@ -26,7 +26,26 @@ struct CollectionIconView: View {
 
 extension SnippetCollection {
     var displayColor: Color {
-        Color(hex: colorHex) ?? Color(hex: Self.defaultColorHex) ?? .accentColor
+        let lightColor = Color(hex: colorHex) ?? Color(hex: Self.defaultColorHex) ?? .accentColor
+        guard let darkHex = colorHexDark, let darkColor = Color(hex: darkHex) else {
+            return lightColor
+        }
+        
+        #if canImport(AppKit)
+        let nsLight = NSColor(lightColor)
+        let nsDark = NSColor(darkColor)
+        let dynamicNSColor = NSColor(name: nil, dynamicProvider: { appearance in
+            switch appearance.name {
+            case .darkAqua, .vibrantDark, .accessibilityHighContrastDarkAqua, .accessibilityHighContrastVibrantDark:
+                return nsDark
+            default:
+                return nsLight
+            }
+        })
+        return Color(nsColor: dynamicNSColor)
+        #else
+        return lightColor
+        #endif
     }
 
     var displayIconName: String {

@@ -18,6 +18,21 @@ struct GlassCard<Content: View>: View {
     }
 }
 
+struct LiquidGlassContainer<Content: View>: View {
+    let spacing: CGFloat
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        if #available(macOS 26.0, *) {
+            GlassEffectContainer(spacing: spacing) {
+                content()
+            }
+        } else {
+            content()
+        }
+    }
+}
+
 private struct LiquidGlassSurfaceModifier<S: Shape>: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
 
@@ -31,8 +46,21 @@ private struct LiquidGlassSurfaceModifier<S: Shape>: ViewModifier {
     func body(content: Content) -> some View {
         let resolvedBorderOpacity = borderOpacity ?? (colorScheme == .dark ? 0.18 : 0.42)
 
-        content
-            .glassEffect(interactive ? .regular.interactive() : .regular, in: shape)
+        if #available(macOS 26.0, *) {
+            decorated(
+                content.glassEffect(interactive ? .regular.interactive() : .regular, in: shape),
+                borderOpacity: resolvedBorderOpacity
+            )
+        } else {
+            decorated(
+                content.background(shape.fill(.ultraThinMaterial)),
+                borderOpacity: resolvedBorderOpacity
+            )
+        }
+    }
+
+    private func decorated<V: View>(_ view: V, borderOpacity: Double) -> some View {
+        view
             .overlay {
                 shape
                     .fill(.white.opacity(colorScheme == .dark ? 0.035 : 0.16))
@@ -47,7 +75,7 @@ private struct LiquidGlassSurfaceModifier<S: Shape>: ViewModifier {
             }
             .overlay {
                 shape
-                    .stroke(.white.opacity(resolvedBorderOpacity), lineWidth: 1)
+                    .stroke(.white.opacity(borderOpacity), lineWidth: 1)
                     .allowsHitTesting(false)
             }
             .shadow(
