@@ -70,3 +70,9 @@ fileprivate struct MetalGenieRepresentable: NSViewRepresentable {
     }
 }
 #endif
+
+#Preview("MetalGenieOverlay") {
+    MetalGenieOverlay(progress: 0.5, accent: .blue)
+        .frame(width: 300, height: 400)
+        .background(Color.black)
+}

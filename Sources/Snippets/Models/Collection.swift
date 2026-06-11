@@ -14,6 +14,7 @@ final class SnippetCollection {
     var createdAt: Date
     var updatedAt: Date
     var deletedAt: Date?
+    var isFavorite: Bool = false
 
     var snippets: [Snippet]
 
@@ -48,6 +49,7 @@ final class SnippetCollection {
         createdAt: Date = .now,
         updatedAt: Date = .now,
         deletedAt: Date? = nil,
+        isFavorite: Bool = false,
         snippets: [Snippet] = [],
         parent: SnippetCollection? = nil,
         children: [SnippetCollection] = []
@@ -59,6 +61,7 @@ final class SnippetCollection {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.deletedAt = deletedAt
+        self.isFavorite = isFavorite
         self.snippets = snippets
         self.parent = parent
         self.children = children

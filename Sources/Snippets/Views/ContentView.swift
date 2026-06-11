@@ -20,6 +20,7 @@ struct ContentView: View {
     @State private var searchText: String = ""
     @State private var editingSnippet: Snippet? = nil
     @State private var isPresentingNew: Bool = false
+    @State private var newSnippetPreselectedCollectionID: PersistentIdentifier? = nil
     @State private var isPresentingCollectionEditor: Bool = false
     @State private var editingCollection: SnippetCollection? = nil
     @State private var collectionDraftName: String = ""
@@ -32,6 +33,7 @@ struct ContentView: View {
     @State private var selectedSnippetID: PersistentIdentifier? = nil
     enum SidebarSelectionContext: Hashable {
         case frequentlyUsed
+        case favorites
         case allSnippets
         case trash
         case collection(PersistentIdentifier)
@@ -39,7 +41,9 @@ struct ContentView: View {
     @State private var sidebarSelectionContext: SidebarSelectionContext? = nil
     @State private var selectedCollectionID: PersistentIdentifier? = nil
     @State private var sidebarSearch: String = ""
+    @State private var showFavoritesOnly: Bool = false
     @State private var isLibrarySectionExpanded: Bool = true
+    @State private var isFavoritesSectionExpanded: Bool = true
     @State private var isFrequentlyUsedSectionExpanded: Bool = true
     @State private var isLanguagesSectionExpanded: Bool = true
     @State private var isAllSnippetsExpanded: Bool = false
@@ -101,11 +105,17 @@ struct ContentView: View {
 
             if let selectedCollectionID {
                 if !belongsDirectlyToCollection(selectedCollectionID) { return false }
+            } else if sidebarSelectionContext == .allSnippets {
+                if snippet.collections.contains(where: { !$0.isDeleted }) {
+                    return false
+                }
             }
 
             if !selectedSearchCollections.isEmpty {
                 if !selectedSearchCollections.contains(where: { belongsToCollection($0) }) { return false }
             }
+
+            if showFavoritesOnly && !snippet.isFavorite { return false }
 
             return true
         }
@@ -114,6 +124,8 @@ struct ContentView: View {
     private var searchFilteredSnippets: [Snippet] {
         snippets.filter { snippet in
             if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
+
+            if showFavoritesOnly && !snippet.isFavorite { return false }
 
             guard !selectedSearchCollections.isEmpty else { return true }
             return selectedSearchCollections.contains { collectionID in
@@ -129,7 +141,9 @@ struct ContentView: View {
         guard !needle.isEmpty else { return [] }
 
         return collections.filter { collection in
-            !collection.isDeleted && collection.name.lowercased().contains(needle)
+            !collection.isDeleted && 
+            (!showFavoritesOnly || collection.isFavorite) &&
+            collection.name.lowercased().contains(needle)
         }
     }
 
@@ -157,11 +171,12 @@ struct ContentView: View {
             let selectedCollection,
             sidebarSelectionContext == .collection(selectedCollection.persistentModelID)
         {
-            return selectedCollection.children.sorted(by: collectionSort)
+            let children = selectedCollection.children.sorted(by: collectionSort)
+            return showFavoritesOnly ? children.filter(\.isFavorite) : children
         }
 
-        guard selectedCollectionID == nil, sidebarSelectionContext != .trash else { return [] }
-        return topLevelCollections
+        guard selectedCollectionID == nil, sidebarSelectionContext == .allSnippets else { return [] }
+        return showFavoritesOnly ? topLevelCollections.filter(\.isFavorite) : topLevelCollections
     }
 
     private var availableLanguages: [SupportedLanguage] {
@@ -185,6 +200,14 @@ struct ContentView: View {
             }
             .prefix(5)
         )
+    }
+
+    private var favoriteSnippets: [Snippet] {
+        snippets.filter(\.isFavorite).sorted(by: { $0.updatedAt > $1.updatedAt })
+    }
+
+    private var favoriteCollections: [SnippetCollection] {
+        collections.filter(\.isFavorite).sorted(by: collectionSort)
     }
 
     private var trashedItemCount: Int {
@@ -251,6 +274,7 @@ struct ContentView: View {
                             searchResultSnippets: searchResultSnippets,
                             searchQuery: trimmedSearchText,
                             searchText: $searchText,
+                            showFavoritesOnly: $showFavoritesOnly,
                             selectedLanguages: $selectedLanguages,
                             selectedSearchCollections: $selectedSearchCollections,
                             availableLanguages: availableLanguages,
@@ -277,7 +301,10 @@ struct ContentView: View {
                             onCreateCollection: {
                                 beginCreateCollection()
                             },
-                            onNew: { isPresentingNew = true },
+                            onNew: {
+                                newSnippetPreselectedCollectionID = selectedCollectionID
+                                isPresentingNew = true
+                            },
                             onBack: selectedCollectionID != nil ? {
                                 navigateBackFromCollection()
                             } : nil,
@@ -349,8 +376,62 @@ struct ContentView: View {
                         }
                         .zIndex(2)
                     }
+
+                    if isPresentingNew {
+                        Color.black
+                            .opacity(colorScheme == .dark ? 0.34 : 0.22)
+                            .ignoresSafeArea()
+                            .onTapGesture {
+                                NotificationCenter.default.post(name: .init("AttemptDismissEditor"), object: nil)
+                            }
+                            .transition(.opacity)
+                            .zIndex(3)
+
+                        GeometryReader { proxy in
+                            let w = min(max(proxy.size.width * 0.90, 820), 1200)
+                            let h = min(max(proxy.size.height * 0.92, 660), 960)
+                            SnippetEditorView(
+                                mode: .create(preselectedCollectionID: newSnippetPreselectedCollectionID),
+                                availableCollections: collections,
+                                onRequestDismiss: {
+                                    withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                        isPresentingNew = false
+                                    }
+                                },
+                                onSave: { newSnippet in
+                                    modelContext.insert(newSnippet)
+                                    try? modelContext.save()
+                                    withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                        selectedSnippetID = newSnippet.persistentModelID
+                                        sidebarSelectionContext = .allSnippets
+                                        isPresentingNew = false
+                                    }
+                                }
+                            )
+                            .frame(width: w, height: h)
+                            .background {
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(theme.surface)
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .strokeBorder(theme.borderStrong, lineWidth: 1)
+                                    }
+                            }
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .transition(
+                                .asymmetric(
+                                    insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)),
+                                    removal:   .opacity.combined(with: .scale(scale: 0.97, anchor: .center))
+                                )
+                            )
+                        }
+                        .zIndex(4)
+                    }
                 }
                 .animation(.spring(response: 0.4, dampingFraction: 0.88), value: selectedSnippetID)
+                .animation(.spring(response: 0.4, dampingFraction: 0.88), value: isPresentingNew)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     StatusBar(
                         segments: currentStatusSegments,
@@ -362,16 +443,6 @@ struct ContentView: View {
 
         .task {
             performTrashCleanup()
-        }
-        .sheet(isPresented: $isPresentingNew) {
-            SnippetEditorView(mode: .create, availableCollections: collections) { newSnippet in
-                modelContext.insert(newSnippet)
-                try? modelContext.save()
-                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
-                    selectedSnippetID = newSnippet.persistentModelID
-                    sidebarSelectionContext = .allSnippets
-                }
-            }
         }
         .sheet(item: $editingSnippet) { snippet in
             SnippetEditorView(mode: .edit(snippet), availableCollections: collections) { _ in
@@ -471,21 +542,18 @@ struct ContentView: View {
 
     @ViewBuilder
     private var sidebar: some View {
-        if #available(macOS 26.0, *) {
-            modernSidebar
-        } else {
-            legacySidebar
-        }
+        modernSidebar
     }
 
-    // MARK: - Modern (Tahoe / macOS 26+) sidebar
+    // MARK: - Modern sidebar
 
-    @available(macOS 26.0, *)
     private var modernSidebar: some View {
         ModernSidebar(
             snippets: snippets,
             collections: collections,
             frequentlyUsedSnippets: frequentlyUsedSnippets,
+            favoriteSnippets: favoriteSnippets,
+            favoriteCollections: favoriteCollections,
             availableLanguages: availableLanguages,
             sidebarFilteredLanguages: sidebarFilteredLanguages,
             trashedItemCount: trashedItemCount,
@@ -496,6 +564,7 @@ struct ContentView: View {
             sidebarSelectionContext: $sidebarSelectionContext,
             selectedCollectionID: $selectedCollectionID,
             isLibrarySectionExpanded: $isLibrarySectionExpanded,
+            isFavoritesSectionExpanded: $isFavoritesSectionExpanded,
             isFrequentlyUsedSectionExpanded: $isFrequentlyUsedSectionExpanded,
             isLanguagesSectionExpanded: $isLanguagesSectionExpanded,
             isAllSnippetsExpanded: $isAllSnippetsExpanded,
@@ -512,39 +581,7 @@ struct ContentView: View {
         )
     }
 
-    // MARK: - Legacy (pre-Tahoe) sidebar
 
-    private var legacySidebar: some View {
-        LegacySidebar(
-            snippets: snippets,
-            collections: collections,
-            frequentlyUsedSnippets: frequentlyUsedSnippets,
-            availableLanguages: availableLanguages,
-            sidebarFilteredLanguages: sidebarFilteredLanguages,
-            trashedItemCount: trashedItemCount,
-            backgroundPalette: backgroundPalette,
-            sidebarSearch: $sidebarSearch,
-            selectedLanguages: $selectedLanguages,
-            selectedSearchCollections: $selectedSearchCollections,
-            selectedSnippetID: $selectedSnippetID,
-            sidebarSelectionContext: $sidebarSelectionContext,
-            selectedCollectionID: $selectedCollectionID,
-            isLibrarySectionExpanded: $isLibrarySectionExpanded,
-            isFrequentlyUsedSectionExpanded: $isFrequentlyUsedSectionExpanded,
-            isLanguagesSectionExpanded: $isLanguagesSectionExpanded,
-            isAllSnippetsExpanded: $isAllSnippetsExpanded,
-            expandedCollections: $expandedCollections,
-            onNew: { beginCreateCollection() },
-            onEditCollection: { collection in beginEditCollection(collection) },
-            onDeleteCollection: { collection in delete(collection) },
-            onEditSnippet: { snippet in editingSnippet = snippet },
-            onDeleteSnippet: { snippet in delete(snippet) },
-            onMoveSnippetToLibrary: { snippet in moveSnippetToLibrary(snippet) },
-            onMoveSnippetToCollection: { snippet, collection in moveSnippet(snippet, to: collection) },
-            onCopySnippetToCollection: { snippet, collection in copySnippet(snippet, to: collection) },
-            onHandleDrop: { items, collection in handleDrop(items: items, to: collection) }
-        )
-    }
 
     private func delete(_ snippet: Snippet) {
         if suppressSnippetDeleteWarning {

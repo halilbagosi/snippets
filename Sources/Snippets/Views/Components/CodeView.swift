@@ -64,3 +64,13 @@ struct CodeView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
+
+#Preview("CodeView") {
+    CodeView(
+        code: "func hello() {\n    print(\"Hello, World!\")\n}",
+        maxLines: nil,
+        showLineNumbers: true,
+        fontSize: 12.5
+    )
+    .padding()
+}

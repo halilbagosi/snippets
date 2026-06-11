@@ -14,12 +14,14 @@ struct SnippetEditorView: View {
     let mode: Mode
     let availableCollections: [SnippetCollection]
     let onSave: (Snippet) throws -> Void
+    var onRequestDismiss: (() -> Void)? = nil
     private let mediaManager: any MediaManaging
 
     @State private var viewModel = SnippetEditorViewModel()
 
     @FocusState private var focus: Field?
     @State private var codeFocused: Bool = false
+    @State private var isPresentingCancelConfirm: Bool = false
 
     enum Field: Hashable { case title, description }
 
@@ -27,11 +29,13 @@ struct SnippetEditorView: View {
         mode: Mode,
         availableCollections: [SnippetCollection],
         mediaManager: any MediaManaging = MediaManager.shared,
+        onRequestDismiss: (() -> Void)? = nil,
         onSave: @escaping (Snippet) throws -> Void
     ) {
         self.mode = mode
         self.availableCollections = availableCollections
         self.mediaManager = mediaManager
+        self.onRequestDismiss = onRequestDismiss
         self.onSave = onSave
     }
 
@@ -86,6 +90,18 @@ struct SnippetEditorView: View {
         } message: {
             Text(viewModel.saveErrorMessage ?? "Unknown error")
         }
+        .interactiveDismissDisabled(viewModel.hasUnsavedData(mode: mode))
+        .onReceive(NotificationCenter.default.publisher(for: .init("AttemptDismissEditor"))) { _ in
+            if viewModel.hasUnsavedData(mode: mode) {
+                isPresentingCancelConfirm = true
+            } else {
+                if let onRequestDismiss {
+                    onRequestDismiss()
+                } else {
+                    dismiss()
+                }
+            }
+        }
     }
 
     private var editorChrome: some View {
@@ -114,7 +130,15 @@ struct SnippetEditorView: View {
             Spacer(minLength: 8)
 
             Button {
-                dismiss()
+                if viewModel.hasUnsavedData(mode: mode) {
+                    isPresentingCancelConfirm = true
+                } else {
+                    if let onRequestDismiss {
+                        onRequestDismiss()
+                    } else {
+                        dismiss()
+                    }
+                }
             } label: {
                 Text("cancel")
                     .font(Mono.font(size: 12, weight: .semibold))
@@ -130,6 +154,22 @@ struct SnippetEditorView: View {
                 shadowY: 2
             )
             .keyboardShortcut(.cancelAction)
+            .confirmationDialog(
+                "Discard changes?",
+                isPresented: $isPresentingCancelConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Discard", role: .destructive) { 
+                    if let onRequestDismiss {
+                        onRequestDismiss()
+                    } else {
+                        dismiss()
+                    }
+                }
+                Button("Keep editing", role: .cancel) { }
+            } message: {
+                Text("Your snippet has unsaved content. Discard it?")
+            }
 
             Button {
                 save()
@@ -445,7 +485,11 @@ struct SnippetEditorView: View {
         )
 
         if didSave {
-            dismiss()
+            if let onRequestDismiss {
+                onRequestDismiss()
+            } else {
+                dismiss()
+            }
         }
     }
 }

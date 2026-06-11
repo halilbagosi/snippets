@@ -11,6 +11,7 @@ final class Snippet {
     var createdAt: Date
     var updatedAt: Date
     var copyCount: Int = 0
+    var isFavorite: Bool = false
     var deletedAt: Date?
 
     @Relationship(deleteRule: .cascade, inverse: \MediaItem.snippet)
@@ -37,6 +38,7 @@ final class Snippet {
         createdAt: Date = .now,
         updatedAt: Date = .now,
         copyCount: Int = 0,
+        isFavorite: Bool = false,
         deletedAt: Date? = nil,
         mediaItems: [MediaItem] = [],
         collections: [SnippetCollection] = []
@@ -48,6 +50,7 @@ final class Snippet {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.copyCount = copyCount
+        self.isFavorite = isFavorite
         self.deletedAt = deletedAt
         self.mediaItems = mediaItems
         self.collections = collections

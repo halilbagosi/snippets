@@ -12,6 +12,7 @@ struct SnippetGalleryView: View {
     let searchResultSnippets: [Snippet]
     let searchQuery: String
     @Binding var searchText: String
+    @Binding var showFavoritesOnly: Bool
     @Binding var selectedLanguages: Set<SupportedLanguage>
     @Binding var selectedSearchCollections: Set<PersistentIdentifier>
     let availableLanguages: [SupportedLanguage]
@@ -58,6 +59,7 @@ struct SnippetGalleryView: View {
     @State private var unminimizeProgress: CGFloat = 1.0
     @State private var cardSizes: [PersistentIdentifier: CGSize] = [:]
     @State private var genieSnapshots: [PersistentIdentifier: NSImage] = [:]
+    @State private var showMoveSheet: Bool = false
     @State private var collectionFilterSearchText = ""
 #if canImport(AppKit)
     @State private var keyEventMonitor: Any? = nil
@@ -229,6 +231,13 @@ struct SnippetGalleryView: View {
                 .padding(.bottom, 24)
         }
         .coordinateSpace(name: "galleryDragSpace")
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                if viewModel.isShowingCollectionFilter {
+                    viewModel.isShowingCollectionFilter = false
+                }
+            }
+        )
         .onAppear {
             hasAnimatedCards = false
             withAnimation(.spring(response: 0.5, dampingFraction: 0.84)) {
@@ -291,6 +300,22 @@ struct SnippetGalleryView: View {
             }
             #endif
         }
+        .sheet(isPresented: $showMoveSheet) {
+            MoveToCollectionSheet(
+                collections: availableCollections,
+                onMove: { collection in
+                    let toMoveSnippets = viewModel.selectedSnippets(from: snippets)
+                    for snippet in toMoveSnippets {
+                        onMoveSnippetToCollection?(snippet, collection)
+                    }
+                    withAnimation {
+                        viewModel.clearSelectionAndExitSelectMode()
+                    }
+                    showMoveSheet = false
+                },
+                onCancel: { showMoveSheet = false }
+            )
+        }
     }
 
     private var theme: Theme { Theme.current(colorScheme) }
@@ -330,7 +355,7 @@ struct SnippetGalleryView: View {
     private func subcollectionGrid(_ source: [SnippetCollection]) -> some View {
         LiquidGlassContainer(spacing: 18) {
             LazyVGrid(columns: subcollectionColumns, spacing: 14) {
-                ForEach(Array(source.enumerated()), id: \.element.persistentModelID) { index, collection in
+                ForEach(Array(viewModel.ordered(source).enumerated()), id: \.element.persistentModelID) { index, collection in
                     ZStack {
                         SnippetCollectionCard(
                             collection: collection,
@@ -699,7 +724,9 @@ struct SnippetGalleryView: View {
                 }
                 
                 let baseAccent = Color(hex: language.accentHex) ?? theme.accent
-                let accent = baseAccent.saturation(3.0).brightness(0.22)
+                let accent = colorScheme == .dark 
+                    ? baseAccent.saturation(3.0).brightness(0.22)
+                    : baseAccent.saturation(3.0).brightness(-0.15)
                 let isExpanded = Binding(
                     get: { !expandedLanguageSections.contains(language.rawValue) },
                     set: { newValue in
@@ -811,6 +838,19 @@ struct SnippetGalleryView: View {
                                 .opacity(viewModel.selectedForAction.isEmpty ? 0.5 : 1.0)
                             }
 
+                            if !isTrashMode {
+                                FilterTag(
+                                    label: "move (\(viewModel.selectedForAction.count))",
+                                    icon: "folder",
+                                    accent: theme.accent,
+                                    isSelected: false
+                                ) {
+                                    showMoveSheet = true
+                                }
+                                .disabled(viewModel.selectedForAction.isEmpty)
+                                .opacity(viewModel.selectedForAction.isEmpty ? 0.5 : 1.0)
+                            }
+
                             FilterTag(
                                 label: "delete (\(viewModel.selectedForAction.count))",
                                 icon: "trash",
@@ -857,6 +897,18 @@ struct SnippetGalleryView: View {
                                 }
                                 .popover(isPresented: $viewModel.isShowingCollectionFilter, arrowEdge: .bottom) {
                                     collectionFilterPopover
+                                        .presentationBackground(.clear)
+                                }
+
+                                FilterTag(
+                                    label: "favorites",
+                                    icon: showFavoritesOnly ? "star.fill" : "star",
+                                    accent: Color(red: 1.0, green: 0.80, blue: 0.20),
+                                    isSelected: showFavoritesOnly
+                                ) {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        showFavoritesOnly.toggle()
+                                    }
                                 }
                             }
                         }
@@ -960,6 +1012,14 @@ struct SnippetGalleryView: View {
         .frame(width: 330)
         .padding(.top, 8)
         .padding(.bottom, 12)
+        .liquidGlassSurface(
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous),
+            tint: theme.surface.opacity(colorScheme == .dark ? 0.3 : 0.8),
+            interactive: false,
+            borderOpacity: colorScheme == .dark ? 0.22 : 0.40,
+            shadowRadius: 16,
+            shadowY: 6
+        )
         .onDisappear {
             collectionFilterSearchText = ""
         }
@@ -1060,11 +1120,11 @@ struct SnippetGalleryView: View {
             .padding(.leading, 12)
             .padding(.trailing, 12)
             .frame(height: 34)
-            .contentShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
             .background {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(isSelected ? accent.opacity(colorScheme == .dark ? 0.18 : 0.12) : Color.clear)
             }
+            .contentShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -1072,35 +1132,41 @@ struct SnippetGalleryView: View {
     private var searchBar: some View {
         HStack(spacing: 10) {
             HStack(spacing: 6) {
-                Image(systemName: "terminal")
+                Image(systemName: "magnifyingglass")
                     .font(Mono.font(size: 10, weight: .semibold))
                 Text("snippets")
                     .font(Mono.font(size: 11, weight: .semibold))
             }
-            .foregroundStyle(theme.textMuted)
+            .foregroundStyle(searchFocused ? theme.safeAccentText(theme.accent).opacity(0.85) : theme.textMuted)
 
             Text(">")
                 .font(Mono.font(size: 12, weight: .bold))
-                .foregroundStyle(theme.accent)
+                .foregroundStyle(searchFocused ? theme.safeAccentText(theme.accent) : theme.accent)
 
-            TextField("search title, description, or code…", text: $searchText)
+            TextField(
+                "",
+                text: $searchText,
+                prompt: Text("search title, description, or code…")
+                    .foregroundColor(searchFocused ? theme.safeAccentText(theme.accent).opacity(0.7) : (colorScheme == .dark ? .white.opacity(0.6) : theme.textMuted))
+            )
                 .textFieldStyle(.plain)
                 .focused($searchFocused)
                 .font(Mono.font(size: 13))
-                .foregroundStyle(theme.text)
+                .foregroundStyle(searchFocused ? theme.safeAccentText(theme.accent) : theme.text)
+                .tint(searchFocused ? theme.safeAccentText(theme.accent) : theme.accent)
 
             if !searchText.isEmpty {
                 Button { searchText = "" } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(Mono.font(size: 12))
-                        .foregroundStyle(theme.textFaint)
+                        .foregroundStyle(searchFocused ? theme.safeAccentText(theme.accent).opacity(0.8) : theme.textFaint)
                 }
                 .buttonStyle(.plain)
             }
 
             Text(searchFocused ? "esc" : "⌘F")
                 .font(Mono.font(size: 10, weight: .semibold))
-                .foregroundStyle(theme.textFaint)
+                .foregroundStyle(searchFocused ? theme.safeAccentText(theme.accent).opacity(0.7) : theme.textFaint)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
@@ -1137,9 +1203,9 @@ struct SnippetGalleryView: View {
                     }
                     ForEach(availableLanguages) { language in
                         let baseAccent = Color(hex: language.accentHex) ?? theme.accent
-                        let accent = baseAccent
-                            .saturation(3.0)
-                            .brightness(0.22)
+                        let accent = colorScheme == .dark 
+                            ? baseAccent.saturation(3.0).brightness(0.22)
+                            : baseAccent.saturation(3.0).brightness(-0.15)
                         let selectedAccent = (Color(hex: language.accentHexSelectedFill) ?? accent)
                             .saturation(2.5)
                             .brightness(0.15)
@@ -1147,7 +1213,7 @@ struct SnippetGalleryView: View {
                             label: "lang:\(language.rawValue.lowercased())",
                             icon: language.symbolName,
                             accent: accent,
-                            foregroundAccent: colorScheme == .dark ? accent : accent.blended(with: .black, ratio: 0.18),
+                            foregroundAccent: colorScheme == .dark ? .white : accent.blended(with: .black, ratio: 0.18),
                             selectedFillAccent: selectedAccent,
                             isSelected: selectedLanguages.contains(language)
                         ) {
@@ -1291,5 +1357,70 @@ struct SnippetGalleryView: View {
             .animation(.spring(response: 0.3, dampingFraction: 0.82), value: isVisible)
             .animation(.spring(response: 0.24, dampingFraction: 0.68), value: isTrashTargeted)
         }
+    }
+}
+
+private struct MoveToCollectionSheet: View {
+    @Environment(\.colorScheme) private var colorScheme
+    let collections: [SnippetCollection]
+    let onMove: (SnippetCollection) -> Void
+    let onCancel: () -> Void
+
+    private var theme: Theme { Theme.current(colorScheme) }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 8) {
+                    ForEach(collections) { collection in
+                        Button(action: { onMove(collection) }) {
+                            HStack(spacing: 12) {
+                                let color = Color(hex: collection.colorHex) ?? theme.accent
+                                Image(systemName: SnippetCollection.isValidSFSymbolName(collection.iconName) ? collection.iconName : SnippetCollection.defaultIconName)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(color)
+                                    .frame(width: 24, height: 24)
+
+                                Text(collection.name)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.primary)
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(.secondary.opacity(0.5))
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .liquidGlassSurface(
+                                in: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                                interactive: true,
+                                shadowRadius: 4,
+                                shadowY: 2
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(24)
+            }
+            .background {
+                ZStack {
+                    Color.clear.ignoresSafeArea()
+                    DotGridBackground(gradientPalette: [theme.accent], lightModeStrength: 0.5)
+                        .opacity(colorScheme == .dark ? 0.12 : 0.10)
+                        .ignoresSafeArea()
+                }
+            }
+            .navigationTitle("Move to Collection")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", action: onCancel)
+                }
+            }
+        }
+        .frame(width: 380)
+        .frame(minHeight: 400)
     }
 }

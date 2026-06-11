@@ -1,21 +1,21 @@
 import Foundation
 
 enum SupportedLanguage: String, CaseIterable, Identifiable, Hashable {
-    case glsl = "GLSL"
-    case metal = "Metal"
-    case hlsl = "HLSL"
+    case html = "HTML"
     case swift = "Swift"
-    case kotlin = "Kotlin"
     case rust = "Rust"
+    case javascript = "JavaScript"
+    case json = "JSON"
     case go = "Go"
+    case react = "React"
+    case hlsl = "HLSL"
+    case glsl = "GLSL"
     case python = "Python"
     case typescript = "TypeScript"
-    case javascript = "JavaScript"
-    case react = "React"
-    case css = "CSS"
-    case html = "HTML"
-    case json = "JSON"
     case cpp = "C/C++"
+    case kotlin = "Kotlin"
+    case metal = "Metal"
+    case css = "CSS"
     case unknown = "Unknown"
 
     var id: String { rawValue }

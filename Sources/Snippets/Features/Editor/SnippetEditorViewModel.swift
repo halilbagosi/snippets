@@ -3,7 +3,7 @@ import Observation
 import SwiftData
 
 enum SnippetEditorMode {
-    case create
+    case create(preselectedCollectionID: PersistentIdentifier? = nil)
     case edit(Snippet)
 }
 
@@ -30,6 +30,21 @@ final class SnippetEditorViewModel {
         !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    func hasUnsavedData(mode: SnippetEditorMode) -> Bool {
+        switch mode {
+        case .create:
+            return !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || !snippetDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || !mediaItems.isEmpty
+        case .edit(let original):
+            return title != original.title
+                || snippetDescription != original.snippetDescription
+                || code != original.code
+                || mediaItems != original.mediaItems
+        }
+    }
+
     var lineCount: Int {
         max(code.split(separator: "\n", omittingEmptySubsequences: false).count, 1)
     }
@@ -52,6 +67,9 @@ final class SnippetEditorViewModel {
                 detectedLanguage = LanguageDetector.detect(code: snippet.code)
             }
         } else {
+            if case .create(let preselectedCollectionID) = mode, let id = preselectedCollectionID {
+                selectedCollectionIDs.insert(id)
+            }
             detectedLanguage = LanguageDetector.detect(code: code)
         }
     }

@@ -57,3 +57,11 @@ struct EditorTabHeader: View {
         }
     }
 }
+
+#Preview("EditorTabHeader") {
+    VStack(spacing: 20) {
+        EditorTabHeader(filename: "main.swift", language: .swift)
+        EditorTabHeader(filename: "style.css", language: .css, showTrafficLights: false)
+    }
+    .padding()
+}

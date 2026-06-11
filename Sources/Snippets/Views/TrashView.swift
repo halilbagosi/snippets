@@ -56,6 +56,7 @@ struct TrashView: View {
                     searchResultSnippets: trimmedSearchText.isEmpty ? [] : matchingTrashedSnippets,
                     searchQuery: trimmedSearchText,
                     searchText: $searchText,
+                    showFavoritesOnly: .constant(false),
                     selectedLanguages: $selectedLanguages,
                     selectedSearchCollections: $selectedSearchCollections,
                     availableLanguages: [],

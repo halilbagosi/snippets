@@ -13,11 +13,7 @@ struct SnippetDetailView: View {
     let onClose: () -> Void
 
     @State private var didCopy: Bool = false
-
     @State private var lightboxMedia: MediaItem? = nil
-    @State private var isCopyPressed: Bool = false
-    @State private var isEditPressed: Bool = false
-    @State private var isDeletePressed: Bool = false
 
     private var theme: Theme { Theme.current(colorScheme) }
 
@@ -49,7 +45,6 @@ struct SnippetDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     titleBlock
-                    actionBar
                     if !snippet.snippetDescription.isEmpty {
                         descriptionBlock
                     }
@@ -104,95 +99,83 @@ struct SnippetDetailView: View {
                 .foregroundStyle(theme.text)
             HStack(spacing: 10) {
                 LanguageBadge(language: language)
-                Text(snippet.updatedAt, format: .dateTime.month().day().year().hour().minute())
-                    .font(Mono.font(size: 11))
-                    .foregroundStyle(theme.textMuted)
+                
+                if let firstCollection = snippet.collections.sorted(by: { $0.name < $1.name }).first {
+                    let collectionColor = Color(hex: firstCollection.colorHex) ?? theme.accent
+                    let fillOpacity = colorScheme == .dark ? 0.20 : 0.12
+                    HStack(spacing: 5) {
+                        Image(systemName: firstCollection.displayIconName)
+                            .symbolRenderingMode(.hierarchical)
+                            .font(Mono.font(size: 10, weight: .semibold))
+                        Text(firstCollection.name.lowercased())
+                            .font(Mono.font(size: 11, weight: .semibold))
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .foregroundStyle(colorScheme == .dark ? .white : collectionColor.blended(with: .black, ratio: 0.45))
+                    .background {
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(collectionColor.opacity(fillOpacity))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                    .stroke(collectionColor.opacity(0.50), lineWidth: 1)
+                            }
+                    }
+                }
+                
+                Spacer()
+                
+                actionBar
             }
         }
     }
 
     private var actionBar: some View {
         HStack(spacing: 8) {
-            Button {
+            FilterTag(
+                label: didCopy ? "copied" : "copy",
+                icon: didCopy ? "checkmark" : "doc.on.doc",
+                accent: didCopy ? .blue : theme.textMuted,
+                isSelected: didCopy
+            ) {
                 Clipboard.copy(snippet.code)
                 snippet.copyCount += 1
                 didCopy = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     didCopy = false
                 }
-            } label: {
-                Label(didCopy ? "Copied" : "Copy Code", systemImage: didCopy ? "checkmark" : "doc.on.doc")
-                    .padding(.horizontal, actionBarButtonHorizontalPadding)
-                    .frame(height: actionBarButtonLabelHeight)
-                    .foregroundStyle(didCopy ? Color.blue : Color.blue.opacity(0.85))
             }
-            .buttonStyle(.plain)
-            .liquidGlassSurface(
-                in: Capsule(),
-                tint: didCopy ? Color.blue.opacity(0.25) : Color.blue.opacity(0.12),
-                interactive: true,
-                shadowRadius: 4,
-                shadowY: 2
-            )
-            .scaleEffect(isCopyPressed ? 0.95 : 1.0)
-            .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isCopyPressed)
-            .simultaneousGesture(pressGesture(isPressed: $isCopyPressed))
 
-            Button(action: onEdit) {
-                Label("Edit", systemImage: "pencil")
-                    .padding(.horizontal, actionBarButtonHorizontalPadding)
-                    .frame(height: actionBarButtonLabelHeight)
-                    .foregroundStyle(theme.text)
+            FilterTag(
+                label: "edit",
+                icon: "pencil",
+                accent: theme.textMuted,
+                isSelected: false
+            ) {
+                onEdit()
             }
-            .buttonStyle(.plain)
-            .liquidGlassSurface(
-                in: Capsule(),
-                interactive: true,
-                shadowRadius: 4,
-                shadowY: 2
-            )
-            .scaleEffect(isEditPressed ? 0.95 : 1.0)
-            .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isEditPressed)
-            .simultaneousGesture(pressGesture(isPressed: $isEditPressed))
 
-            Spacer()
+            FilterTag(
+                label: snippet.isFavorite ? "unfavorite" : "favorite",
+                icon: snippet.isFavorite ? "star.fill" : "star",
+                accent: snippet.isFavorite ? Color(red: 1.0, green: 0.80, blue: 0.20) : theme.textMuted,
+                isSelected: snippet.isFavorite
+            ) {
+                snippet.isFavorite.toggle()
+            }
 
-            Button(role: .destructive) {
+            FilterTag(
+                label: "delete",
+                icon: "trash",
+                accent: .red,
+                selectedFillAccent: .red,
+                isSelected: true
+            ) {
                 onDelete()
-            } label: {
-                Label("Delete", systemImage: "trash")
-                    .padding(.horizontal, actionBarButtonHorizontalPadding)
-                    .frame(height: actionBarButtonLabelHeight)
-                    .foregroundStyle(.red)
             }
-            .buttonStyle(.plain)
-            .liquidGlassSurface(
-                in: Capsule(),
-                tint: Color.red.opacity(0.12),
-                interactive: true,
-                shadowRadius: 4,
-                shadowY: 2
-            )
-            .scaleEffect(isDeletePressed ? 0.95 : 1.0)
-            .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isDeletePressed)
-            .simultaneousGesture(pressGesture(isPressed: $isDeletePressed))
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
     }
-
-    private func pressGesture(isPressed: Binding<Bool>) -> some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { _ in
-                if !isPressed.wrappedValue {
-                    isPressed.wrappedValue = true
-                }
-            }
-            .onEnded { _ in
-                isPressed.wrappedValue = false
-            }
-    }
-
 
     private var descriptionBlock: some View {
         VStack(alignment: .leading, spacing: 8) {

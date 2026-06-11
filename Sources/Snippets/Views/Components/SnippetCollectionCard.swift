@@ -111,9 +111,27 @@ struct SnippetCollectionCard: View {
                     }
                     .foregroundStyle(deletionBadgeColor)
                 } else {
-                    Text("Created on: \(formattedDate)")
-                        .font(Mono.font(size: 10, weight: .medium))
-                        .foregroundStyle(theme.textFaint)
+                    HStack(spacing: 8) {
+                        Button {
+                            collection.isFavorite.toggle()
+                        } label: {
+                            Image(systemName: collection.isFavorite ? "star.fill" : "star")
+                                .font(Mono.font(size: 14, weight: .semibold))
+                                .foregroundStyle(
+                                    collection.isFavorite
+                                        ? Color(red: 1.0, green: 0.80, blue: 0.20)
+                                        : theme.textFaint
+                                )
+                                .padding(4)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help(collection.isFavorite ? "Remove from favorites" : "Add to favorites")
+
+                        Text("Created on: \(formattedDate)")
+                            .font(Mono.font(size: 10, weight: .medium))
+                            .foregroundStyle(theme.textFaint)
+                    }
                 }
             }
 
@@ -268,5 +286,23 @@ struct SnippetCollectionCard: View {
                 }
             }
         }
+    }
+}
+
+#Preview("SnippetCollectionCard") {
+    do {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: Snippet.self, SnippetCollection.self, MediaItem.self, configurations: config)
+        let collection = SnippetCollection(
+            name: "Favorites",
+            colorHex: "#FF0000",
+            iconName: "star.fill"
+        )
+        return SnippetCollectionCard(collection: collection, onOpen: {})
+            .padding()
+            .frame(width: 300)
+            .modelContainer(container)
+    } catch {
+        return Text("Failed to create preview container")
     }
 }

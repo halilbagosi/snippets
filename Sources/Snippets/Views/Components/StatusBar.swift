@@ -53,3 +53,10 @@ struct StatusBar: View {
         }
     }
 }
+
+#Preview("StatusBar") {
+    StatusBar(segments: [
+        StatusBar.Segment(icon: "checkmark", label: "Ready", tint: .green),
+        StatusBar.Segment(label: "10 items")
+    ])
+}

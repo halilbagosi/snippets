@@ -1,7 +1,6 @@
 import SwiftUI
 import SwiftData
 
-@available(macOS 26.0, *)
 struct ModernSidebar: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.controlActiveState) private var controlActiveState
@@ -18,6 +17,8 @@ struct ModernSidebar: View {
     let snippets: [Snippet]
     let collections: [SnippetCollection]
     let frequentlyUsedSnippets: [Snippet]
+    let favoriteSnippets: [Snippet]
+    let favoriteCollections: [SnippetCollection]
     let availableLanguages: [SupportedLanguage]
     let sidebarFilteredLanguages: [SupportedLanguage]
     let trashedItemCount: Int
@@ -29,6 +30,7 @@ struct ModernSidebar: View {
     @Binding var sidebarSelectionContext: ContentView.SidebarSelectionContext?
     @Binding var selectedCollectionID: PersistentIdentifier?
     @Binding var isLibrarySectionExpanded: Bool
+    @Binding var isFavoritesSectionExpanded: Bool
     @Binding var isFrequentlyUsedSectionExpanded: Bool
     @Binding var isLanguagesSectionExpanded: Bool
     @Binding var isAllSnippetsExpanded: Bool
@@ -106,160 +108,25 @@ struct ModernSidebar: View {
 
     var body: some View {
         List(selection: selection) {
-            Section("Snippets", isExpanded: $isLibrarySectionExpanded) {
-                DisclosureGroup(isExpanded: $isAllSnippetsExpanded) {
-                    ForEach(snippets) { snippet in
-                        let language = SupportedLanguage(rawValue: snippet.language) ?? .unknown
-                        let accent = Color(hex: language.accentHex) ?? .accentColor
-                        let isSnippetSelected = selection.wrappedValue == .snippet(snippet.persistentModelID, .allSnippets)
-                        let isActiveSelection = isSnippetSelected && isListFocused && controlActiveState != .inactive
-                        Label {
-                            Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        } icon: {
-                            Circle()
-                                .fill(isActiveSelection ? .white : accent)
-                                .frame(width: 8, height: 8)
-                        }
-                        .foregroundStyle(isActiveSelection ? .white : .primary)
-                        .tag(Selection.snippet(snippet.persistentModelID, .allSnippets))
-                        .draggable(String(snippet.persistentModelID.hashValue))
-                        .contextMenu {
-                            Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
-                            Button(role: .destructive) { onDeleteSnippet(snippet) } label: { Label("Delete snippet", systemImage: "trash") }
-                            Menu("Move to") {
-                                Button { onMoveSnippetToLibrary(snippet) } label: { Label("All Snippets", systemImage: "square.grid.2x2") }
-                                ForEach(collections) { collection in
-                                    Button { onMoveSnippetToCollection(snippet, collection) } label: { Label(collection.name, systemImage: collection.displayIconName) }
-                                }
-                            }
-                            Menu("Copy to") {
-                                ForEach(collections) { collection in
-                                    Button { onCopySnippetToCollection(snippet, collection) } label: { Label(collection.name, systemImage: collection.displayIconName) }
-                                }
-                            }
-                        }
-                    }
-                } label: {
-                    let isAllSelected = selection.wrappedValue == .all
-                    let isActiveSelection = isAllSelected && isListFocused && controlActiveState != .inactive
-                    Label {
-                        HStack {
-                            Text("All Snippets")
-                            Spacer()
-                            Text("\(snippets.count)")
-                                .foregroundStyle(isActiveSelection ? .white.opacity(0.7) : .secondary)
-                                .monospacedDigit()
-                        }
-                    } icon: {
-                        Image(systemName: "square.grid.2x2")
-                            .foregroundStyle(isActiveSelection ? .white : .accentColor)
-                    }
-                    .foregroundStyle(isActiveSelection ? .white : .primary)
-                }
-                .tag(Selection.all)
-                .dropDestination(for: String.self) { items, _ in return onHandleDrop(items, nil) }
+            snippetsSection
 
-                ForEach(topLevelCollections) { collection in
-                    modernCollectionTree(for: collection)
-                }
+            if !favoriteSnippets.isEmpty || !favoriteCollections.isEmpty {
+                favoritesSection
             }
 
             if !frequentlyUsedSnippets.isEmpty {
-                Section("Frequently Used", isExpanded: $isFrequentlyUsedSectionExpanded) {
-                    ForEach(frequentlyUsedSnippets) { snippet in
-                        let language = SupportedLanguage(rawValue: snippet.language) ?? .unknown
-                        let accent = Color(hex: language.accentHex) ?? .accentColor
-                        let isFreqSelected = selection.wrappedValue == .snippet(snippet.persistentModelID, .frequentlyUsed)
-                        let isActiveSelection = isFreqSelected && isListFocused && controlActiveState != .inactive
-                        Label {
-                            Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        } icon: {
-                            Circle()
-                                .fill(isActiveSelection ? .white : accent)
-                                .frame(width: 8, height: 8)
-                        }
-                        .foregroundStyle(isActiveSelection ? .white : .primary)
-                        .tag(Selection.snippet(snippet.persistentModelID, .frequentlyUsed))
-                        .contextMenu {
-                            Button { onEditSnippet(snippet) } label: {
-                                Label("Edit snippet", systemImage: "pencil")
-                            }
-                            Button(role: .destructive) { onDeleteSnippet(snippet) } label: {
-                                Label("Delete snippet", systemImage: "trash")
-                            }
-                            Menu("Move to") {
-                                Button { onMoveSnippetToLibrary(snippet) } label: {
-                                    Label("Snippets", systemImage: "square.grid.2x2")
-                                }
-                                ForEach(collections) { collection in
-                                    Button { onMoveSnippetToCollection(snippet, collection) } label: {
-                                        Label(collection.name, systemImage: collection.displayIconName)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                frequentlyUsedSection
             }
-
 
             if !availableLanguages.isEmpty {
-                Section("Languages", isExpanded: $isLanguagesSectionExpanded) {
-                    ForEach(sidebarFilteredLanguages) { language in
-                        let count = snippets.filter { $0.language == language.rawValue }.count
-                        let accent = Color(hex: language.accentHex) ?? .accentColor
-                        let isLangSelected = selection.wrappedValue == .language(language.rawValue)
-                        let isActiveSelection = isLangSelected && isListFocused && controlActiveState != .inactive
-                        Label {
-                            HStack {
-                                Text(language.rawValue)
-                                Spacer()
-                                Text("\(count)")
-                                    .foregroundStyle(isActiveSelection ? .white.opacity(0.7) : .secondary)
-                                    .monospacedDigit()
-                            }
-                        } icon: {
-                            Image(systemName: language.symbolName)
-                                .foregroundStyle(isActiveSelection ? .white : accent)
-                        }
-                        .foregroundStyle(isActiveSelection ? .white : .primary)
-                        .tag(Selection.language(language.rawValue))
-                    }
-
-                    if sidebarFilteredLanguages.isEmpty && !sidebarSearch.isEmpty {
-                        Text("No matches")
-                            .foregroundStyle(.secondary)
-                            .font(.callout)
-                    }
-                }
+                languagesSection
             }
 
-            Section {
-                let isTrashSelected = selection.wrappedValue == .trash
-                let isActiveSelection = isTrashSelected && isListFocused && controlActiveState != .inactive
-                Label {
-                    HStack {
-                        Text("Recently Deleted")
-                        Spacer()
-                        Text("\(trashedItemCount)")
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
-                } icon: {
-                    Image(systemName: "trash")
-                        .foregroundStyle(isActiveSelection ? .white : .red)
-                }
-                .tag(Selection.trash)
-                .foregroundStyle(isActiveSelection ? .white : .red)
-            }
+            recentlyDeletedSection
         }
         .focused($isListFocused)
         .listStyle(.sidebar)
-        .scrollContentBackground(.hidden)
+        .scrollContentBackground(.automatic)
         .safeAreaInset(edge: .top, spacing: 0) {
             Button(action: onNew) {
                 Label("New Collection", systemImage: "plus")
@@ -289,31 +156,199 @@ struct ModernSidebar: View {
         }
     }
 
+    // MARK: - Sections
+
+    @ViewBuilder
+    private var snippetsSection: some View {
+        Section("Snippets", isExpanded: $isLibrarySectionExpanded) {
+            DisclosureGroup(isExpanded: $isAllSnippetsExpanded) {
+                ForEach(snippets) { snippet in
+                    snippetRow(snippet, context: .allSnippets)
+                        .draggable(String(snippet.persistentModelID.hashValue))
+                        .contextMenu {
+                            Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
+                            Button(role: .destructive) { onDeleteSnippet(snippet) } label: { Label("Delete snippet", systemImage: "trash") }
+                            moveToMenu(snippet)
+                            copyToMenu(snippet)
+                        }
+                }
+            } label: {
+                countRow(title: "All Snippets", icon: "square.grid.2x2", iconColor: Color.accentColor, count: snippets.count)
+            }
+            .tag(Selection.all)
+            .dropDestination(for: String.self) { items, _ in return onHandleDrop(items, nil) }
+
+            ForEach(topLevelCollections) { collection in
+                modernCollectionTree(for: collection)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var favoritesSection: some View {
+        Section("Favorites", isExpanded: $isFavoritesSectionExpanded) {
+            ForEach(favoriteCollections) { collection in
+                Label {
+                    Text(collection.name)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                } icon: {
+                    Image(systemName: SnippetCollection.isValidSFSymbolName(collection.iconName) ? collection.iconName : SnippetCollection.defaultIconName)
+                        .foregroundStyle(Color(red: 1.0, green: 0.80, blue: 0.20))
+                }
+                .tag(Selection.collection(collection.persistentModelID))
+                .contextMenu {
+                    Button { onEditCollection(collection) } label: { Label("Edit collection", systemImage: "pencil") }
+                    Button(role: .destructive) { onDeleteCollection(collection) } label: { Label("Delete collection", systemImage: "trash") }
+                }
+            }
+            ForEach(favoriteSnippets) { snippet in
+                Label {
+                    Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                } icon: {
+                    Image(systemName: "star.fill")
+                        .foregroundStyle(Color(red: 1.0, green: 0.80, blue: 0.20))
+                }
+                .tag(Selection.snippet(snippet.persistentModelID, .favorites))
+                .contextMenu {
+                    Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
+                    Button(role: .destructive) { onDeleteSnippet(snippet) } label: { Label("Delete snippet", systemImage: "trash") }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var frequentlyUsedSection: some View {
+        Section("Frequently Used", isExpanded: $isFrequentlyUsedSectionExpanded) {
+            ForEach(frequentlyUsedSnippets) { snippet in
+                snippetRow(snippet, context: .frequentlyUsed)
+                    .contextMenu {
+                        Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
+                        Button(role: .destructive) { onDeleteSnippet(snippet) } label: { Label("Delete snippet", systemImage: "trash") }
+                        moveToMenu(snippet)
+                    }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var languagesSection: some View {
+        Section("Languages", isExpanded: $isLanguagesSectionExpanded) {
+            ForEach(sidebarFilteredLanguages) { language in
+                let count = snippets.filter { $0.language == language.rawValue }.count
+                let accent = Color(hex: language.accentHex) ?? Color.accentColor
+                countRow(title: language.rawValue, icon: language.symbolName, iconColor: accent, count: count)
+                    .tag(Selection.language(language.rawValue))
+            }
+
+            if sidebarFilteredLanguages.isEmpty && !sidebarSearch.isEmpty {
+                Text("No matches")
+                    .foregroundStyle(.secondary)
+                    .font(.callout)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var recentlyDeletedSection: some View {
+        Section {
+            countRow(title: "Recently Deleted", icon: "trash", iconColor: .red, count: trashedItemCount)
+                .tag(Selection.trash)
+        }
+    }
+
+    // MARK: - Reusable Row Builders
+
+    /// A standard snippet row with a colored language dot icon.
+    @ViewBuilder
+    private func snippetRow(_ snippet: Snippet, context: ContentView.SidebarSelectionContext) -> some View {
+        let language = SupportedLanguage(rawValue: snippet.language) ?? .unknown
+        let accent = Color(hex: language.accentHex) ?? Color.accentColor
+        Label {
+            Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        } icon: {
+            Circle()
+                .fill(accent)
+                .frame(width: 8, height: 8)
+        }
+        .tag(Selection.snippet(snippet.persistentModelID, context))
+    }
+
+    /// A row with a trailing count badge.
+    @ViewBuilder
+    private func countRow(title: String, icon: String, iconColor: Color, count: Int) -> some View {
+        Label {
+            HStack {
+                Text(title)
+                Spacer()
+                Text("\(count)")
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .font(.system(size: 12))
+            }
+        } icon: {
+            Image(systemName: icon)
+                .foregroundStyle(iconColor)
+        }
+    }
+
+    // MARK: - Context Menu Helpers
+
+    @ViewBuilder
+    private func moveToMenu(_ snippet: Snippet) -> some View {
+        Menu("Move to") {
+            Button { onMoveSnippetToLibrary(snippet) } label: {
+                Label("All Snippets", systemImage: "square.grid.2x2")
+            }
+            ForEach(collections) { collection in
+                Button { onMoveSnippetToCollection(snippet, collection) } label: {
+                    Label(collection.name, systemImage: collection.displayIconName)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func copyToMenu(_ snippet: Snippet) -> some View {
+        Menu("Copy to") {
+            ForEach(collections) { collection in
+                Button { onCopySnippetToCollection(snippet, collection) } label: {
+                    Label(collection.name, systemImage: collection.displayIconName)
+                }
+            }
+        }
+    }
+
+    // MARK: - Collection Tree
+
     @ViewBuilder
     private func modernCollectionTree(for collection: SnippetCollection) -> some View {
         let isExpanded = Binding(
             get: { expandedCollections.contains(collection.persistentModelID) },
             set: { if $0 { expandedCollections.insert(collection.persistentModelID) } else { expandedCollections.remove(collection.persistentModelID) } }
         )
+        let activeCount = collection.snippets.filter { $0.deletedAt == nil }.count
         DisclosureGroup(isExpanded: isExpanded) {
             ForEach(collection.children) { child in
                 AnyView(modernCollectionTree(for: child))
             }
             ForEach(collection.snippets.filter { $0.deletedAt == nil }) { snippet in
                 let language = SupportedLanguage(rawValue: snippet.language) ?? .unknown
-                let accent = Color(hex: language.accentHex) ?? .accentColor
-                let isCollSnippetSelected = selection.wrappedValue == .snippet(snippet.persistentModelID, .collection(collection.persistentModelID))
-                let isActiveSelection = isCollSnippetSelected && isListFocused && controlActiveState != .inactive
+                let accent = Color(hex: language.accentHex) ?? Color.accentColor
                 Label {
                     Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 } icon: {
                     Circle()
-                        .fill(isActiveSelection ? .white : accent)
+                        .fill(accent)
                         .frame(width: 8, height: 8)
                 }
-                .foregroundStyle(isActiveSelection ? .white : .primary)
                 .tag(Selection.snippet(snippet.persistentModelID, .collection(collection.persistentModelID)))
                 .draggable(String(snippet.persistentModelID.hashValue))
                 .contextMenu {
@@ -333,25 +368,11 @@ struct ModernSidebar: View {
                 }
             }
         } label: {
-            let isCollSelected = selection.wrappedValue == .collection(collection.persistentModelID)
-            let isActiveSelection = isCollSelected && isListFocused && controlActiveState != .inactive
-            Label {
-                HStack {
-                    Text(collection.name)
-                    Spacer()
-                    Text("\(collection.snippets.filter { $0.deletedAt == nil }.count)")
-                        .foregroundStyle(isActiveSelection ? .white.opacity(0.7) : .secondary)
-                        .monospacedDigit()
+            countRow(title: collection.name, icon: collection.displayIconName, iconColor: collection.displayColor, count: activeCount)
+                .contextMenu {
+                    Button { onEditCollection(collection) } label: { Label("Edit collection", systemImage: "pencil") }
+                    Button(role: .destructive) { onDeleteCollection(collection) } label: { Label("Delete collection", systemImage: "trash") }
                 }
-            } icon: {
-                Image(systemName: collection.displayIconName)
-                    .foregroundStyle(isActiveSelection ? .white : collection.displayColor)
-            }
-            .foregroundStyle(isActiveSelection ? .white : .primary)
-            .contextMenu {
-                Button { onEditCollection(collection) } label: { Label("Edit collection", systemImage: "pencil") }
-                Button(role: .destructive) { onDeleteCollection(collection) } label: { Label("Delete collection", systemImage: "trash") }
-            }
         }
         .tag(Selection.collection(collection.persistentModelID))
         .dropDestination(for: String.self) { items, _ in return onHandleDrop(items, collection) }

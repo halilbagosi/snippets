@@ -47,6 +47,10 @@ final class SnippetGalleryViewModel {
         isOldestToNewest ? Array(snippets.reversed()) : snippets
     }
 
+    func ordered(_ collections: [SnippetCollection]) -> [SnippetCollection] {
+        isOldestToNewest ? Array(collections.reversed()) : collections
+    }
+
     func toggleSelectMode() {
         isSelectMode.toggle()
         if !isSelectMode {

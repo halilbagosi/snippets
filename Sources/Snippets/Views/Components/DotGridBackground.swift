@@ -51,17 +51,17 @@ struct DotGridBackground: View {
                 let elapsed = timeline.date.timeIntervalSinceReferenceDate
                 let isLight = colorScheme == .light
                 let tunedLightStrength = min(max(lightModeStrength, 0.2), 1.5)
-                let lightBoost = isLight ? (1.95 * tunedLightStrength) : 1.0
-                let haloOpacity = (isLight ? 0.34 : 0.19) * lightBoost
-                let coreOpacity = (isLight ? 0.22 : 0.08) * lightBoost
+                let lightBoost = isLight ? (1.6 * tunedLightStrength) : 1.0
+                let haloOpacity = (isLight ? 0.30 : 0.18) * lightBoost
+                let coreOpacity = (isLight ? 0.18 : 0.07) * lightBoost
 
                 ZStack {
                     ForEach(Array(resolvedPalette.enumerated()), id: \.offset) { index, color in
                         let idx = Double(index)
                         let phase = idx * (.pi / 2.7)
-                        // Lower frequencies + broader gradients produce smoother mesh-like flow.
+                        // Bias Y center downward into the card area (0.55–0.85 range).
                         let x = 0.5 + 0.34 * sin(elapsed * (0.072 + idx * 0.011) + phase)
-                        let y = 0.5 + 0.28 * cos(elapsed * (0.081 + idx * 0.010) + phase * 1.21)
+                        let y = 0.62 + 0.22 * cos(elapsed * (0.081 + idx * 0.010) + phase * 1.21)
 
                         RadialGradient(
                             colors: [
@@ -70,8 +70,8 @@ struct DotGridBackground: View {
                                 .clear
                             ],
                             center: UnitPoint(x: x, y: y),
-                            startRadius: 18,
-                            endRadius: isLight ? 440 : 420
+                            startRadius: 20,
+                            endRadius: isLight ? 480 : 460
                         )
                     }
 
@@ -80,26 +80,47 @@ struct DotGridBackground: View {
                         let idx = Double(index)
                         let phase = idx * (.pi / 3.1) + .pi / 5
                         let x = 0.5 + 0.30 * sin(elapsed * (0.058 + idx * 0.009) + phase)
-                        let y = 0.5 + 0.25 * cos(elapsed * (0.066 + idx * 0.008) + phase * 1.33)
+                        let y = 0.65 + 0.20 * cos(elapsed * (0.066 + idx * 0.008) + phase * 1.33)
 
                         RadialGradient(
                             colors: [
-                                color.opacity((isLight ? 0.16 : 0.09) * lightBoost),
+                                color.opacity((isLight ? 0.14 : 0.08) * lightBoost),
                                 .clear
                             ],
                             center: UnitPoint(x: x, y: y),
-                            startRadius: 40,
-                            endRadius: isLight ? 540 : 500
+                            startRadius: 50,
+                            endRadius: isLight ? 580 : 540
                         )
                     }
                 }
-                .saturation(isLight ? (1.0 + 0.75 * tunedLightStrength) : 1.05)
-                .contrast(isLight ? (1.0 + 0.08 * tunedLightStrength) : 1.0)
-                .blur(radius: isLight ? (34 - 8 * tunedLightStrength) : 34)
-                .opacity(isLight ? (0.50 + 0.38 * tunedLightStrength) : 1.0)
+                .saturation(isLight ? (1.05 + 0.55 * tunedLightStrength) : 1.05)
+                .contrast(isLight ? (1.0 + 0.06 * tunedLightStrength) : 1.0)
+                .blur(radius: isLight ? (40 - 6 * tunedLightStrength) : 38)
+                .opacity(isLight ? (0.52 + 0.30 * tunedLightStrength) : 0.88)
                 .blendMode(isLight ? .multiply : .plusLighter)
+                // Vertical mask: fades from subtle at top to full vibrancy in card area.
+                .mask(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white.opacity(0.08), location: 0.0),
+                            .init(color: .white.opacity(0.25), location: 0.15),
+                            .init(color: .white.opacity(0.60), location: 0.30),
+                            .init(color: .white, location: 0.45),
+                            .init(color: .white, location: 1.0),
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
                 .allowsHitTesting(false)
             }
         }
     }
+}
+
+#Preview("DotGridBackground") {
+    DotGridBackground(
+        gradientPalette: [.red, .blue, .green],
+        lightModeStrength: 1.0
+    )
 }

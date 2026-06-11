@@ -9,7 +9,7 @@ struct LanguageBadge: View {
     var compact: Bool = false
 
     private var baseAccent: Color { Color(hex: language.accentHex) ?? Theme.current(colorScheme).accent }
-    private var accent: Color { baseAccent.saturation(3.0).brightness(0.22) }
+    private var accent: Color { colorScheme == .dark ? baseAccent.saturation(3.0).brightness(0.22) : baseAccent.saturation(3.0).brightness(-0.15) }
     private var selectedFillAccent: Color {
         (Color(hex: language.accentHexSelectedFill) ?? accent)
             .saturation(2.5)
@@ -17,7 +17,7 @@ struct LanguageBadge: View {
     }
     
     private var foregroundAccent: Color {
-        colorScheme == .dark ? accent : accent.blended(with: .black, ratio: 0.18)
+        colorScheme == .dark ? accent : baseAccent.blended(with: .black, ratio: 0.45)
     }
 
     private var resolvedForeground: Color {
@@ -97,4 +97,12 @@ extension Color {
         return self
         #endif
     }
+}
+
+#Preview("LanguageBadge") {
+    HStack {
+        LanguageBadge(language: .swift)
+        LanguageBadge(language: .python, compact: true)
+    }
+    .padding()
 }

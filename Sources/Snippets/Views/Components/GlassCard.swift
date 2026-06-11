@@ -108,3 +108,15 @@ extension View {
         )
     }
 }
+
+#Preview("GlassCard") {
+    ZStack {
+        Color.blue.ignoresSafeArea()
+        GlassCard {
+            Text("Glass Card Content")
+                .padding(40)
+                .foregroundStyle(.white)
+        }
+        .padding()
+    }
+}

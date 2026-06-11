@@ -122,22 +122,48 @@ struct CollectionEditorSheet: View {
     }
 
     private enum ContrastSuggestion {
-        case suggestForDark(Color)
-        case suggestForLight(Color)
+        /// Color has poor contrast in the current mode → best for the other mode
+        case poorInCurrent(suggested: Color, otherModeName: String)
+        /// Color works in current mode but poorly in the other
+        case poorInOther(suggested: Color, otherModeName: String)
         case none
     }
 
     private var contrastSuggestion: ContrastSuggestion {
+        // Once the user has set separate colors, don't suggest anymore
+        guard collectionColorDark == nil else { return .none }
+
         let current = activeColor
+        let contrastWithLight = current.contrastRatio(with: Color.white)
+        let contrastWithDark = current.contrastRatio(with: Color(white: 0.1))
+
         if colorScheme == .light {
-            // Check if the current light color has poor contrast in dark mode
-            if current.contrastRatio(with: Color(white: 0.1)) < 2.5 {
-                return .suggestForDark(current.brightness(0.3).saturation(0.8))
+            if contrastWithLight < 2.5 {
+                // Too light for light mode → best used in dark mode
+                return .poorInCurrent(
+                    suggested: current.brightness(-0.25).saturation(1.2),
+                    otherModeName: "Dark"
+                )
+            } else if contrastWithDark < 2.5 {
+                // Good in light, poor in dark
+                return .poorInOther(
+                    suggested: current.brightness(0.3).saturation(0.8),
+                    otherModeName: "Dark"
+                )
             }
         } else {
-            // Check if the current dark color has poor contrast in light mode
-            if current.contrastRatio(with: Color.white) < 2.5 {
-                return .suggestForLight(current.brightness(-0.25).saturation(1.2))
+            if contrastWithDark < 2.5 {
+                // Too dark for dark mode → best used in light mode
+                return .poorInCurrent(
+                    suggested: current.brightness(0.3).saturation(0.8),
+                    otherModeName: "Light"
+                )
+            } else if contrastWithLight < 2.5 {
+                // Good in dark, poor in light
+                return .poorInOther(
+                    suggested: current.brightness(-0.25).saturation(1.2),
+                    otherModeName: "Light"
+                )
             }
         }
         return .none
@@ -145,32 +171,61 @@ struct CollectionEditorSheet: View {
 
     @ViewBuilder
     private var glassContrastWarning: some View {
+        let currentModeName = colorScheme == .light ? "Light" : "Dark"
+
         switch contrastSuggestion {
-        case .suggestForDark(let suggested):
-            warningView(
-                text: "This color looks great in Light Mode, but has poor contrast in Dark Mode.",
-                suggestionText: "Apply Lighter Version to Dark Mode",
+        case .poorInCurrent(let suggested, let otherModeName):
+            contrastWarningCard(
+                text: "Poor contrast in \(currentModeName) Mode. Best used in \(otherModeName) Mode.",
+                suggestionText: "Use for \(otherModeName) & apply adjusted version for \(currentModeName)",
                 suggestedColor: suggested
             ) {
-                collectionColorDark = suggested
+                if colorScheme == .light {
+                    // Keep original for dark, apply darker suggestion for light
+                    collectionColorDark = collectionColor
+                    collectionColor = suggested
+                } else {
+                    // Keep original for light, apply lighter suggestion for dark
+                    collectionColorDark = suggested
+                }
             }
-        case .suggestForLight(let suggested):
-            warningView(
-                text: "This color looks great in Dark Mode, but has poor contrast in Light Mode.",
-                suggestionText: "Apply Darker Version to Light Mode",
+        case .poorInOther(let suggested, let otherModeName):
+            contrastWarningCard(
+                text: "Looks great in \(currentModeName) Mode, but has poor contrast in \(otherModeName) Mode.",
+                suggestionText: "Apply adjusted version for \(otherModeName) Mode",
                 suggestedColor: suggested
             ) {
-                let currentDark = collectionColorDark ?? collectionColor
-                collectionColor = suggested
-                collectionColorDark = currentDark
+                if colorScheme == .light {
+                    collectionColorDark = suggested
+                } else {
+                    let currentDark = collectionColor
+                    collectionColor = suggested
+                    collectionColorDark = currentDark
+                }
             }
         case .none:
             EmptyView()
         }
     }
 
-    private func warningView(text: String, suggestionText: String, suggestedColor: Color, action: @escaping () -> Void) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private func contrastWarningCard(text: String, suggestionText: String, suggestedColor: Color, action: @escaping () -> Void) -> some View {
+        let otherColorBinding = Binding<Color>(
+            get: {
+                colorScheme == .light ? (collectionColorDark ?? collectionColor) : collectionColor
+            },
+            set: { newColor in
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    if colorScheme == .light {
+                        collectionColorDark = newColor
+                    } else {
+                        let currentDark = collectionColorDark ?? collectionColor
+                        collectionColor = newColor
+                        collectionColorDark = currentDark
+                    }
+                }
+            }
+        )
+        return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
@@ -179,26 +234,39 @@ struct CollectionEditorSheet: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    action()
+
+            HStack(spacing: 8) {
+                // Auto-suggested color button
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        action()
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(suggestedColor)
+                            .frame(width: 12, height: 12)
+                            .overlay(Circle().stroke(.white.opacity(0.3), lineWidth: 1))
+                        Text(suggestionText)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.primary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.secondary.opacity(0.1))
+                    .clipShape(Capsule())
                 }
-            } label: {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(suggestedColor)
-                        .frame(width: 12, height: 12)
-                        .overlay(Circle().stroke(.white.opacity(0.3), lineWidth: 1))
-                    Text(suggestionText)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.primary)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.secondary.opacity(0.1))
-                .clipShape(Capsule())
+                .buttonStyle(.plain)
+
+                // Custom color picker for the other mode
+                ColorPicker("Adjust Brightness", selection: otherColorBinding, supportsOpacity: false)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.secondary.opacity(0.1))
+                    .clipShape(Capsule())
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.top, -12)
@@ -253,12 +321,42 @@ struct CollectionEditorSheet: View {
     private var glassPreviewHeader: some View {
         HStack(spacing: 16) {
             if collectionColorDark != nil {
-                HStack(spacing: 8) {
-                    previewIcon(color: collectionColor, isDark: false)
-                    previewIcon(color: collectionColorDark!, isDark: true)
+                VStack(spacing: 6) {
+                    HStack(spacing: 8) {
+                        VStack(spacing: 4) {
+                            Text("Light").font(.system(size: 10, weight: .bold)).foregroundStyle(.secondary).textCase(.uppercase)
+                            previewIcon(color: collectionColor, isDark: false)
+                        }
+                        VStack(spacing: 4) {
+                            Text("Dark").font(.system(size: 10, weight: .bold)).foregroundStyle(.secondary).textCase(.uppercase)
+                            previewIcon(color: collectionColorDark!, isDark: true)
+                        }
+                    }
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            collectionColorDark = nil
+                        }
+                    } label: {
+                        Text("Reset to unified")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.secondary.opacity(0.1))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
                 }
+                .transition(.asymmetric(
+                    insertion: .scale(scale: 0.9).combined(with: .opacity),
+                    removal: .scale(scale: 0.9).combined(with: .opacity)
+                ))
             } else {
                 previewIcon(color: activeColor, isDark: colorScheme == .dark)
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.9).combined(with: .opacity),
+                        removal: .scale(scale: 0.9).combined(with: .opacity)
+                    ))
             }
 
             TextField("Collection name", text: $collectionName)
@@ -321,26 +419,27 @@ struct CollectionEditorSheet: View {
             ZStack {
                 ColorPicker("", selection: activeColorBinding, supportsOpacity: false)
                     .labelsHidden()
-                    .opacity(0.015)
-                    .clipShape(Circle())
+                    .opacity(0.01)
 
-                Circle()
-                    .fill(activeColor)
-                    .frame(width: 28, height: 28)
-                    .overlay {
-                        Circle().stroke(.white.opacity(colorScheme == .dark ? 0.12 : 0.25), lineWidth: 1)
-                    }
-                    .allowsHitTesting(false)
-
-                Image(systemName: "plus")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.3), radius: 1, y: 1)
-                    .allowsHitTesting(false)
+                ZStack {
+                    Circle()
+                        .fill(activeColor.opacity(0.15))
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(colorScheme == .dark ? .white : .black)
+                    Circle()
+                        .strokeBorder(
+                            AngularGradient(
+                                colors: [.red, .orange, .yellow, .green, .blue, .purple, .pink, .red],
+                                center: .center
+                            ),
+                            lineWidth: 2.0
+                        )
+                }
+                .frame(width: 28, height: 28)
+                .allowsHitTesting(false)
             }
             .frame(width: 38, height: 38)
-            .contentShape(Circle())
-            .clipShape(Circle())
             .help("Custom color")
         }
         .frame(maxWidth: .infinity)
@@ -491,8 +590,7 @@ struct CollectionEditorSheet: View {
                 Spacer()
                 Toggle("", isOn: $isSubcollection.animation(.spring(response: 0.35, dampingFraction: 0.8)))
                     .labelsHidden()
-                    .toggleStyle(.switch)
-                    .tint(activeColor)
+                    .toggleStyle(.liquidGlass(tint: activeColor))
             }
 
             if isSubcollection {
@@ -517,14 +615,11 @@ struct CollectionEditorSheet: View {
             }
         }
         .padding(16)
-        .background {
-            Color.clear
-                .liquidGlassSurface(
-                    in: RoundedRectangle(cornerRadius: 14, style: .continuous),
-                    shadowRadius: 8,
-                    shadowY: 4
-                )
-        }
+        .liquidGlassSurface(
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            shadowRadius: 8,
+            shadowY: 4
+        )
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isSubcollection)
     }
 
@@ -606,14 +701,11 @@ struct CollectionEditorSheet: View {
             }
         }
         .padding(16)
-        .background {
-            Color.clear
-                .liquidGlassSurface(
-                    in: RoundedRectangle(cornerRadius: 14, style: .continuous),
-                    shadowRadius: 8,
-                    shadowY: 4
-                )
-        }
+        .liquidGlassSurface(
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            shadowRadius: 8,
+            shadowY: 4
+        )
     }
 
     private func glassSnippetToggleRow(_ snippet: Snippet) -> some View {

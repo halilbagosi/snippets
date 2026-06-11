@@ -3,6 +3,7 @@ import AVKit
 #if canImport(AppKit)
 import AppKit
 #endif
+import SwiftData
 
 struct SnippetCard: View {
     @Environment(\.colorScheme) private var colorScheme
@@ -72,30 +73,33 @@ struct SnippetCard: View {
 
     @ViewBuilder
     private func copyButton(theme: Theme, languageAccent: Color) -> some View {
+        let fgColor = colorScheme == .dark ? .white : languageAccent.blended(with: .black, ratio: 0.45)
+        let strokeColor = languageAccent.saturation(3.0).brightness(colorScheme == .dark ? 0.22 : -0.15).opacity(0.50)
+        let fillColor = languageAccent.saturation(2.5).brightness(0.15).opacity(colorScheme == .dark ? 0.20 : 0.12)
+        
         Button(action: performCopy) {
             HStack(spacing: 5) {
                 Image(systemName: didCopy ? "checkmark" : "doc.on.doc")
-                    .font(Mono.font(size: 10, weight: .bold))
+                    .symbolRenderingMode(.hierarchical)
+                    .font(Mono.font(size: 9, weight: .semibold))
                     .contentTransition(.symbolEffect(.replace))
-                Text(didCopy ? "copied" : "code")
+                Text(didCopy ? "copied" : "copy")
                     .font(Mono.font(size: 10, weight: .semibold))
             }
-            .foregroundStyle(didCopy ? languageAccent : theme.textMuted)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.clear)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .foregroundStyle(didCopy ? (colorScheme == .dark ? .white : languageAccent) : fgColor)
+            .background {
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(didCopy ? languageAccent.opacity(colorScheme == .dark ? 0.40 : 0.25) : fillColor)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .stroke(didCopy ? languageAccent.opacity(0.8) : strokeColor, lineWidth: 1)
+                    }
+            }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(didCopy ? languageAccent.opacity(colorScheme == .dark ? 0.20 : 0.15) : .white.opacity(colorScheme == .dark ? 0.05 : 0.4))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .strokeBorder(.white.opacity(colorScheme == .dark ? 0.12 : 0.35), lineWidth: 1)
-                }
-                .shadow(color: .black.opacity(colorScheme == .dark ? 0.15 : 0.05), radius: 2, y: 1)
-        }
         .help("Copy snippet code")
         .accessibilityLabel(didCopy ? "Copied" : "Copy code")
     }
@@ -194,6 +198,21 @@ struct SnippetCard: View {
                     .foregroundStyle(theme.textMuted)
                 }
                 copyButton(theme: theme, languageAccent: languageAccent)
+                Button {
+                    snippet.isFavorite.toggle()
+                } label: {
+                    Image(systemName: snippet.isFavorite ? "star.fill" : "star")
+                        .font(Mono.font(size: 14, weight: .semibold))
+                        .foregroundStyle(
+                            snippet.isFavorite
+                                ? Color(red: 1.0, green: 0.80, blue: 0.20)
+                                : theme.textFaint
+                        )
+                        .padding(4)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(snippet.isFavorite ? "Remove from favorites" : "Add to favorites")
                 Spacer(minLength: 8)
                 if inTrashView {
                     let days = snippet.daysUntilPermanentDeletion
@@ -277,20 +296,20 @@ struct SnippetCard: View {
         }
         .frame(maxWidth: .infinity)
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .scaleEffect(effectiveIsHovered ? 1.01 : 1.0)
+        .scaleEffect(effectiveIsHovered ? 1.005 : 1.0)
         .rotation3DEffect(
-            .degrees(isHovered ? -Double(hoverVector.dy) * 5.5 : 0),
+            .degrees(isHovered ? -Double(hoverVector.dy) * 1.5 : 0),
             axis: (x: 1, y: 0, z: 0),
             perspective: 0.72
         )
         .rotation3DEffect(
-            .degrees(isHovered ? Double(hoverVector.dx) * 6.5 : 0),
+            .degrees(isHovered ? Double(hoverVector.dx) * 2.0 : 0),
             axis: (x: 0, y: 1, z: 0),
             perspective: 0.72
         )
         .offset(
-            x: isHovered ? hoverVector.dx * 3.5 : 0,
-            y: isHovered ? hoverVector.dy * 2.5 : 0
+            x: isHovered ? hoverVector.dx * 1.5 : 0,
+            y: isHovered ? hoverVector.dy * 1.0 : 0
         )
         .opacity(didAppear ? 1 : 0)
         .offset(y: didAppear ? 0 : 10)
@@ -587,5 +606,24 @@ private extension View {
         } else {
             self
         }
+    }
+}
+
+#Preview("SnippetCard") {
+    do {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: Snippet.self, SnippetCollection.self, MediaItem.self, configurations: config)
+        let snippet = Snippet(
+            title: "Hello World",
+            snippetDescription: "A simple hello world script.",
+            language: "swift",
+            code: "print(\"Hello World\")"
+        )
+        return SnippetCard(snippet: snippet)
+            .padding()
+            .frame(width: 300)
+            .modelContainer(container)
+    } catch {
+        return Text("Failed to create preview container")
     }
 }

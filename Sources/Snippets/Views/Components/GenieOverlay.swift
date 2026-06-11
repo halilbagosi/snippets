@@ -176,3 +176,10 @@ struct GlassShardFragmentView: View {
             .opacity(1.0 - fallPhase * 0.92)
     }
 }
+
+#Preview("GenieOverlay") {
+    ZStack {
+        Color.black.ignoresSafeArea()
+        GenieOverlay(accent: .blue)
+    }
+}
