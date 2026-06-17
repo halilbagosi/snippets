@@ -898,7 +898,6 @@ struct SnippetGalleryView: View {
                                 }
                                 .popover(isPresented: $viewModel.isShowingCollectionFilter, arrowEdge: .bottom) {
                                     collectionFilterPopover
-                                        .presentationBackground(.clear)
                                 }
 
                                 FilterTag(
@@ -948,9 +947,9 @@ struct SnippetGalleryView: View {
     private var collectionFilterPopover: some View {
         VStack(alignment: .leading, spacing: 0) {
             collectionFilterSearchField
-                .padding(.horizontal, 12)
-                .padding(.top, 8)
-                .padding(.bottom, 5)
+                .padding(.horizontal, 14)
+                .padding(.top, 14)
+                .padding(.bottom, 6)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
@@ -1009,23 +1008,15 @@ struct SnippetGalleryView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .padding(.bottom, 6)
             }
         }
         .frame(width: 330)
-        .padding(.top, 8)
-        .padding(.bottom, 12)
-        .liquidGlassSurface(
-            in: RoundedRectangle(cornerRadius: 12, style: .continuous),
-            tint: theme.surface.opacity(colorScheme == .dark ? 0.3 : 0.8),
-            interactive: false,
-            borderOpacity: colorScheme == .dark ? 0.22 : 0.40,
-            shadowRadius: 16,
-            shadowY: 6
-        )
+        .padding(.top, 12)
+        .padding(.bottom, 8)
         .onDisappear {
             collectionFilterSearchText = ""
         }
-        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var collectionFilterSearchField: some View {
@@ -1054,15 +1045,8 @@ struct SnippetGalleryView: View {
         .padding(.horizontal, 8)
         .frame(height: 30)
         .background {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.clear)
-                .liquidGlassSurface(
-                    in: RoundedRectangle(cornerRadius: 12, style: .continuous),
-                    tint: theme.surface.opacity(colorScheme == .dark ? 0.26 : 0.30),
-                    borderOpacity: colorScheme == .dark ? 0.10 : 0.34,
-                    shadowRadius: 4,
-                    shadowY: 2
-                )
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.04))
         }
     }
 
@@ -1277,7 +1261,7 @@ struct SnippetGalleryView: View {
                 .foregroundStyle(colorScheme == .dark ? .white : theme.text)
                 .liquidGlassSurface(
                     in: Capsule(style: .continuous),
-                    tint: .green,
+                    tint: theme.accent,
                     interactive: true,
                     borderOpacity: colorScheme == .dark ? 0.26 : 0.46,
                     shadowRadius: fabHovered ? 16 : 10,
@@ -1286,7 +1270,7 @@ struct SnippetGalleryView: View {
                 .overlay {
                     if colorScheme == .light {
                         Capsule(style: .continuous)
-                            .fill(Color.green.opacity(0.12))
+                            .fill(theme.accent.opacity(0.12))
                             .allowsHitTesting(false)
                     }
                 }

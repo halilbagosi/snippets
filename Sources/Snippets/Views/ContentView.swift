@@ -7,6 +7,7 @@ import AppKit
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(AppearanceSettings.self) private var appearanceSettings
 
     @Query(filter: #Predicate<Snippet> { $0.deletedAt == nil }, sort: [SortDescriptor(\Snippet.updatedAt, order: .reverse)])
     private var snippets: [Snippet]
@@ -105,7 +106,7 @@ struct ContentView: View {
 
             if let selectedCollectionID {
                 if !belongsDirectlyToCollection(selectedCollectionID) { return false }
-            } else if sidebarSelectionContext == .allSnippets {
+            } else if sidebarSelectionContext == .allSnippets && selectedSearchCollections.isEmpty {
                 if snippet.collections.contains(where: { !$0.isDeleted }) {
                     return false
                 }
@@ -263,7 +264,7 @@ struct ContentView: View {
             } else {
                 ZStack {
                     Group {
-                        DotGridBackground(gradientPalette: backgroundPalette, lightModeStrength: 0.78)
+                        DotGridBackground(gradientPalette: backgroundPalette, lightModeStrength: 0.78, focusedMode: appearanceSettings.focusedMode)
                             .ignoresSafeArea()
                     }
 

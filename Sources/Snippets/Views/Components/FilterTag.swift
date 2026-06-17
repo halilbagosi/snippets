@@ -56,23 +56,17 @@ struct FilterTag: View {
                 in: RoundedRectangle(cornerRadius: 7, style: .continuous),
                 tint: resolvedFill,
                 interactive: true,
-                borderOpacity: isSelected ? 0.44 : (colorScheme == .dark ? 0.30 : 0.38),
-                shadowRadius: colorScheme == .dark ? 8 : 0,
-                shadowY: colorScheme == .dark ? 4 : 0
+                borderOpacity: isSelected ? 0.44 : (colorScheme == .dark ? 0.30 : 0.18),
+                shadowRadius: 0,
+                shadowY: 0
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .stroke(accent.opacity(isSelected ? 0.50 : (colorScheme == .dark ? 0.28 : 0.30)), lineWidth: 1)
+                    .stroke(accent.opacity(isSelected ? 0.50 : (colorScheme == .dark ? 0.28 : 0.15)), lineWidth: 1)
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .shadow(
-            color: colorScheme == .dark ? accent.opacity(isSelected ? 0.45 : 0.22) : .clear,
-            radius: isSelected ? 10 : 6,
-            x: 0,
-            y: isSelected ? 3 : 2
-        )
         .animation(.snappy(duration: 0.12), value: isSelected)
     }
 }

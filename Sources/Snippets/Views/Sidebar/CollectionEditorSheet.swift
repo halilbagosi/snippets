@@ -278,6 +278,7 @@ struct CollectionEditorSheet: View {
         NavigationStack {
             VStack(spacing: 0) {
                 ScrollView {
+                    LiquidGlassContainer(spacing: 20) {
                     VStack(alignment: .leading, spacing: 20) {
                         glassPreviewHeader
                         glassColorStrip
@@ -287,6 +288,7 @@ struct CollectionEditorSheet: View {
                         glassSubcollectionToggleSection
                         glassSnippetMembershipSection
                         glassSymbolBrowser
+                    }
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 24)

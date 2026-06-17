@@ -7,6 +7,7 @@ import SwiftData
 
 struct SnippetCard: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(AppearanceSettings.self) private var appearanceSettings
     let snippet: Snippet
     var isSelected: Bool = false
     var inTrashView: Bool = false
@@ -114,7 +115,7 @@ struct SnippetCard: View {
     var body: some View {
         let theme = Theme.current(colorScheme)
         let languageAccent = theme.accentColor(for: language).saturation(10)
-        let effectiveIsHovered = isSelectionMode ? false : isHovered
+        let effectiveIsHovered = (isSelectionMode || appearanceSettings.disableHoverEffects) ? false : isHovered
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top) {
@@ -199,7 +200,9 @@ struct SnippetCard: View {
                 }
                 copyButton(theme: theme, languageAccent: languageAccent)
                 Button {
-                    snippet.isFavorite.toggle()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        snippet.isFavorite.toggle()
+                    }
                 } label: {
                     Image(systemName: snippet.isFavorite ? "star.fill" : "star")
                         .font(Mono.font(size: 14, weight: .semibold))
@@ -275,7 +278,7 @@ struct SnippetCard: View {
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(
-                    isSelected ? languageAccent.opacity(0.85) : .white.opacity(colorScheme == .dark ? 0.14 : 0.40),
+                    isSelected ? languageAccent.opacity(0.85) : (colorScheme == .dark ? .white.opacity(0.14) : .black.opacity(0.08)),
                     lineWidth: isSelected ? 1.35 : 1
                 )
         }
@@ -296,20 +299,20 @@ struct SnippetCard: View {
         }
         .frame(maxWidth: .infinity)
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .scaleEffect(effectiveIsHovered ? 1.005 : 1.0)
+        .scaleEffect(isHovered ? 1.005 : 1.0)
         .rotation3DEffect(
-            .degrees(isHovered ? -Double(hoverVector.dy) * 1.5 : 0),
+            .degrees(effectiveIsHovered ? -Double(hoverVector.dy) * 1.5 : 0),
             axis: (x: 1, y: 0, z: 0),
             perspective: 0.72
         )
         .rotation3DEffect(
-            .degrees(isHovered ? Double(hoverVector.dx) * 2.0 : 0),
+            .degrees(effectiveIsHovered ? Double(hoverVector.dx) * 2.0 : 0),
             axis: (x: 0, y: 1, z: 0),
             perspective: 0.72
         )
         .offset(
-            x: isHovered ? hoverVector.dx * 1.5 : 0,
-            y: isHovered ? hoverVector.dy * 1.0 : 0
+            x: effectiveIsHovered ? hoverVector.dx * 1.5 : 0,
+            y: effectiveIsHovered ? hoverVector.dy * 1.0 : 0
         )
         .opacity(didAppear ? 1 : 0)
         .offset(y: didAppear ? 0 : 10)
@@ -377,8 +380,8 @@ struct CardHoverShaderOverlay: View {
 
                 RadialGradient(
                     colors: [
-                        .white.opacity(isActive ? 0.09 : 0.0),
-                        accent.opacity(isActive ? (colorScheme == .dark ? 0.07 : 0.045) : 0.0),
+                        .white.opacity(isActive ? 0.04 : 0.0),
+                        accent.opacity(isActive ? (colorScheme == .dark ? 0.03 : 0.02) : 0.0),
                         .clear
                     ],
                     center: UnitPoint(x: x, y: y),
@@ -391,8 +394,8 @@ struct CardHoverShaderOverlay: View {
                 LinearGradient(
                     colors: [
                         .clear,
-                        accent.opacity(isActive ? 0.025 + shimmer * 0.012 : 0),
-                        .white.opacity(isActive ? 0.025 : 0),
+                        accent.opacity(isActive ? 0.01 + shimmer * 0.005 : 0),
+                        .white.opacity(isActive ? 0.01 : 0),
                         .clear
                     ],
                     startPoint: UnitPoint(x: max(0, x - 0.18), y: max(0, y - 0.24)),
@@ -623,6 +626,7 @@ private extension View {
             .padding()
             .frame(width: 300)
             .modelContainer(container)
+            .environment(AppearanceSettings())
     } catch {
         return Text("Failed to create preview container")
     }

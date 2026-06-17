@@ -141,8 +141,8 @@ struct ModernSidebar: View {
                 tint: theme.accent,
                 interactive: true,
                 borderOpacity: colorScheme == .dark ? 0.22 : 0.40,
-                shadowRadius: 6,
-                shadowY: 3
+                shadowRadius: 0,
+                shadowY: 0
             )
             .overlay {
                 if colorScheme == .light {

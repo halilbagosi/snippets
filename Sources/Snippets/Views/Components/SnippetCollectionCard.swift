@@ -113,7 +113,9 @@ struct SnippetCollectionCard: View {
                 } else {
                     HStack(spacing: 8) {
                         Button {
-                            collection.isFavorite.toggle()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                collection.isFavorite.toggle()
+                            }
                         } label: {
                             Image(systemName: collection.isFavorite ? "star.fill" : "star")
                                 .font(Mono.font(size: 14, weight: .semibold))

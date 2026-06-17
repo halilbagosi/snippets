@@ -3,6 +3,9 @@ import SwiftUI
 struct Theme {
     let scheme: ColorScheme
 
+    /// User-chosen accent colour override (set by AppearanceSettings).
+    @MainActor static var userAccent: Color? = nil
+
     static func current(_ scheme: ColorScheme) -> Theme { Theme(scheme: scheme) }
 
     var canvas: Color {
@@ -51,9 +54,10 @@ struct Theme {
     }
 
     var accent: Color {
-        scheme == .dark
+        let fallback = scheme == .dark
             ? Color(red: 0.318, green: 0.761, blue: 0.420)
             : Color(red: 0.094, green: 0.518, blue: 0.286)
+        return MainActor.assumeIsolated { Theme.userAccent ?? fallback }
     }
     var keyword: Color { Color(red: 1.0, green: 0.482, blue: 0.447) }
     var string: Color { Color(red: 0.949, green: 0.800, blue: 0.376) }

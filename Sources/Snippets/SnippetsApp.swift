@@ -56,6 +56,7 @@ struct SnippetsApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     #endif
     @State private var environment = AppEnvironment()
+    @State private var appearanceSettings = AppearanceSettings()
 
     private var sharedModelContainer: ModelContainer = {
         let schema = Schema([Snippet.self, MediaItem.self, SnippetCollection.self])
@@ -75,6 +76,8 @@ struct SnippetsApp: App {
         WindowGroup {
             ContentView()
                 .environment(environment)
+                .environment(appearanceSettings)
+                .preferredColorScheme(appearanceSettings.resolvedColorScheme)
                 .frame(minWidth: 1100, minHeight: 720)
         }
         #if os(macOS)
@@ -91,5 +94,12 @@ struct SnippetsApp: App {
         }
         #endif
         .modelContainer(sharedModelContainer)
+
+        #if os(macOS)
+        Settings {
+            SettingsView()
+                .environment(appearanceSettings)
+        }
+        #endif
     }
 }
