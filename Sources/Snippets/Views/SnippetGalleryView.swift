@@ -74,7 +74,7 @@ struct SnippetGalleryView: View {
         searchQuery.isEmpty && !subcollections.isEmpty && selectedLanguages.isEmpty && selectedSearchCollections.isEmpty
     }
     private var hasAnyGalleryContent: Bool {
-        hasAnyResults || hasVisibleSubcollections
+        hasAnyResults || hasVisibleSubcollections || (!subcollections.isEmpty && !selectedLanguages.isEmpty)
     }
     private var hasAnyResults: Bool {
         viewModel.hasAnyResults(
@@ -190,10 +190,10 @@ struct SnippetGalleryView: View {
                                         subcollectionGrid(subcollections)
                                     }
                                 }
-                                if !snippets.isEmpty {
-                                    if !selectedLanguages.isEmpty {
-                                        languageGroupedSnippets(viewModel.ordered(snippets))
-                                    } else if !selectedSearchCollections.isEmpty {
+                                if !selectedLanguages.isEmpty {
+                                    languageGroupedSnippets(viewModel.ordered(snippets))
+                                } else if !snippets.isEmpty {
+                                    if !selectedSearchCollections.isEmpty {
                                         snippetGrid(viewModel.ordered(snippets))
                                     } else {
                                         GallerySection(
@@ -220,6 +220,7 @@ struct SnippetGalleryView: View {
                 }
             }
             .scrollIndicators(.never)
+            .ignoresSafeArea(.container, edges: .top)
 
             dragTrashTarget
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
@@ -644,12 +645,6 @@ struct SnippetGalleryView: View {
                             Button { onEditSnippet?(snippet) } label: {
                                 Label("Edit snippet", systemImage: "pencil")
                             }
-                            Button(role: .destructive) {
-                                onDelete?(snippet)
-                            } label: {
-                                Label("Delete snippet", systemImage: "trash")
-                            }
-                            Divider()
                             Menu {
                                 if !snippet.collections.isEmpty {
                                     Button { onMoveSnippetToLibrary?(snippet) } label: {
@@ -666,6 +661,12 @@ struct SnippetGalleryView: View {
                                 }
                             } label: {
                                 Label("Move to", systemImage: "folder")
+                            }
+                            Divider()
+                            Button(role: .destructive) {
+                                onDelete?(snippet)
+                            } label: {
+                                Label("Delete snippet", systemImage: "trash")
                             }
                         }
                     }
@@ -708,20 +709,20 @@ struct SnippetGalleryView: View {
             let langSnippets = grouped[language] ?? []
             let isFilteringByCollection = !selectedSearchCollections.isEmpty
             let langCollections = isFilteringByCollection ? [] : subcollections.filter { collection in
-                let allowedIDs = collection.allDescendantIDs
-                return source.contains { snippet in
-                    snippet.language == language.rawValue &&
-                    snippet.collections.contains { allowedIDs.contains($0.persistentModelID) }
+                var queue = [collection]
+                let favOnly = showFavoritesOnly
+                while !queue.isEmpty {
+                    let col = queue.removeFirst()
+                    if col.snippets.contains(where: { $0.language == language.rawValue && !$0.isDeleted && (!favOnly || $0.isFavorite) }) {
+                        return true
+                    }
+                    queue.append(contentsOf: col.children)
                 }
+                return false
             }
 
             if !langSnippets.isEmpty || !langCollections.isEmpty {
-                let visibleSnippets = langSnippets.filter { snippet in
-                    !langCollections.contains { collection in
-                        let allowedIDs = collection.allDescendantIDs
-                        return snippet.collections.contains { allowedIDs.contains($0.persistentModelID) }
-                    }
-                }
+                let visibleSnippets = langSnippets
                 
                 let baseAccent = Color(hex: language.accentHex) ?? theme.accent
                 let accent = colorScheme == .dark 
@@ -924,7 +925,7 @@ struct SnippetGalleryView: View {
             }
         }
         .padding(.horizontal, 32)
-        .padding(.top, 14)
+        .padding(.top, 36)
         .padding(.bottom, 12)
         .background {
             Rectangle()
@@ -935,6 +936,7 @@ struct SnippetGalleryView: View {
                     shadowRadius: 0,
                     shadowY: 0
                 )
+                .ignoresSafeArea(edges: .top)
                 .overlay(alignment: .bottom) {
                     Rectangle()
                         .frame(height: 1)
@@ -1053,11 +1055,14 @@ struct SnippetGalleryView: View {
         .frame(height: 30)
         .background {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(theme.surface.opacity(colorScheme == .dark ? 0.26 : 0.30))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(.white.opacity(colorScheme == .dark ? 0.10 : 0.34), lineWidth: 1)
-                }
+                .fill(.clear)
+                .liquidGlassSurface(
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                    tint: theme.surface.opacity(colorScheme == .dark ? 0.26 : 0.30),
+                    borderOpacity: colorScheme == .dark ? 0.10 : 0.34,
+                    shadowRadius: 4,
+                    shadowY: 2
+                )
         }
     }
 
@@ -1147,7 +1152,7 @@ struct SnippetGalleryView: View {
                 "",
                 text: $searchText,
                 prompt: Text("search title, description, or code…")
-                    .foregroundColor(searchFocused ? theme.safeAccentText(theme.accent).opacity(0.7) : (colorScheme == .dark ? .white.opacity(0.6) : theme.textMuted))
+                    .foregroundColor(searchFocused ? theme.safeAccentText(theme.accent).opacity(0.7) : (colorScheme == .dark ? .white.opacity(0.9) : theme.textMuted))
             )
                 .textFieldStyle(.plain)
                 .focused($searchFocused)

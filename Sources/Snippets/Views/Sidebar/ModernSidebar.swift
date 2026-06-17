@@ -227,8 +227,8 @@ struct ModernSidebar: View {
                 snippetRow(snippet, context: .frequentlyUsed)
                     .contextMenu {
                         Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
-                        Button(role: .destructive) { onDeleteSnippet(snippet) } label: { Label("Delete snippet", systemImage: "trash") }
                         moveToMenu(snippet)
+                        Button(role: .destructive) { onDeleteSnippet(snippet) } label: { Label("Delete snippet", systemImage: "trash") }
                     }
             }
         }
@@ -353,13 +353,13 @@ struct ModernSidebar: View {
                 .draggable(String(snippet.persistentModelID.hashValue))
                 .contextMenu {
                     Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
-                    Button(role: .destructive) { onDeleteSnippet(snippet) } label: { Label("Delete snippet", systemImage: "trash") }
                     Menu("Move to") {
                         Button { onMoveSnippetToLibrary(snippet) } label: { Label("All Snippets", systemImage: "square.grid.2x2") }
                         ForEach(collections) { target in
                             Button { onMoveSnippetToCollection(snippet, target) } label: { Label(target.name, systemImage: target.displayIconName) }
                         }
                     }
+                    Button(role: .destructive) { onDeleteSnippet(snippet) } label: { Label("Delete snippet", systemImage: "trash") }
                     Menu("Copy to") {
                         ForEach(collections) { target in
                             Button { onCopySnippetToCollection(snippet, target) } label: { Label(target.name, systemImage: target.displayIconName) }

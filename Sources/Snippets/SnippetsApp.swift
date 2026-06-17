@@ -38,7 +38,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func configureWindows(_ windows: [NSWindow]) {
         for window in windows where window.canBecomeMain {
-            window.styleMask.formUnion([.titled, .closable, .miniaturizable, .resizable])
+            window.styleMask.formUnion([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
             window.collectionBehavior.insert(.fullScreenPrimary)
             window.collectionBehavior.insert(.managed)
             window.minSize = NSSize(width: 1100, height: 720)

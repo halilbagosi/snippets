@@ -38,7 +38,7 @@ struct ContentView: View {
         case trash
         case collection(PersistentIdentifier)
     }
-    @State private var sidebarSelectionContext: SidebarSelectionContext? = nil
+    @State private var sidebarSelectionContext: SidebarSelectionContext? = .allSnippets
     @State private var selectedCollectionID: PersistentIdentifier? = nil
     @State private var sidebarSearch: String = ""
     @State private var showFavoritesOnly: Bool = false
@@ -440,7 +440,6 @@ struct ContentView: View {
                 }
             }
         }
-
         .task {
             performTrashCleanup()
         }

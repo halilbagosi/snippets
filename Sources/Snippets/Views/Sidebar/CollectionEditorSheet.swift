@@ -419,25 +419,31 @@ struct CollectionEditorSheet: View {
             ZStack {
                 ColorPicker("", selection: activeColorBinding, supportsOpacity: false)
                     .labelsHidden()
-                    .opacity(0.01)
-
-                ZStack {
-                    Circle()
-                        .fill(activeColor.opacity(0.15))
-                    Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(colorScheme == .dark ? .white : .black)
-                    Circle()
-                        .strokeBorder(
-                            AngularGradient(
-                                colors: [.red, .orange, .yellow, .green, .blue, .purple, .pink, .red],
-                                center: .center
-                            ),
-                            lineWidth: 2.0
-                        )
-                }
-                .frame(width: 28, height: 28)
-                .allowsHitTesting(false)
+                    .frame(width: 28, height: 28)
+                    .clipShape(Circle())
+                    .overlay {
+                        ZStack {
+                            Circle()
+                                .fill(activeColor.opacity(1.0)) // ensure full coverage
+                            Circle()
+                                .fill(theme.surface) // background to hide the color well underneath completely
+                            Circle()
+                                .fill(activeColor.opacity(0.15))
+                            Image(systemName: "plus")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(colorScheme == .dark ? .white : .black)
+                            Circle()
+                                .strokeBorder(
+                                    AngularGradient(
+                                        colors: [.red, .orange, .yellow, .green, .blue, .purple, .pink, .red],
+                                        center: .center
+                                    ),
+                                    lineWidth: 2.0
+                                )
+                        }
+                        .frame(width: 28, height: 28)
+                        .allowsHitTesting(false)
+                    }
             }
             .frame(width: 38, height: 38)
             .help("Custom color")
@@ -590,7 +596,8 @@ struct CollectionEditorSheet: View {
                 Spacer()
                 Toggle("", isOn: $isSubcollection.animation(.spring(response: 0.35, dampingFraction: 0.8)))
                     .labelsHidden()
-                    .toggleStyle(.liquidGlass(tint: activeColor))
+                    .toggleStyle(.switch)
+                    .tint(activeColor)
             }
 
             if isSubcollection {
