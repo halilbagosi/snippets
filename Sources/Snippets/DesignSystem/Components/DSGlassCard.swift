@@ -1,0 +1,15 @@
+import SwiftUI
+
+public struct DSGlassCard<Content: View>: View {
+    let content: Content
+
+    public init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    public var body: some View {
+        content
+            .padding(DSToken.Spacing.m)
+            .modifier(DSGlassModifier())
+    }
+}
