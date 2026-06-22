@@ -440,7 +440,7 @@ struct SnippetGalleryView: View {
 
     private func subcollectionGrid(_ source: [SnippetCollection]) -> some View {
         let ordered = viewModel.ordered(source)
-        return LiquidGlassContainer(spacing: 18) {
+        return DSGlassContainer(spacing: 18) {
             LazyVGrid(columns: subcollectionColumns, spacing: 14) {
                 ForEach(Array(ordered.enumerated()), id: \.element.persistentModelID) { index, collection in
                     ZStack {
@@ -727,7 +727,7 @@ struct SnippetGalleryView: View {
     }
 
     private var topBar: some View {
-        LiquidGlassContainer(spacing: 10) {
+        DSGlassContainer(spacing: 10) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
                     if let onBack {
@@ -756,7 +756,7 @@ struct SnippetGalleryView: View {
                         .frame(maxWidth: .infinity)
                     
                     HStack(spacing: 8) {
-                        DSTag(
+                        FilterTag(
                             label: viewModel.isSelectMode ? "done" : "select",
                             icon: viewModel.isSelectMode ? "checkmark.circle" : "checklist",
                             accent: viewModel.isSelectMode ? theme.accent : theme.textMuted,
@@ -769,7 +769,7 @@ struct SnippetGalleryView: View {
 
                         if viewModel.isSelectMode {
                             let isAllSelected = viewModel.selectedForAction.count == (displaySnippets.count + subcollections.count) && (!displaySnippets.isEmpty || !subcollections.isEmpty)
-                            DSTag(
+                            FilterTag(
                                 label: isAllSelected ? "deselect all" : "select all",
                                 icon: isAllSelected ? "circle.dashed" : "checkmark.circle.fill",
                                 accent: theme.textMuted,
@@ -790,7 +790,7 @@ struct SnippetGalleryView: View {
                             .transition(.scale.combined(with: .opacity))
 
                             if isTrashMode {
-                                DSTag(
+                                FilterTag(
                                     label: "put back (\(viewModel.selectedForAction.count))",
                                     icon: "arrow.uturn.left",
                                     accent: theme.accent,
@@ -810,7 +810,7 @@ struct SnippetGalleryView: View {
                             }
 
                             if !isTrashMode {
-                                DSTag(
+                                FilterTag(
                                     label: "move (\(viewModel.selectedForAction.count))",
                                     icon: "folder",
                                     accent: theme.accent,
@@ -823,7 +823,7 @@ struct SnippetGalleryView: View {
                                 .transition(.scale.combined(with: .opacity))
                             }
 
-                            DSTag(
+                            FilterTag(
                                 label: "delete (\(viewModel.selectedForAction.count))",
                                 icon: "trash",
                                 accent: .red,
@@ -852,7 +852,7 @@ struct SnippetGalleryView: View {
                         }
 
                         if !viewModel.isSelectMode {
-                            DSTag(
+                            FilterTag(
                                 label: viewModel.isOldestToNewest ? "sort:oldest" : "sort:newest",
                                 icon: viewModel.isOldestToNewest ? "arrow.up" : "arrow.down",
                                 accent: theme.textMuted,
@@ -865,7 +865,7 @@ struct SnippetGalleryView: View {
                             .transition(.scale.combined(with: .opacity))
 
                             if !isTrashMode {
-                                DSTag(
+                                FilterTag(
                                     label: (selectedSearchCollections.isEmpty && !showUncategorizedOnly) ? "collections:all" : (showUncategorizedOnly ? "collections:none" : "collections:\(selectedSearchCollections.count)"),
                                     icon: "folder",
                                     accent: theme.textMuted,
@@ -879,7 +879,7 @@ struct SnippetGalleryView: View {
                                 }
                                 .transition(.scale.combined(with: .opacity))
 
-                                DSTag(
+                                FilterTag(
                                     label: "favorites",
                                     icon: showFavoritesOnly ? "star.fill" : "star",
                                     accent: Color(red: 1.0, green: 0.80, blue: 0.20),
@@ -1208,9 +1208,9 @@ struct SnippetGalleryView: View {
 
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            LiquidGlassContainer(spacing: 8) {
+            DSGlassContainer(spacing: 8) {
                 HStack(spacing: 8) {
-                    DSTag(
+                    FilterTag(
                         label: "lang:all",
                         icon: "asterisk",
                         accent: theme.accent,
@@ -1229,7 +1229,7 @@ struct SnippetGalleryView: View {
                         let selectedAccent = (Color(hex: language.accentHexSelectedFill) ?? accent)
                             .saturation(2.5)
                             .brightness(0.15)
-                        DSTag(
+                        FilterTag(
                             label: "lang:\(language.rawValue.lowercased())",
                             icon: language.symbolName,
                             accent: accent,
@@ -1327,7 +1327,7 @@ private struct MoveToCollectionSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                LiquidGlassContainer(spacing: 0) {
+                DSGlassContainer(spacing: 0) {
                     VStack(spacing: 0) {
                         ForEach(Array(collections.enumerated()), id: \.element.persistentModelID) { index, collection in
                             Button(action: { onMove(collection) }) {

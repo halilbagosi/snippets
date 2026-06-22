@@ -285,7 +285,7 @@ struct CollectionEditorSheet: View {
         NavigationStack {
             VStack(spacing: 0) {
                 ScrollView {
-                    LiquidGlassContainer(spacing: 20) {
+                    DSGlassContainer(spacing: 20) {
                     VStack(alignment: .leading, spacing: 20) {
                         glassPreviewHeader
                         glassColorStrip

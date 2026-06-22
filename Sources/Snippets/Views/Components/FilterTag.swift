@@ -85,8 +85,8 @@ private struct FilterTagButtonStyle: ButtonStyle {
 
 #Preview("FilterTag") {
     HStack {
-        DSTag(label: "Swift", icon: "swift", accent: .orange, isSelected: false, action: {})
-        DSTag(label: "Selected", icon: "checkmark", accent: .green, isSelected: true, action: {})
+        FilterTag(label: "Swift", icon: "swift", accent: .orange, isSelected: false, action: {})
+        FilterTag(label: "Selected", icon: "checkmark", accent: .green, isSelected: true, action: {})
     }
     .padding()
 }

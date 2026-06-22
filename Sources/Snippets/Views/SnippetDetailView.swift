@@ -139,7 +139,7 @@ struct SnippetDetailView: View {
 
     private var actionBar: some View {
         HStack(spacing: 8) {
-            DSTag(
+            FilterTag(
                 label: didCopy ? "copied" : "copy",
                 icon: didCopy ? "checkmark" : "doc.on.doc",
                 accent: didCopy ? .blue : theme.textMuted,
@@ -153,7 +153,7 @@ struct SnippetDetailView: View {
                 }
             }
 
-            DSTag(
+            FilterTag(
                 label: "edit",
                 icon: "pencil",
                 accent: theme.textMuted,
@@ -162,7 +162,7 @@ struct SnippetDetailView: View {
                 onEdit()
             }
 
-            DSTag(
+            FilterTag(
                 label: snippet.isFavorite ? "unfavorite" : "favorite",
                 icon: snippet.isFavorite ? "star.fill" : "star",
                 accent: snippet.isFavorite ? Color(red: 1.0, green: 0.80, blue: 0.20) : theme.textMuted,
@@ -171,7 +171,7 @@ struct SnippetDetailView: View {
                 snippet.isFavorite.toggle()
             }
 
-            DSTag(
+            FilterTag(
                 label: "delete",
                 icon: "trash",
                 accent: .red,

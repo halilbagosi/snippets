@@ -14,15 +14,15 @@ public struct DSTag: View {
     public var body: some View {
         Button(action: action) {
             Text(title)
-                .font(DSToken.Font.caption)
-                .padding(.horizontal, DSToken.Spacing.s)
+                .font(DSToken.Typography.caption)
+                .padding(.horizontal, DSToken.Spacing.sm)
                 .padding(.vertical, DSToken.Spacing.xs)
-                .background(isSelected ? DSToken.Color.primary : DSToken.Color.surface)
-                .foregroundColor(isSelected ? DSToken.Color.onPrimary : DSToken.Color.textPrimary)
-                .cornerRadius(DSToken.Radius.s)
+                .background(isSelected ? DSToken.Color.textPrimary : DSToken.Color.surface)
+                .foregroundColor(isSelected ? DSToken.Color.background : DSToken.Color.textPrimary)
+                .cornerRadius(DSToken.Radius.sm)
                 .overlay(
-                    RoundedRectangle(cornerRadius: DSToken.Radius.s)
-                        .stroke(isSelected ? Color.clear : DSToken.Color.border, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: DSToken.Radius.sm)
+                        .stroke(isSelected ? Color.clear : DSToken.Color.textSecondary, lineWidth: 1)
                 )
         }
     }

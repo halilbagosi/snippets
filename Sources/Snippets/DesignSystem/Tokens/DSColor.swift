@@ -11,6 +11,7 @@ public extension DSToken {
         public static let textPrimary = SwiftUI.Color.primary
         public static let textSecondary = SwiftUI.Color.secondary
         public static let tint = SwiftUI.Color.accentColor
+        public static let destructive = SwiftUI.Color.red
         
         public struct LiquidGlass {
             public static func fill(isDark: Bool) -> SwiftUI.Color {

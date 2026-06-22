@@ -42,7 +42,7 @@ public struct DSButton: View {
     private var backgroundColor: Color {
         switch style {
         case .primary:
-            return DSToken.Color.primary
+            return DSToken.Color.textPrimary
         case .secondary:
             return DSToken.Color.surface
         case .ghost:
@@ -57,14 +57,14 @@ public struct DSButton: View {
         case .primary, .destructive:
             return Color.white
         case .secondary, .ghost:
-            return DSToken.Color.primary
+            return DSToken.Color.textPrimary
         }
     }
 
     private var borderColor: Color {
         switch style {
         case .secondary:
-            return DSToken.Color.primary.opacity(0.2)
+            return DSToken.Color.textPrimary.opacity(0.2)
         default:
             return Color.clear
         }

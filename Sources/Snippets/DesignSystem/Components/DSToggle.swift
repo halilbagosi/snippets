@@ -20,7 +20,7 @@ public struct DSLiquidGlassToggleStyle: ToggleStyle {
             configuration.label
             Spacer()
             Capsule()
-                .fill(configuration.isOn ? DSToken.Color.primary : DSToken.Color.surface)
+                .fill(configuration.isOn ? DSToken.Color.textPrimary : DSToken.Color.surface)
                 .frame(width: 50, height: 30)
                 .overlay(
                     Circle()

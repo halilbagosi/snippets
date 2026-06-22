@@ -16,7 +16,7 @@ public struct DSIconButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(DSToken.Typography.body)
-                .foregroundColor(DSToken.Color.primary)
+                .foregroundColor(DSToken.Color.textPrimary)
                 .padding(DSToken.Spacing.sm)
                 .background(
                     RoundedRectangle(cornerRadius: DSToken.Radius.md)
