@@ -67,7 +67,7 @@ struct SnippetEditorView: View {
                         codeSection
                         mediaSection
                     }
-                    .padding(28)
+                    .padding(DSToken.Spacing.xl)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
@@ -351,7 +351,7 @@ struct SnippetEditorView: View {
                     fontSize: 13,
                     minHeight: 160
                 )
-                .padding(2)
+                .padding(DSToken.Spacing.xxs)
                 .frame(minHeight: 180)
 
                 if viewModel.code.isEmpty && !codeFocused {
@@ -576,7 +576,7 @@ private struct MediaThumbnail: View {
                     .foregroundStyle(.white, .black.opacity(0.6))
             }
             .buttonStyle(.plain)
-            .padding(6)
+            .padding(DSToken.Spacing.xs)
         }
         .frame(maxWidth: .infinity)
         .onAppear(perform: loadThumbnail)

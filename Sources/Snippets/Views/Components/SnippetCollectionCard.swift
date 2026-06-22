@@ -123,7 +123,7 @@ struct SnippetCollectionCard: View {
                                         ? Color(red: 1.0, green: 0.80, blue: 0.20)
                                         : theme.textFaint
                                 )
-                                .padding(4)
+                                .padding(DSToken.Spacing.xxs)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)

@@ -180,7 +180,7 @@ struct ModernSidebar: View {
                 }
             }
             .keyboardShortcut("n", modifiers: [.command, .shift])
-            .padding(12)
+            .padding(DSToken.Spacing.sm)
         }
     }
 

@@ -158,7 +158,7 @@ struct SnippetCard: View {
                             .font(Mono.font(size: 10))
                             .foregroundStyle(theme.text.opacity(0.72))
                             .lineLimit(10)
-                            .padding(12)
+                            .padding(DSToken.Spacing.sm)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .background(theme.canvasDeep)
@@ -210,7 +210,7 @@ struct SnippetCard: View {
                                 ? Color(red: 1.0, green: 0.80, blue: 0.20)
                                 : theme.textFaint
                         )
-                        .padding(4)
+                        .padding(DSToken.Spacing.xxs)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -494,7 +494,7 @@ private struct GalleryAttachmentPreview: View {
                 Image(systemName: "play.fill")
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(.white)
-                    .padding(6)
+                    .padding(DSToken.Spacing.xs)
                     .background(.ultraThinMaterial, in: Circle())
                     .padding(innerPadding + 3)
             }

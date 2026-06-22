@@ -139,7 +139,7 @@ struct SnippetDetailView: View {
 
     private var actionBar: some View {
         HStack(spacing: 8) {
-            FilterTag(
+            DSTag(
                 label: didCopy ? "copied" : "copy",
                 icon: didCopy ? "checkmark" : "doc.on.doc",
                 accent: didCopy ? .blue : theme.textMuted,
@@ -153,7 +153,7 @@ struct SnippetDetailView: View {
                 }
             }
 
-            FilterTag(
+            DSTag(
                 label: "edit",
                 icon: "pencil",
                 accent: theme.textMuted,
@@ -162,7 +162,7 @@ struct SnippetDetailView: View {
                 onEdit()
             }
 
-            FilterTag(
+            DSTag(
                 label: snippet.isFavorite ? "unfavorite" : "favorite",
                 icon: snippet.isFavorite ? "star.fill" : "star",
                 accent: snippet.isFavorite ? Color(red: 1.0, green: 0.80, blue: 0.20) : theme.textMuted,
@@ -171,7 +171,7 @@ struct SnippetDetailView: View {
                 snippet.isFavorite.toggle()
             }
 
-            FilterTag(
+            DSTag(
                 label: "delete",
                 icon: "trash",
                 accent: .red,
@@ -190,7 +190,7 @@ struct SnippetDetailView: View {
                 .font(Sans.font(size: 14))
                 .foregroundStyle(theme.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(14)
+                .padding(DSToken.Spacing.md)
                 .liquidGlassSurface(
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous),
                     shadowRadius: 6,
@@ -338,7 +338,7 @@ private struct MediaPreview: View {
                 Image(systemName: "play.fill")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white)
-                    .padding(7)
+                    .padding(DSToken.Spacing.xs)
                     .background(.ultraThinMaterial, in: Circle())
                     .padding(innerPadding + 4)
             }

@@ -528,7 +528,7 @@ struct CollectionEditorSheet: View {
                     .frame(maxWidth: .infinity, minHeight: 60)
             }
         }
-        .padding(16)
+        .padding(DSToken.Spacing.md)
         .liquidGlassSurface(
             in: RoundedRectangle(cornerRadius: 16, style: .continuous),
             shadowRadius: 12,
@@ -652,7 +652,7 @@ struct CollectionEditorSheet: View {
                 .transition(.opacity)
             }
         }
-        .padding(16)
+        .padding(DSToken.Spacing.md)
         .liquidGlassSurface(
             in: RoundedRectangle(cornerRadius: 14, style: .continuous),
             shadowRadius: 8,
@@ -739,7 +739,7 @@ struct CollectionEditorSheet: View {
                 }
             }
         }
-        .padding(16)
+        .padding(DSToken.Spacing.md)
         .liquidGlassSurface(
             in: RoundedRectangle(cornerRadius: 14, style: .continuous),
             shadowRadius: 8,

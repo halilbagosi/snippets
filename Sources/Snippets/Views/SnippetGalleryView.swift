@@ -480,9 +480,9 @@ struct SnippetGalleryView: View {
                                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                                         .foregroundStyle(isSelected ? theme.accent : theme.textMuted.opacity(0.5))
                                         .font(.title2)
-                                        .padding(12)
+                                        .padding(DSToken.Spacing.sm)
                                         .background {
-                                            Circle().fill(theme.surfaceElevated).padding(12)
+                                            Circle().fill(theme.surfaceElevated).padding(DSToken.Spacing.sm)
                                         }
                                 }
                         }
@@ -524,9 +524,9 @@ struct SnippetGalleryView: View {
                                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                                     .foregroundStyle(isSelected ? theme.accent : theme.textMuted.opacity(0.5))
                                     .font(.title2)
-                                    .padding(12)
+                                    .padding(DSToken.Spacing.sm)
                                     .background {
-                                        Circle().fill(theme.surfaceElevated).padding(12)
+                                        Circle().fill(theme.surfaceElevated).padding(DSToken.Spacing.sm)
                                     }
                             }
                     }
@@ -744,7 +744,7 @@ struct SnippetGalleryView: View {
                                     shadowY: 2
                                 )
                                 .compositingGroup()
-                                .padding(8)
+                                .padding(DSToken.Spacing.xs)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -756,7 +756,7 @@ struct SnippetGalleryView: View {
                         .frame(maxWidth: .infinity)
                     
                     HStack(spacing: 8) {
-                        FilterTag(
+                        DSTag(
                             label: viewModel.isSelectMode ? "done" : "select",
                             icon: viewModel.isSelectMode ? "checkmark.circle" : "checklist",
                             accent: viewModel.isSelectMode ? theme.accent : theme.textMuted,
@@ -769,7 +769,7 @@ struct SnippetGalleryView: View {
 
                         if viewModel.isSelectMode {
                             let isAllSelected = viewModel.selectedForAction.count == (displaySnippets.count + subcollections.count) && (!displaySnippets.isEmpty || !subcollections.isEmpty)
-                            FilterTag(
+                            DSTag(
                                 label: isAllSelected ? "deselect all" : "select all",
                                 icon: isAllSelected ? "circle.dashed" : "checkmark.circle.fill",
                                 accent: theme.textMuted,
@@ -790,7 +790,7 @@ struct SnippetGalleryView: View {
                             .transition(.scale.combined(with: .opacity))
 
                             if isTrashMode {
-                                FilterTag(
+                                DSTag(
                                     label: "put back (\(viewModel.selectedForAction.count))",
                                     icon: "arrow.uturn.left",
                                     accent: theme.accent,
@@ -810,7 +810,7 @@ struct SnippetGalleryView: View {
                             }
 
                             if !isTrashMode {
-                                FilterTag(
+                                DSTag(
                                     label: "move (\(viewModel.selectedForAction.count))",
                                     icon: "folder",
                                     accent: theme.accent,
@@ -823,7 +823,7 @@ struct SnippetGalleryView: View {
                                 .transition(.scale.combined(with: .opacity))
                             }
 
-                            FilterTag(
+                            DSTag(
                                 label: "delete (\(viewModel.selectedForAction.count))",
                                 icon: "trash",
                                 accent: .red,
@@ -852,7 +852,7 @@ struct SnippetGalleryView: View {
                         }
 
                         if !viewModel.isSelectMode {
-                            FilterTag(
+                            DSTag(
                                 label: viewModel.isOldestToNewest ? "sort:oldest" : "sort:newest",
                                 icon: viewModel.isOldestToNewest ? "arrow.up" : "arrow.down",
                                 accent: theme.textMuted,
@@ -865,7 +865,7 @@ struct SnippetGalleryView: View {
                             .transition(.scale.combined(with: .opacity))
 
                             if !isTrashMode {
-                                FilterTag(
+                                DSTag(
                                     label: (selectedSearchCollections.isEmpty && !showUncategorizedOnly) ? "collections:all" : (showUncategorizedOnly ? "collections:none" : "collections:\(selectedSearchCollections.count)"),
                                     icon: "folder",
                                     accent: theme.textMuted,
@@ -879,7 +879,7 @@ struct SnippetGalleryView: View {
                                 }
                                 .transition(.scale.combined(with: .opacity))
 
-                                FilterTag(
+                                DSTag(
                                     label: "favorites",
                                     icon: showFavoritesOnly ? "star.fill" : "star",
                                     accent: Color(red: 1.0, green: 0.80, blue: 0.20),
@@ -1210,7 +1210,7 @@ struct SnippetGalleryView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             LiquidGlassContainer(spacing: 8) {
                 HStack(spacing: 8) {
-                    FilterTag(
+                    DSTag(
                         label: "lang:all",
                         icon: "asterisk",
                         accent: theme.accent,
@@ -1229,7 +1229,7 @@ struct SnippetGalleryView: View {
                         let selectedAccent = (Color(hex: language.accentHexSelectedFill) ?? accent)
                             .saturation(2.5)
                             .brightness(0.15)
-                        FilterTag(
+                        DSTag(
                             label: "lang:\(language.rawValue.lowercased())",
                             icon: language.symbolName,
                             accent: accent,
@@ -1273,7 +1273,7 @@ struct SnippetGalleryView: View {
             }
         }
         .frame(maxWidth: 480)
-        .padding(28)
+        .padding(DSToken.Spacing.xl)
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(theme.surface.opacity(0.6)))
     }
 
@@ -1362,7 +1362,7 @@ private struct MoveToCollectionSheet: View {
                         }
                     }
                 }
-                .padding(24)
+                .padding(DSToken.Spacing.lg)
             }
             .background {
                 ZStack {

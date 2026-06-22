@@ -9,7 +9,7 @@ public struct DSGlassCard<Content: View>: View {
 
     public var body: some View {
         content
-            .padding(DSToken.Spacing.m)
-            .modifier(DSGlassModifier())
+            .padding(DSToken.Spacing.md)
+            .liquidGlassSurface(in: RoundedRectangle(cornerRadius: DSToken.Radius.md, style: .continuous))
     }
 }
