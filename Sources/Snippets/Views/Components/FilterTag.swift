@@ -66,8 +66,20 @@ struct FilterTag: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(FilterTagButtonStyle(isSelected: isSelected, accent: selectedFillAccent ?? accent))
         .animation(.snappy(duration: 0.12), value: isSelected)
+    }
+}
+
+private struct FilterTagButtonStyle: ButtonStyle {
+    let isSelected: Bool
+    let accent: Color
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .shadow(color: isSelected || configuration.isPressed ? accent.opacity(0.40) : .clear, radius: 8, x: 0, y: 0)
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.spring(response: 0.22, dampingFraction: 0.72), value: configuration.isPressed)
     }
 }
 

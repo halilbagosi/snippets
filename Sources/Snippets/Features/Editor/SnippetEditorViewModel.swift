@@ -10,9 +10,15 @@ enum SnippetEditorMode {
 @MainActor
 @Observable
 final class SnippetEditorViewModel {
-    var title: String = ""
-    var snippetDescription: String = ""
-    var code: String = ""
+    var title: String = "" {
+        didSet { updateTitleCaches() }
+    }
+    var snippetDescription: String = "" {
+        didSet { trimmedSnippetDescription = snippetDescription.trimmingCharacters(in: .whitespacesAndNewlines) }
+    }
+    var code: String = "" {
+        didSet { updateCodeCaches() }
+    }
     var detectedLanguage: SupportedLanguage = .unknown
     var manualLanguage: SupportedLanguage?
     var mediaItems: [MediaItem] = []
@@ -20,22 +26,26 @@ final class SnippetEditorViewModel {
     var saveErrorMessage: String?
 
     private var hasLoaded = false
+    private var trimmedTitle = ""
+    private var trimmedCode = ""
+    private var trimmedSnippetDescription = ""
+    private var titleSlug = ""
+    private(set) var lineCount: Int = 1
 
     var effectiveLanguage: SupportedLanguage {
         manualLanguage ?? detectedLanguage
     }
 
     var canSave: Bool {
-        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !trimmedTitle.isEmpty && !trimmedCode.isEmpty
     }
 
     func hasUnsavedData(mode: SnippetEditorMode) -> Bool {
         switch mode {
         case .create:
-            return !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                || !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                || !snippetDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            return !trimmedTitle.isEmpty
+                || !trimmedCode.isEmpty
+                || !trimmedSnippetDescription.isEmpty
                 || !mediaItems.isEmpty
         case .edit(let original):
             return title != original.title
@@ -43,10 +53,6 @@ final class SnippetEditorViewModel {
                 || code != original.code
                 || mediaItems != original.mediaItems
         }
-    }
-
-    var lineCount: Int {
-        max(code.split(separator: "\n", omittingEmptySubsequences: false).count, 1)
     }
 
     func load(mode: SnippetEditorMode) {
@@ -109,11 +115,7 @@ final class SnippetEditorViewModel {
     }
 
     func headerFilename(isEditing: Bool) -> String {
-        let slug = title
-            .lowercased()
-            .replacingOccurrences(of: " ", with: "-")
-            .filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
-        let base = slug.isEmpty ? (isEditing ? "snippet" : "untitled") : slug
+        let base = titleSlug.isEmpty ? (isEditing ? "snippet" : "untitled") : titleSlug
         return base + Self.fileExtension(for: effectiveLanguage)
     }
 
@@ -125,14 +127,11 @@ final class SnippetEditorViewModel {
     ) -> Bool {
         guard canSave else { return false }
 
-        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedDescription = snippetDescription.trimmingCharacters(in: .whitespacesAndNewlines)
-
         switch mode {
         case .create:
             let snippet = Snippet(
                 title: trimmedTitle,
-                snippetDescription: trimmedDescription,
+                snippetDescription: trimmedSnippetDescription,
                 language: effectiveLanguage.rawValue,
                 code: code,
                 createdAt: .now,
@@ -159,7 +158,7 @@ final class SnippetEditorViewModel {
 
         case .edit(let snippet):
             snippet.title = trimmedTitle
-            snippet.snippetDescription = trimmedDescription
+            snippet.snippetDescription = trimmedSnippetDescription
             snippet.language = effectiveLanguage.rawValue
             snippet.code = code
             snippet.updatedAt = .now
@@ -195,6 +194,21 @@ final class SnippetEditorViewModel {
 
     private func selectedCollections(from collections: [SnippetCollection]) -> [SnippetCollection] {
         collections.filter { selectedCollectionIDs.contains($0.persistentModelID) }
+    }
+
+    private func updateTitleCaches() {
+        trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        titleSlug = title
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+            .filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
+    }
+
+    private func updateCodeCaches() {
+        trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        lineCount = max(code.utf8.reduce(0) { count, byte in
+            count + (byte == 0x0A ? 1 : 0)
+        } + 1, 1)
     }
 
     private static func fileExtension(for language: SupportedLanguage) -> String {

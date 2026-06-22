@@ -48,7 +48,7 @@ struct CollectionEditorSheet: View {
         .init(name: "Gray", hex: "#4B5563")
     ]
 
-    private let symbolSections: [SymbolSection] = [
+    private static let symbolSections: [SymbolSection] = [
         .init(title: "Code", symbols: [
             "curlybraces", "terminal", "chevron.left.forwardslash.chevron.right", "command",
             "apple.terminal", "doc.plaintext", "doc.text", "doc.on.doc",
@@ -79,6 +79,14 @@ struct CollectionEditorSheet: View {
             "sparkles", "cloud", "flame", "drop"
         ])
     ]
+
+    private static let validatedSymbolSections: [SymbolSection] = {
+        symbolSections.compactMap { section in
+            let symbols = section.symbols.filter(SnippetCollection.isValidSFSymbolName)
+            guard !symbols.isEmpty else { return nil }
+            return SymbolSection(title: section.title, symbols: symbols)
+        }
+    }()
 
     private var theme: Theme { Theme.current(colorScheme) }
 
@@ -111,10 +119,9 @@ struct CollectionEditorSheet: View {
 
     private var displayedSymbolSections: [SymbolSection] {
         let needle = symbolSearch.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return symbolSections.compactMap { section in
+        return Self.validatedSymbolSections.compactMap { section in
             let symbols = section.symbols.filter { symbol in
-                SnippetCollection.isValidSFSymbolName(symbol) &&
-                (needle.isEmpty || symbol.lowercased().contains(needle))
+                needle.isEmpty || symbol.lowercased().contains(needle)
             }
             guard !symbols.isEmpty else { return nil }
             return SymbolSection(title: section.title, symbols: symbols)
@@ -321,8 +328,9 @@ struct CollectionEditorSheet: View {
     // MARK: - Liquid Glass Preview Header
 
     private var glassPreviewHeader: some View {
-        HStack(spacing: 16) {
-            if collectionColorDark != nil {
+        VStack(spacing: 16) {
+            ZStack {
+                if collectionColorDark != nil {
                 VStack(spacing: 6) {
                     HStack(spacing: 8) {
                         VStack(spacing: 4) {
@@ -360,9 +368,12 @@ struct CollectionEditorSheet: View {
                         removal: .scale(scale: 0.9).combined(with: .opacity)
                     ))
             }
+            }
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: collectionColorDark)
 
             TextField("Collection name", text: $collectionName)
                 .textFieldStyle(.plain)
+                .multilineTextAlignment(.center)
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .padding(.horizontal, 18)
                 .padding(.vertical, 10)
@@ -396,19 +407,19 @@ struct CollectionEditorSheet: View {
                 } label: {
                     ZStack {
                         Circle()
+                            .fill((Color(hex: choice.hex) ?? theme.accent).opacity(0.35))
+                            .frame(width: 38, height: 38)
+                            .blur(radius: 6)
+                            .opacity(isSelected ? 1 : 0)
+
+                        Circle()
                             .fill(Color(hex: choice.hex) ?? theme.accent)
                             .frame(width: 28, height: 28)
 
-                        if isSelected {
-                            Circle()
-                                .strokeBorder(.white, lineWidth: 2.5)
-                                .frame(width: 28, height: 28)
-
-                            Circle()
-                                .fill((Color(hex: choice.hex) ?? theme.accent).opacity(0.35))
-                                .frame(width: 38, height: 38)
-                                .blur(radius: 6)
-                        }
+                        Circle()
+                            .strokeBorder(.white, lineWidth: 2.5)
+                            .frame(width: 28, height: 28)
+                            .opacity(isSelected ? 1 : 0)
                     }
                     .frame(width: 38, height: 38)
                     .scaleEffect(isSelected ? 1.08 : 1.0)
@@ -501,7 +512,7 @@ struct CollectionEditorSheet: View {
                         .textCase(.uppercase)
                         .tracking(0.5)
 
-                    LazyVGrid(columns: Array(repeating: GridItem(.adaptive(minimum: 32, maximum: 40), spacing: 8), count: 8), spacing: 8) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 32, maximum: 40), spacing: 8)], spacing: 8) {
                         ForEach(section.symbols, id: \.self) { symbolName in
                             glassSymbolButton(symbolName)
                         }
@@ -558,13 +569,13 @@ struct CollectionEditorSheet: View {
                 .foregroundStyle(isSelected ? .white : .secondary)
                 .frame(width: 34, height: 34)
                 .background {
-                    if isSelected {
-                        Circle()
-                            .fill(activeColor)
-                            .shadow(color: activeColor.opacity(0.5), radius: 6, x: 0, y: 2)
-                    } else {
+                    ZStack {
                         Circle()
                             .fill(.ultraThinMaterial)
+                        Circle()
+                            .fill(activeColor)
+                            .shadow(color: isSelected ? activeColor.opacity(0.5) : .clear, radius: 6, x: 0, y: 2)
+                            .opacity(isSelected ? 1 : 0)
                     }
                 }
                 .overlay {
@@ -577,6 +588,7 @@ struct CollectionEditorSheet: View {
                         )
                 }
                 .scaleEffect(isSelected ? 1.1 : 1.0)
+                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isSelected)
         }
         .buttonStyle(.plain)
         .help(symbolName)
@@ -608,15 +620,32 @@ struct CollectionEditorSheet: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Picker("", selection: $parentCollectionID) {
-                        Text("Select collection…").tag(nil as PersistentIdentifier?)
+                    Menu {
+                        Button("Select collection…") { parentCollectionID = nil }
                         ForEach(availableParentCollections) { collection in
-                            Text(collection.name).tag(collection.persistentModelID as PersistentIdentifier?)
+                            Button(collection.name) { parentCollectionID = collection.persistentModelID }
                         }
+                    } label: {
+                        HStack {
+                            Text(parentCollectionID == nil ? "Select collection…" : availableParentCollections.first(where: { $0.persistentModelID == parentCollectionID })?.name ?? "Select collection…")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                            Spacer()
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .liquidGlassSurface(
+                            in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+                            interactive: true,
+                            borderOpacity: colorScheme == .dark ? 0.16 : 0.36
+                        )
                     }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .tint(activeColor)
+                    .menuStyle(.borderlessButton)
                     .frame(maxWidth: 200)
                 }
                 .padding(.top, 4)
@@ -638,10 +667,11 @@ struct CollectionEditorSheet: View {
         }
         var excludedIDs = Set([editingID])
         var queue = [editingID]
+        let lookup = Dictionary(uniqueKeysWithValues: collections.map { ($0.persistentModelID, $0) })
 
         while !queue.isEmpty {
             let currentID = queue.removeFirst()
-            if let current = collections.first(where: { $0.persistentModelID == currentID }) {
+            if let current = lookup[currentID] {
                 let childIDs = current.children.map(\.persistentModelID)
                 excludedIDs.formUnion(childIDs)
                 queue.append(contentsOf: childIDs)
@@ -731,24 +761,28 @@ struct CollectionEditorSheet: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(isSelected ? AnyShapeStyle(activeColor) : AnyShapeStyle(.thickMaterial))
+                        .fill(.thickMaterial)
                         .frame(width: 20, height: 20)
-                        .overlay {
-                            Circle()
-                                .stroke(
-                                    isSelected
-                                        ? activeColor
-                                        : .white.opacity(colorScheme == .dark ? 0.1 : 0.2),
-                                    lineWidth: 1
-                                )
-                        }
 
-                    if isSelected {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white)
-                            .transition(.scale.combined(with: .opacity))
-                    }
+                    Circle()
+                        .fill(activeColor)
+                        .frame(width: 20, height: 20)
+                        .opacity(isSelected ? 1 : 0)
+
+                    Circle()
+                        .stroke(
+                            isSelected
+                                ? activeColor
+                                : .white.opacity(colorScheme == .dark ? 0.1 : 0.2),
+                            lineWidth: 1
+                        )
+                        .frame(width: 20, height: 20)
+
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .opacity(isSelected ? 1 : 0)
+                        .scaleEffect(isSelected ? 1 : 0.5)
                 }
 
                 Text(snippet.title.isEmpty ? "untitled" : snippet.title)

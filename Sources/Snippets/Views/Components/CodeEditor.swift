@@ -23,6 +23,7 @@ struct CodeEditor: NSViewRepresentable {
 
         if let storage = textView.textStorage {
             SyntaxHighlighter.applyAttributes(to: storage, language: language, theme: theme, fontSize: fontSize)
+            context.coordinator.markHighlighted(language: language, theme: theme, fontSize: fontSize)
         }
 
         let ruler = LineNumberRulerView(textView: textView, theme: theme)
@@ -37,18 +38,15 @@ struct CodeEditor: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSScrollView, context: Context) {
         guard let textView = nsView.documentView as? NSTextView else { return }
+        let coordinator = context.coordinator
+        coordinator.parent = self
+        coordinator.applyCachedColors(to: textView, scrollView: nsView, theme: theme)
 
-        textView.textColor = NSColor(theme.text)
-        textView.insertionPointColor = NSColor(theme.accent)
-        textView.selectedTextAttributes = [
-            .backgroundColor: NSColor(theme.accent).withAlphaComponent(0.28)
-        ]
         textView.backgroundColor = .clear
         nsView.backgroundColor = .clear
 
         if let ruler = nsView.verticalRulerView as? LineNumberRulerView {
             ruler.update(theme: theme)
-            ruler.needsDisplay = true
         }
 
         if textView.string != text {
@@ -56,15 +54,25 @@ struct CodeEditor: NSViewRepresentable {
             textView.string = text
             if let storage = textView.textStorage {
                 SyntaxHighlighter.applyAttributes(to: storage, language: language, theme: theme, fontSize: fontSize)
+                coordinator.markHighlighted(language: language, theme: theme, fontSize: fontSize)
             }
+            (nsView.verticalRulerView as? LineNumberRulerView)?.updateText(text)
             let length = (text as NSString).length
             if NSMaxRange(selected) <= length {
                 textView.setSelectedRange(selected)
             } else {
                 textView.setSelectedRange(NSRange(location: length, length: 0))
             }
-        } else if let storage = textView.textStorage {
+        } else if coordinator.needsHighlight(language: language, theme: theme, fontSize: fontSize),
+                  let storage = textView.textStorage {
             SyntaxHighlighter.applyAttributes(to: storage, language: language, theme: theme, fontSize: fontSize)
+            coordinator.markHighlighted(language: language, theme: theme, fontSize: fontSize)
+        } else if coordinator.isInternalUpdate {
+            coordinator.isInternalUpdate = false
+        }
+
+        if let ruler = nsView.verticalRulerView as? LineNumberRulerView {
+            ruler.needsDisplay = true
         }
     }
 
@@ -106,7 +114,14 @@ struct CodeEditor: NSViewRepresentable {
 
     @MainActor
     final class Coordinator: NSObject, NSTextViewDelegate {
-        fileprivate let parent: CodeEditor
+        fileprivate var parent: CodeEditor
+        fileprivate var isInternalUpdate = false
+        private var highlightedLanguage: SupportedLanguage?
+        private var highlightedThemeScheme: ColorScheme?
+        private var highlightedFontSize: CGFloat?
+        private var cachedThemeSignature: String?
+        private var cachedTextColor: NSColor?
+        private var cachedAccentColor: NSColor?
 
         init(_ parent: CodeEditor) {
             self.parent = parent
@@ -132,14 +147,47 @@ struct CodeEditor: NSViewRepresentable {
 
         func textDidChange(_ notification: Notification) {
             guard let textView = notification.object as? NSTextView else { return }
+            isInternalUpdate = true
             parent.text = textView.string
             if let storage = textView.textStorage {
                 SyntaxHighlighter.applyAttributes(to: storage, language: parent.language, theme: parent.theme, fontSize: parent.fontSize)
+                markHighlighted(language: parent.language, theme: parent.theme, fontSize: parent.fontSize)
             }
             if let scroll = textView.enclosingScrollView,
                let ruler = scroll.verticalRulerView as? LineNumberRulerView {
+                ruler.updateText(textView.string)
                 ruler.needsDisplay = true
             }
+        }
+
+        func needsHighlight(language: SupportedLanguage, theme: Theme, fontSize: CGFloat) -> Bool {
+            highlightedLanguage != language ||
+            highlightedThemeScheme != theme.scheme ||
+            highlightedFontSize != fontSize
+        }
+
+        func markHighlighted(language: SupportedLanguage, theme: Theme, fontSize: CGFloat) {
+            highlightedLanguage = language
+            highlightedThemeScheme = theme.scheme
+            highlightedFontSize = fontSize
+        }
+
+        func applyCachedColors(to textView: NSTextView, scrollView: NSScrollView, theme: Theme) {
+            let signature = "\(theme.scheme)-\(theme.text)-\(theme.accent)"
+            if cachedThemeSignature != signature {
+                cachedThemeSignature = signature
+                cachedTextColor = NSColor(theme.text)
+                cachedAccentColor = NSColor(theme.accent)
+            }
+
+            let textColor = cachedTextColor ?? NSColor(theme.text)
+            let accentColor = cachedAccentColor ?? NSColor(theme.accent)
+            textView.textColor = textColor
+            textView.insertionPointColor = accentColor
+            textView.selectedTextAttributes = [
+                .backgroundColor: accentColor.withAlphaComponent(0.28)
+            ]
+            scrollView.backgroundColor = .clear
         }
     }
 }
@@ -147,6 +195,7 @@ struct CodeEditor: NSViewRepresentable {
 final class LineNumberRulerView: NSRulerView {
     private weak var textView: NSTextView?
     private var theme: Theme
+    private var newlineIndexes: [Int] = []
 
     init(textView: NSTextView, theme: Theme) {
         self.theme = theme
@@ -154,12 +203,23 @@ final class LineNumberRulerView: NSRulerView {
         self.textView = textView
         self.clientView = textView
         self.ruleThickness = 44
+        updateText(textView.string)
     }
 
     required init(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func update(theme: Theme) {
         self.theme = theme
+    }
+
+    func updateText(_ text: String) {
+        let nsString = text as NSString
+        var indexes: [Int] = []
+        indexes.reserveCapacity(max(8, text.utf8.count / 40))
+        for idx in 0..<nsString.length where nsString.character(at: idx) == 0x0A {
+            indexes.append(idx)
+        }
+        newlineIndexes = indexes
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -189,7 +249,7 @@ final class LineNumberRulerView: NSRulerView {
 
         let nsString = textView.string as NSString
         let firstCharIndex = layoutManager.characterIndexForGlyph(at: visibleGlyphRange.location)
-        var lineNumber = computeLineNumber(at: firstCharIndex, in: nsString)
+        var lineNumber = computeLineNumber(at: firstCharIndex)
 
         let labelFont = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
         let labelAttrs: [NSAttributedString.Key: Any] = [
@@ -203,7 +263,7 @@ final class LineNumberRulerView: NSRulerView {
 
         let inset = textView.textContainerInset.height
         let selectedRange = textView.selectedRange()
-        let selectedLine = computeLineNumber(at: selectedRange.location, in: nsString)
+        let selectedLine = computeLineNumber(at: selectedRange.location)
 
         var glyphIndex = visibleGlyphRange.location
         while glyphIndex < NSMaxRange(visibleGlyphRange) {
@@ -234,18 +294,22 @@ final class LineNumberRulerView: NSRulerView {
         }
     }
 
-    private func computeLineNumber(at characterIndex: Int, in nsString: NSString) -> Int {
-        let safe = min(max(characterIndex, 0), nsString.length)
+    private func computeLineNumber(at characterIndex: Int) -> Int {
+        let length = textView?.string.utf16.count ?? 0
+        let safe = min(max(characterIndex, 0), length)
         guard safe > 0 else { return 1 }
-        var count = 1
-        var idx = 0
-        while idx < safe {
-            if nsString.character(at: idx) == 0x0A {
-                count += 1
+
+        var low = 0
+        var high = newlineIndexes.count
+        while low < high {
+            let mid = (low + high) / 2
+            if newlineIndexes[mid] < safe {
+                low = mid + 1
+            } else {
+                high = mid
             }
-            idx += 1
         }
-        return count
+        return low + 1
     }
 }
 #endif

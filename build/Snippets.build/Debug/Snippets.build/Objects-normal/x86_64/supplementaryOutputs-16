@@ -1,0 +1,37 @@
+{
+  "/Users/halilbagosi/snippets/Sources/Snippets/Services/SyntaxHighlighter.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/SyntaxHighlighter.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/SyntaxHighlighter.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/SyntaxHighlighter.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/SyntaxHighlighter.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/SyntaxHighlighter.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Services/Theme.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Theme.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Theme.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Theme.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Theme.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Theme.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/ViewSnapshot.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/ViewSnapshot.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/ViewSnapshot.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/ViewSnapshot.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/ViewSnapshot.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/ViewSnapshot.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/TrashView.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/TrashView.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/TrashView.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/TrashView.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/TrashView.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/TrashView.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/GeneratedAssetSymbols.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/GeneratedAssetSymbols.swiftdeps"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "source": "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SnippetCollectionCard.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%@, %@",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 268
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld day%@ remaining",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 108
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 132
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove from favorites",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 130
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add to favorites",
+        "location": {
+          "startingColumn": 81,
+          "startingLine": 130
+        }
+      },
+      {
+        "comment": "",
+        "key": "Put back",
+        "location": {
+          "startingColumn": 59,
+          "startingLine": 276
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete permanently",
+        "location": {
+          "startingColumn": 87,
+          "startingLine": 279
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit collection",
+        "location": {
+          "startingColumn": 56,
+          "startingLine": 283
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete collection",
+        "location": {
+          "startingColumn": 78,
+          "startingLine": 286
+        }
+      },
+      {
+        "comment": "",
+        "key": "Failed to create preview container",
+        "location": {
+          "startingColumn": 1,
+          "startingLine": 293
+        }
+      }
+    ]
+  },
+  "version": 1
+}

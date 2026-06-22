@@ -1,0 +1,200 @@
+{
+  "source": "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetGalleryView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Put back",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 555
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete permanently",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 558
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit snippet",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 562
+        }
+      },
+      {
+        "comment": "",
+        "key": "All snippets",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 567
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move to",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 579
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete snippet",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 583
+        }
+      },
+      {
+        "comment": "",
+        "key": "No collections",
+        "location": {
+          "startingColumn": 66,
+          "startingLine": 939
+        }
+      },
+      {
+        "comment": "",
+        "key": "No matches",
+        "location": {
+          "startingColumn": 85,
+          "startingLine": 939
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear Selection",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 965
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 967
+        }
+      },
+      {
+        "comment": "",
+        "key": "Filter",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 995
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1071
+        }
+      },
+      {
+        "comment": "",
+        "key": ">",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1098
+        }
+      },
+      {
+        "comment": "",
+        "key": "search title, description, or code…",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1105
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 1103
+        }
+      },
+      {
+        "comment": "",
+        "key": "esc",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 1123
+        }
+      },
+      {
+        "comment": "",
+        "key": "⌘F",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 1123
+        }
+      },
+      {
+        "comment": "",
+        "key": "snippets",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1093
+        }
+      },
+      {
+        "comment": "",
+        "key": "// trash is empty",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 1197
+        }
+      },
+      {
+        "comment": "",
+        "key": "// no snippets yet",
+        "location": {
+          "startingColumn": 54,
+          "startingLine": 1197
+        }
+      },
+      {
+        "comment": "",
+        "key": "new snippet",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1202
+        }
+      },
+      {
+        "comment": "",
+        "key": "new snippet",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1223
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move to Collection",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1311
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 1314
+        }
+      }
+    ]
+  },
+  "version": 1
+}

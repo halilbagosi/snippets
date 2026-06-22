@@ -1,0 +1,37 @@
+{
+  "/Users/halilbagosi/snippets/Sources/Snippets/Features/Editor/SnippetEditorViewModel.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorViewModel.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorViewModel.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorViewModel.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorViewModel.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorViewModel.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Features/Gallery/SnippetGalleryViewModel.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryViewModel.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryViewModel.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryViewModel.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryViewModel.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryViewModel.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/SnippetsApp.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetsApp.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetsApp.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetsApp.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetsApp.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetsApp.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/StatusBar.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/StatusBar.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/StatusBar.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/StatusBar.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/StatusBar.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/StatusBar.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetGalleryView.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryView.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryView.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryView.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryView.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryView.swiftdeps"
+  }
+}

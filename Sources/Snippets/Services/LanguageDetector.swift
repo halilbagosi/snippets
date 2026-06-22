@@ -107,10 +107,14 @@ enum LanguageDetector {
     ]
 
     static func detect(code rawCode: String) -> SupportedLanguage {
-        let code = rawCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        let scanPrefix = rawCode.prefix(2_048)
+        let code = String(scanPrefix).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !code.isEmpty else { return .unknown }
 
         if let first = code.first, first == "{" || first == "[" {
+            if rawCode.utf8.count > 2_048 {
+                return .json
+            }
             if (try? JSONSerialization.jsonObject(with: Data(code.utf8))) != nil {
                 return .json
             }
@@ -118,8 +122,13 @@ enum LanguageDetector {
 
         var bestMatch: (language: SupportedLanguage, score: Int) = (.unknown, 0)
         for rule in rules {
-            let hits = rule.markers.reduce(into: 0) { count, marker in
-                if code.contains(marker) { count += 1 }
+            var hits = 0
+            let confidentMatchCount = max(rule.minimumMatches, 3)
+            for marker in rule.markers where code.contains(marker) {
+                hits += 1
+                if hits >= confidentMatchCount {
+                    return rule.language
+                }
             }
             if hits >= rule.minimumMatches && hits > bestMatch.score {
                 bestMatch = (rule.language, hits)

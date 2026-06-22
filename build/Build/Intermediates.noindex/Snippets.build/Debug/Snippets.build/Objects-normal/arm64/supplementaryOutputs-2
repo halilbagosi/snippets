@@ -1,0 +1,23 @@
+{
+  "/Users/halilbagosi/snippets/Sources/Snippets/App/AppearanceSettings.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppearanceSettings.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppearanceSettings.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppearanceSettings.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppearanceSettings.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppearanceSettings.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Settings/AboutView.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AboutView.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AboutView.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AboutView.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AboutView.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AboutView.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Settings/AppearanceView.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppearanceView.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppearanceView.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppearanceView.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppearanceView.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppearanceView.swiftdeps"
+  }
+}

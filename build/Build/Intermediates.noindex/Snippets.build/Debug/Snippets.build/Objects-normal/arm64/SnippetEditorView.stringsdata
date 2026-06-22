@@ -1,0 +1,160 @@
+{
+  "source": "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetEditorView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Could not save snippet",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 86
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 90
+        }
+      },
+      {
+        "comment": "",
+        "key": "Discard changes?",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 162
+        }
+      },
+      {
+        "comment": "",
+        "key": "●",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 120
+        }
+      },
+      {
+        "comment": "",
+        "key": "cancel",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 147
+        }
+      },
+      {
+        "comment": "",
+        "key": "Discard",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 166
+        }
+      },
+      {
+        "comment": "",
+        "key": "Keep editing",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 173
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your snippet has unsaved content. Discard it?",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 175
+        }
+      },
+      {
+        "comment": "",
+        "key": "⏎ %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 184
+        }
+      },
+      {
+        "comment": "",
+        "key": "e.g. Procedural Noise Shader",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 218
+        }
+      },
+      {
+        "comment": "",
+        "key": "What does this snippet do?",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 234
+        }
+      },
+      {
+        "comment": "",
+        "key": "Auto-detect",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 253
+        }
+      },
+      {
+        "comment": "",
+        "key": "auto-detect",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 269
+        }
+      },
+      {
+        "comment": "",
+        "key": "reset to auto",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 288
+        }
+      },
+      {
+        "comment": "",
+        "key": "// paste or type your code here…",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 330
+        }
+      },
+      {
+        "comment": "",
+        "key": "No collections yet. Create one from the sidebar.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 359
+        }
+      },
+      {
+        "comment": "",
+        "key": "optional",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 408
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld attached",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 436
+        }
+      },
+      {
+        "comment": "",
+        "key": "attach image / video",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 421
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -22,6 +22,9 @@ struct SnippetEditorView: View {
     @FocusState private var focus: Field?
     @State private var codeFocused: Bool = false
     @State private var isPresentingCancelConfirm: Bool = false
+    @State private var languageDetectionTask: Task<Void, Never>? = nil
+    @State private var showValidationFeedback: Bool = false
+    @State private var validationShake: Bool = false
 
     enum Field: Hashable { case title, description }
 
@@ -80,7 +83,7 @@ struct SnippetEditorView: View {
             }
         }
         .onChange(of: viewModel.code) { _, newValue in
-            viewModel.updateDetectedLanguage(for: newValue)
+            debounceLanguageDetection(for: newValue)
         }
         .alert("Could not save snippet", isPresented: Binding(
             get: { viewModel.saveErrorMessage != nil },
@@ -102,10 +105,22 @@ struct SnippetEditorView: View {
                 }
             }
         }
+        .onDisappear {
+            languageDetectionTask?.cancel()
+        }
     }
 
     private var editorChrome: some View {
-        HStack(spacing: 12) {
+        VStack(spacing: 8) {
+            if showValidationFeedback && !canSave {
+                Text("Title and code are required to save.")
+                    .font(Sans.font(size: 13, weight: .semibold))
+                    .foregroundStyle(.red)
+                    .padding(.top, 4)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+            
+            HStack(spacing: 12) {
             HStack(spacing: 6) {
                 Image(systemName: effectiveLanguage.symbolName)
                     .font(Mono.font(size: 11, weight: .semibold))
@@ -172,7 +187,19 @@ struct SnippetEditorView: View {
             }
 
             Button {
-                save()
+                if canSave {
+                    save()
+                } else {
+                    withAnimation { showValidationFeedback = true }
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.2)) {
+                        validationShake.toggle()
+                    }
+                    if viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        focus = .title
+                    } else if viewModel.code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        codeFocused = true
+                    }
+                }
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "command")
@@ -196,7 +223,6 @@ struct SnippetEditorView: View {
                 shadowRadius: 4,
                 shadowY: 2
             )
-            .disabled(!canSave)
             .keyboardShortcut(.return, modifiers: .command)
         }
         .padding(.horizontal, 16)
@@ -206,6 +232,7 @@ struct SnippetEditorView: View {
             shadowRadius: 8,
             shadowY: 4
         )
+        }
     }
 
     private var titleSection: some View {
@@ -222,6 +249,7 @@ struct SnippetEditorView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { focus = .title }
         }
+        .offset(x: validationShake && viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 5 : 0)
     }
 
     private var descriptionSection: some View {
@@ -272,9 +300,13 @@ struct SnippetEditorView: View {
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(fieldBackground(focused: false))
+                    .liquidGlassSurface(
+                        in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+                        interactive: true,
+                        borderOpacity: colorScheme == .dark ? 0.16 : 0.36
+                    )
                 }
-                .menuStyle(.button)
+                .menuStyle(.borderlessButton)
                 .fixedSize()
 
                 if viewModel.manualLanguage != nil {
@@ -301,7 +333,7 @@ struct SnippetEditorView: View {
 
     private var codeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeader("code", trailing: AnyView(
+            SectionHeader("code") {
                 HStack(spacing: 6) {
                     Image(systemName: effectiveLanguage.symbolName)
                         .font(Mono.font(size: 10, weight: .semibold))
@@ -309,7 +341,7 @@ struct SnippetEditorView: View {
                         .font(Mono.font(size: 10, weight: .semibold))
                 }
                 .foregroundStyle(Color(hex: effectiveLanguage.accentHex) ?? theme.accent)
-            ))
+            }
             ZStack(alignment: .topLeading) {
                 CodeEditor(
                     text: $viewModel.code,
@@ -346,6 +378,7 @@ struct SnippetEditorView: View {
                 }
             }
         }
+        .offset(x: validationShake && viewModel.code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 5 : 0)
     }
 
     private var collectionsSection: some View {
@@ -400,11 +433,11 @@ struct SnippetEditorView: View {
 
     private var mediaSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeader("attachments", trailing: AnyView(
+            SectionHeader("attachments") {
                 Text("optional")
                     .font(Mono.font(size: 10, weight: .medium))
                     .foregroundStyle(theme.textFaint)
-            ))
+            }
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
@@ -492,6 +525,21 @@ struct SnippetEditorView: View {
             }
         }
     }
+
+    private func debounceLanguageDetection(for code: String) {
+        languageDetectionTask?.cancel()
+
+        if code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            viewModel.updateDetectedLanguage(for: code)
+            return
+        }
+
+        languageDetectionTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            viewModel.updateDetectedLanguage(for: code)
+        }
+    }
 }
 
 private struct MediaThumbnail: View {
@@ -500,6 +548,8 @@ private struct MediaThumbnail: View {
     let onRemove: () -> Void
     #if canImport(AppKit)
     @State private var image: NSImage? = nil
+    @State private var imageLoadTask: Task<Void, Never>? = nil
+    @State private var loadFailed: Bool = false
     #endif
 
     var body: some View {
@@ -530,6 +580,11 @@ private struct MediaThumbnail: View {
         }
         .frame(maxWidth: .infinity)
         .onAppear(perform: loadThumbnail)
+        .onDisappear {
+            #if canImport(AppKit)
+            imageLoadTask?.cancel()
+            #endif
+        }
     }
 
     @ViewBuilder
@@ -539,6 +594,15 @@ private struct MediaThumbnail: View {
             Image(nsImage: image)
                 .resizable()
                 .scaledToFill()
+        } else if loadFailed {
+            VStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.secondary)
+                Text("Missing File")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         } else if item.kind == .video {
             Image(systemName: "play.rectangle.fill")
                 .font(.system(size: 26))
@@ -547,17 +611,50 @@ private struct MediaThumbnail: View {
             ProgressView().controlSize(.small)
         }
         #else
-        Image(systemName: item.kind == .video ? "play.rectangle.fill" : "photo")
-            .font(.system(size: 26))
-            .foregroundStyle(.secondary)
+        if loadFailed {
+            VStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.secondary)
+                Text("Missing File")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Image(systemName: item.kind == .video ? "play.rectangle.fill" : "photo")
+                .font(.system(size: 26))
+                .foregroundStyle(.secondary)
+        }
         #endif
     }
 
     private func loadThumbnail() {
         #if canImport(AppKit)
         guard item.kind == .image, image == nil else { return }
+        imageLoadTask?.cancel()
+        loadFailed = false
         let url = MediaManager.resolvedURL(for: item.fileName)
-        image = NSImage(contentsOf: url)
+        imageLoadTask = Task { @MainActor in
+            let data = await EditorImageFileLoader.data(from: url)
+            guard !Task.isCancelled else { return }
+            if let data, let nsImage = NSImage(data: data) {
+                image = nsImage
+            } else {
+                loadFailed = true
+            }
+        }
+        #else
+        loadFailed = true // Simulate failure on non-AppKit for missing ImageFileLoader
         #endif
     }
 }
+
+#if canImport(AppKit)
+private enum EditorImageFileLoader {
+    static func data(from url: URL) async -> Data? {
+        await Task.detached(priority: .userInitiated) {
+            try? Data(contentsOf: url)
+        }.value
+    }
+}
+#endif

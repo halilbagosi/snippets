@@ -141,8 +141,6 @@ struct CollapsibleSectionContent<Content: View>: View {
     let animation: Animation
     let content: Content
 
-    @State private var measuredHeight: CGFloat = 0
-
     init(
         isExpanded: Bool,
         animation: Animation,
@@ -154,32 +152,11 @@ struct CollapsibleSectionContent<Content: View>: View {
     }
 
     var body: some View {
-        content
-            .fixedSize(horizontal: false, vertical: true)
-            .background {
-                GeometryReader { proxy in
-                    Color.clear
-                        .preference(key: CollapsibleSectionHeightKey.self, value: proxy.size.height)
-                }
-            }
-            .opacity(isExpanded ? 1 : 0)
-            .offset(y: isExpanded ? 0 : -6)
-            .frame(height: isExpanded ? measuredHeight : 0, alignment: .top)
-            .allowsHitTesting(isExpanded)
-            .accessibilityHidden(!isExpanded)
-            .clipped()
-            .animation(animation, value: isExpanded)
-            .onPreferenceChange(CollapsibleSectionHeightKey.self) { height in
-                measuredHeight = height
-            }
-    }
-}
-
-private struct CollapsibleSectionHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
+        if isExpanded {
+            content
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                .animation(animation, value: isExpanded)
+        }
     }
 }
 

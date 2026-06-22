@@ -1,0 +1,160 @@
+{
+  "source": "/Users/halilbagosi/snippets/Sources/Snippets/Views/Sidebar/CollectionEditorSheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Adjust Brightness",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 269
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 316
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 319
+        }
+      },
+      {
+        "comment": "",
+        "key": "Collection name",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 371
+        }
+      },
+      {
+        "comment": "",
+        "key": "Light",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 336
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dark",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 340
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset to unified",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 349
+        }
+      },
+      {
+        "comment": "",
+        "key": "Custom color",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 458
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 429
+        }
+      },
+      {
+        "comment": "",
+        "key": "No matching symbols",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 521
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search SF Symbols",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 479
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 607
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sub-Collection",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 599
+        }
+      },
+      {
+        "comment": "",
+        "key": "Collection",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 615
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 619
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select collection…",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 620
+        }
+      },
+      {
+        "comment": "",
+        "key": "No snippets yet",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 704
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 682
+        }
+      },
+      {
+        "comment": "",
+        "key": "Snippets",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 674
+        }
+      }
+    ]
+  },
+  "version": 1
+}

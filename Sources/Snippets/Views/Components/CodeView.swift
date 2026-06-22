@@ -8,7 +8,22 @@ struct CodeView: View {
     var showLineNumbers: Bool = true
     var fontSize: CGFloat = 12.5
 
-    private var displayedLines: [String] {
+    @State private var displayedLines: [String]
+
+    init(
+        code: String,
+        maxLines: Int? = nil,
+        showLineNumbers: Bool = true,
+        fontSize: CGFloat = 12.5
+    ) {
+        self.code = code
+        self.maxLines = maxLines
+        self.showLineNumbers = showLineNumbers
+        self.fontSize = fontSize
+        self._displayedLines = State(initialValue: Self.makeDisplayedLines(from: code, maxLines: maxLines))
+    }
+
+    private static func makeDisplayedLines(from code: String, maxLines: Int?) -> [String] {
         let raw = code.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         if let maxLines, raw.count > maxLines {
             return Array(raw.prefix(maxLines)) + ["…"]
@@ -21,8 +36,8 @@ struct CodeView: View {
         ScrollView([.vertical, .horizontal]) {
             HStack(alignment: .top, spacing: 0) {
                 if showLineNumbers {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        ForEach(Array(displayedLines.enumerated()), id: \.offset) { index, _ in
+                    LazyVStack(alignment: .trailing, spacing: 2) {
+                        ForEach(displayedLines.indices, id: \.self) { index in
                             Text("\(index + 1)")
                                 .font(Mono.font(size: fontSize - 1))
                                 .foregroundStyle(theme.textFaint)
@@ -38,8 +53,9 @@ struct CodeView: View {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(Array(displayedLines.enumerated()), id: \.offset) { _, line in
+                LazyVStack(alignment: .leading, spacing: 2) {
+                    ForEach(displayedLines.indices, id: \.self) { index in
+                        let line = displayedLines[index]
                         Text(line.isEmpty ? " " : line)
                             .font(Mono.font(size: fontSize))
                             .foregroundStyle(theme.text)
@@ -62,6 +78,12 @@ struct CodeView: View {
                 }
         }
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .onChange(of: code) { _, newValue in
+            displayedLines = Self.makeDisplayedLines(from: newValue, maxLines: maxLines)
+        }
+        .onChange(of: maxLines) { _, newValue in
+            displayedLines = Self.makeDisplayedLines(from: code, maxLines: newValue)
+        }
     }
 }
 

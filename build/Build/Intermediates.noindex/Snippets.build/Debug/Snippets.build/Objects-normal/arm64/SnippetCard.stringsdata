@@ -1,0 +1,128 @@
+{
+  "source": "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SnippetCard.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Copy snippet code",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 96
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copied",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 97
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copy code",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 97
+        }
+      },
+      {
+        "comment": "",
+        "key": "copied",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 79
+        }
+      },
+      {
+        "comment": "",
+        "key": "copy",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 79
+        }
+      },
+      {
+        "comment": "",
+        "key": "Snippet",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 349
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 232
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove from favorites",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 217
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add to favorites",
+        "location": {
+          "startingColumn": 70,
+          "startingLine": 217
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 195
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld day%@ remaining",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 227
+        }
+      },
+      {
+        "comment": "",
+        "key": "Put back",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 350
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete snippet",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 351
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 352
+        }
+      },
+      {
+        "comment": "",
+        "key": "+%lld",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 539
+        }
+      }
+    ]
+  },
+  "version": 1
+}

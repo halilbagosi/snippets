@@ -19,15 +19,13 @@ struct SnippetCollectionCard: View {
     @State private var cardSize: CGSize = .zero
     @State private var didAppear = false
 
-    private var activeSnippets: [Snippet] {
+    private var activeSnippetCount: Int {
         var seenIDs = Set<PersistentIdentifier>()
-        var collected: [Snippet] = []
 
         func collect(from collection: SnippetCollection) {
             for snippet in collection.snippets where snippet.deletedAt == nil {
                 guard !seenIDs.contains(snippet.persistentModelID) else { continue }
                 seenIDs.insert(snippet.persistentModelID)
-                collected.append(snippet)
             }
 
             for child in collection.children {
@@ -36,12 +34,7 @@ struct SnippetCollectionCard: View {
         }
 
         collect(from: collection)
-        return collected.sorted {
-            if $0.updatedAt != $1.updatedAt {
-                return $0.updatedAt > $1.updatedAt
-            }
-            return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
-        }
+        return seenIDs.count
     }
 
     private var hoverCenter: CGPoint {
@@ -57,11 +50,16 @@ struct SnippetCollectionCard: View {
     }
 
     private var formattedDate: String {
+        Self.dateFormatter.string(from: collection.createdAt)
+    }
+
+    @MainActor
+    private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
-        return formatter.string(from: collection.createdAt)
-    }
+        return formatter
+    }()
 
     var body: some View {
         let theme = Theme.current(colorScheme)
@@ -69,7 +67,8 @@ struct SnippetCollectionCard: View {
         let effectiveIsHovered = isSelectionMode ? false : isHovered
         let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
         let iconShape = RoundedRectangle(cornerRadius: 10, style: .continuous)
-        let snippetSummary = "\(activeSnippets.count) Snippet\(activeSnippets.count == 1 ? "" : "s")"
+        let count = activeSnippetCount
+        let snippetSummary = "\(count) Snippet\(count == 1 ? "" : "s")"
 
         HStack(spacing: 14) {
             ZStack {
@@ -130,7 +129,7 @@ struct SnippetCollectionCard: View {
                         .buttonStyle(.plain)
                         .help(collection.isFavorite ? "Remove from favorites" : "Add to favorites")
 
-                        Text("Created on: \(formattedDate)")
+                        Text("\(formattedDate)")
                             .font(Mono.font(size: 10, weight: .medium))
                             .foregroundStyle(theme.textFaint)
                     }

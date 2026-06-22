@@ -1,0 +1,44 @@
+{
+  "/Users/halilbagosi/snippets/Sources/Snippets/App/AppEnvironment.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/AppEnvironment.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/AppEnvironment.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/AppEnvironment.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/AppEnvironment.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/AppEnvironment.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Models/Collection.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Collection.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Collection.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Collection.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Collection.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Collection.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Services/Clipboard.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Clipboard.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Clipboard.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Clipboard.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Clipboard.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/Clipboard.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/CodeEditor.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CodeEditor.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CodeEditor.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CodeEditor.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CodeEditor.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CodeEditor.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/CodeView.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CodeView.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CodeView.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CodeView.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CodeView.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CodeView.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Sidebar/CollectionEditorSheet.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CollectionEditorSheet.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CollectionEditorSheet.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CollectionEditorSheet.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CollectionEditorSheet.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/x86_64/CollectionEditorSheet.swiftdeps"
+  }
+}

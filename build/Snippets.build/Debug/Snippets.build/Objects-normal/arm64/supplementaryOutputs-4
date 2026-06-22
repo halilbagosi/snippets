@@ -1,0 +1,37 @@
+{
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/FilterTag.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/FilterTag.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/FilterTag.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/FilterTag.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/FilterTag.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/FilterTag.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/GallerySection.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GallerySection.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GallerySection.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GallerySection.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GallerySection.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GallerySection.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/GenieOverlay.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GenieOverlay.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GenieOverlay.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GenieOverlay.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GenieOverlay.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GenieOverlay.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/GlassCard.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GlassCard.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GlassCard.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GlassCard.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GlassCard.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GlassCard.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/LanguageBadge.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageBadge.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageBadge.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageBadge.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageBadge.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageBadge.swiftdeps"
+  }
+}

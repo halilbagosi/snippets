@@ -41,6 +41,7 @@ struct SnippetDetailView: View {
     }
 
     var body: some View {
+        let mediaItems = orderedMediaItems
         ZStack(alignment: .topTrailing) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
@@ -48,8 +49,8 @@ struct SnippetDetailView: View {
                     if !snippet.snippetDescription.isEmpty {
                         descriptionBlock
                     }
-                    if !orderedMediaItems.isEmpty {
-                        mediaSection
+                    if !mediaItems.isEmpty {
+                        mediaSection(mediaItems)
                     }
                     codeBlock
                     metadata
@@ -85,22 +86,31 @@ struct SnippetDetailView: View {
     }
 
     private var titleBlock: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Text("//")
-                    .font(Mono.font(size: 13, weight: .semibold))
-                    .foregroundStyle(theme.comment)
-                Text("snippet")
-                    .font(Mono.font(size: 13, weight: .semibold))
-                    .foregroundStyle(theme.comment)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Text("//")
+                            .font(Mono.font(size: 13, weight: .semibold))
+                            .foregroundStyle(theme.comment)
+                        Text("snippet")
+                            .font(Mono.font(size: 13, weight: .semibold))
+                            .foregroundStyle(theme.comment)
+                    }
+                    Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
+                        .font(Sans.font(size: 28, weight: .bold))
+                        .foregroundStyle(theme.text)
+                }
+                
+                Spacer(minLength: 16)
+                
+                actionBar
             }
-            Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
-                .font(Sans.font(size: 28, weight: .bold))
-                .foregroundStyle(theme.text)
+            
             HStack(spacing: 10) {
                 LanguageBadge(language: language)
                 
-                if let firstCollection = snippet.collections.sorted(by: { $0.name < $1.name }).first {
+                if let firstCollection = snippet.collections.min(by: { $0.name < $1.name }) {
                     let collectionColor = Color(hex: firstCollection.colorHex) ?? theme.accent
                     let fillOpacity = colorScheme == .dark ? 0.20 : 0.12
                     HStack(spacing: 5) {
@@ -123,10 +133,6 @@ struct SnippetDetailView: View {
                             }
                     }
                 }
-                
-                Spacer()
-                
-                actionBar
             }
         }
     }
@@ -213,18 +219,18 @@ struct SnippetDetailView: View {
         }
     }
 
-    private var mediaSection: some View {
+    private func mediaSection(_ mediaItems: [MediaItem]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeader("attachments", trailing: AnyView(
-                Text("\(orderedMediaItems.count)")
+            SectionHeader("attachments") {
+                Text("\(mediaItems.count)")
                     .font(Mono.font(size: 10, weight: .semibold))
                     .foregroundStyle(theme.textFaint)
-            ))
+            }
 
             let layout = AttachmentStripLayout.self
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .center, spacing: layout.hSpacing) {
-                    ForEach(orderedMediaItems) { item in
+                    ForEach(mediaItems) { item in
                         Button {
                             lightboxMedia = item
                         } label: {
@@ -387,6 +393,8 @@ private struct LightboxImageView: View {
     let fileName: String
     #if canImport(AppKit)
     @State private var image: NSImage? = nil
+    @State private var imageLoadTask: Task<Void, Never>? = nil
+    @State private var loadFailed: Bool = false
     #endif
 
     var body: some View {
@@ -400,24 +408,66 @@ private struct LightboxImageView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if loadFailed {
+                    VStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.secondary)
+                        Text("Missing File")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 8)
+                    }
                 } else {
                     ProgressView()
                 }
                 #else
-                Image(systemName: "photo")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.secondary)
+                if loadFailed {
+                    VStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.secondary)
+                        Text("Missing File")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 8)
+                    }
+                } else {
+                    Image(systemName: "photo")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.secondary)
+                }
                 #endif
             }
         }
         .frame(maxWidth: 900, maxHeight: 720)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
+        .onAppear(perform: loadImage)
+        .onDisappear {
             #if canImport(AppKit)
-            let url = MediaManager.resolvedURL(for: fileName)
-            image = NSImage(contentsOf: url)
+            imageLoadTask?.cancel()
             #endif
         }
+    }
+
+    private func loadImage() {
+        #if canImport(AppKit)
+        guard image == nil else { return }
+        imageLoadTask?.cancel()
+        loadFailed = false
+        let url = MediaManager.resolvedURL(for: fileName)
+        imageLoadTask = Task { @MainActor in
+            let data = await ImageFileLoader.data(from: url)
+            guard !Task.isCancelled else { return }
+            if let data, let nsImage = NSImage(data: data) {
+                image = nsImage
+            } else {
+                loadFailed = true
+            }
+        }
+        #else
+        loadFailed = true // Simulate failure on non-AppKit for missing ImageFileLoader
+        #endif
     }
 }
 
@@ -440,6 +490,8 @@ private struct ImageMediaView: View {
     let item: MediaItem
     #if canImport(AppKit)
     @State private var image: NSImage? = nil
+    @State private var imageLoadTask: Task<Void, Never>? = nil
+    @State private var loadFailed: Bool = false
     #endif
 
     var body: some View {
@@ -452,22 +504,62 @@ private struct ImageMediaView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if loadFailed {
+                VStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.secondary)
+                    Text("Missing File")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             } else {
                 ProgressView().controlSize(.small)
             }
             #else
-            Image(systemName: "photo")
-                .font(.system(size: 32))
-                .foregroundStyle(.secondary)
+            if loadFailed {
+                VStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.secondary)
+                    Text("Missing File")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Image(systemName: "photo")
+                    .font(.system(size: 32))
+                    .foregroundStyle(.secondary)
+            }
             #endif
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
+        .onAppear(perform: loadImage)
+        .onDisappear {
             #if canImport(AppKit)
-            let url = MediaManager.resolvedURL(for: item.fileName)
-            image = NSImage(contentsOf: url)
+            imageLoadTask?.cancel()
             #endif
         }
+    }
+
+    private func loadImage() {
+        #if canImport(AppKit)
+        guard image == nil else { return }
+        imageLoadTask?.cancel()
+        loadFailed = false
+        let url = MediaManager.resolvedURL(for: item.fileName)
+        imageLoadTask = Task { @MainActor in
+            let data = await ImageFileLoader.data(from: url)
+            guard !Task.isCancelled else { return }
+            if let data, let nsImage = NSImage(data: data) {
+                image = nsImage
+            } else {
+                loadFailed = true
+            }
+        }
+        #else
+        loadFailed = true // Simulate failure on non-AppKit for missing ImageFileLoader
+        #endif
     }
 }
 
@@ -483,11 +575,23 @@ private struct VideoMediaView: View {
 }
 
 #if canImport(AppKit)
+private enum ImageFileLoader {
+    static func data(from url: URL) async -> Data? {
+        await Task.detached(priority: .userInitiated) {
+            try? Data(contentsOf: url)
+        }.value
+    }
+}
+#endif
+
+#if canImport(AppKit)
 private struct HighlightedCodeView: NSViewRepresentable {
     let code: String
     let language: SupportedLanguage
     let theme: Theme
     var fontSize: CGFloat = 13
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSTextView.scrollableTextView()
@@ -505,6 +609,7 @@ private struct HighlightedCodeView: NSViewRepresentable {
 
         if let storage = textView.textStorage {
             SyntaxHighlighter.applyAttributes(to: storage, language: language, theme: theme, fontSize: fontSize)
+            context.coordinator.mark(code: code, language: language, theme: theme, fontSize: fontSize)
         }
 
         scrollView.drawsBackground = false
@@ -531,19 +636,48 @@ private struct HighlightedCodeView: NSViewRepresentable {
         nsView.backgroundColor = .clear
 
         let codeChanged = textView.string != code
+        let styleChanged = context.coordinator.needsUpdate(code: code, language: language, theme: theme, fontSize: fontSize)
         if textView.string != code {
             textView.string = code
         }
-        if let storage = textView.textStorage {
+        if (codeChanged || styleChanged), let storage = textView.textStorage {
             SyntaxHighlighter.applyAttributes(to: storage, language: language, theme: theme, fontSize: fontSize)
+            context.coordinator.mark(code: code, language: language, theme: theme, fontSize: fontSize)
         }
         if let ruler = nsView.verticalRulerView as? LineNumberRulerView {
             ruler.update(theme: theme)
+            if codeChanged {
+                ruler.updateText(code)
+            }
             ruler.needsDisplay = true
         }
         if codeChanged {
             nsView.contentView.scroll(to: .zero)
             nsView.reflectScrolledClipView(nsView.contentView)
+        }
+    }
+
+    final class Coordinator {
+        private var lastCodeHash: Int?
+        private var lastCodeLength: Int?
+        private var lastLanguage: SupportedLanguage?
+        private var lastThemeScheme: ColorScheme?
+        private var lastFontSize: CGFloat?
+
+        func needsUpdate(code: String, language: SupportedLanguage, theme: Theme, fontSize: CGFloat) -> Bool {
+            lastCodeHash != code.hashValue ||
+            lastCodeLength != code.utf8.count ||
+            lastLanguage != language ||
+            lastThemeScheme != theme.scheme ||
+            lastFontSize != fontSize
+        }
+
+        func mark(code: String, language: SupportedLanguage, theme: Theme, fontSize: CGFloat) {
+            lastCodeHash = code.hashValue
+            lastCodeLength = code.utf8.count
+            lastLanguage = language
+            lastThemeScheme = theme.scheme
+            lastFontSize = fontSize
         }
     }
 }

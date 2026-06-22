@@ -19,6 +19,11 @@ struct ContentView: View {
     @State private var selectedLanguages: Set<SupportedLanguage> = []
     @State private var selectedSearchCollections: Set<PersistentIdentifier> = []
     @State private var searchText: String = ""
+    @State private var debouncedSearchText: String = ""
+    @State private var searchDebounceTask: Task<Void, Never>? = nil
+    @State private var cachedAvailableLanguages: [SupportedLanguage] = []
+    @State private var cachedBackgroundPalette: [Color] = []
+    @State private var hasBuiltDerivedCaches = false
     @State private var editingSnippet: Snippet? = nil
     @State private var isPresentingNew: Bool = false
     @State private var newSnippetPreselectedCollectionID: PersistentIdentifier? = nil
@@ -38,16 +43,19 @@ struct ContentView: View {
         case allSnippets
         case trash
         case collection(PersistentIdentifier)
+        case favoriteCollection(PersistentIdentifier)
     }
     @State private var sidebarSelectionContext: SidebarSelectionContext? = .allSnippets
     @State private var selectedCollectionID: PersistentIdentifier? = nil
     @State private var sidebarSearch: String = ""
     @State private var showFavoritesOnly: Bool = false
+    @State private var showUncategorizedOnly: Bool = false
     @State private var isLibrarySectionExpanded: Bool = true
     @State private var isFavoritesSectionExpanded: Bool = true
     @State private var isFrequentlyUsedSectionExpanded: Bool = true
     @State private var isLanguagesSectionExpanded: Bool = true
     @State private var isAllSnippetsExpanded: Bool = false
+    @State private var isCollectionsSectionExpanded: Bool = true
     @State private var expandedCollections: Set<PersistentIdentifier> = []
     enum DeletedItem {
         case snippet(PersistentIdentifier)
@@ -57,6 +65,20 @@ struct ContentView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @AppStorage("suppressCollectionDeleteWarning") private var suppressCollectionDeleteWarning = false
     @AppStorage("suppressSnippetDeleteWarning") private var suppressSnippetDeleteWarning = false
+
+    @State private var snippetToDelete: Snippet?
+    @State private var pendingSnippetDeleteConfirm: (() -> Void)?
+    @State private var collectionToDelete: SnippetCollection?
+    @State private var collectionToDeletePermanent: Bool = false
+    @State private var showUndoToast: Bool = false
+    @State private var undoToastMessage: String = ""
+    @State private var toastHideTask: Task<Void, Never>? = nil
+
+    private var uncategorizedSnippets: [Snippet] {
+        snippets.filter { snippet in
+            !snippet.collections.contains(where: { !$0.isDeleted })
+        }
+    }
 
 
     private struct DeletedMediaSnapshot {
@@ -85,11 +107,40 @@ struct ContentView: View {
     }
 
     private var trimmedSearchText: String {
-        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var collectionLookup: [PersistentIdentifier: SnippetCollection] {
+        Dictionary(uniqueKeysWithValues: collections.map { ($0.persistentModelID, $0) })
+    }
+
+    private var descendantIDsByCollectionID: [PersistentIdentifier: Set<PersistentIdentifier>] {
+        let lookup = collectionLookup
+        var cache: [PersistentIdentifier: Set<PersistentIdentifier>] = [:]
+
+        func descendants(for collection: SnippetCollection) -> Set<PersistentIdentifier> {
+            let id = collection.persistentModelID
+            if let cached = cache[id] { return cached }
+
+            var ids = Set([id])
+            for child in collection.children {
+                ids.formUnion(descendants(for: child))
+            }
+            cache[id] = ids
+            return ids
+        }
+
+        for collection in lookup.values {
+            _ = descendants(for: collection)
+        }
+        return cache
     }
 
     private var baseFilteredSnippets: [Snippet] {
-        snippets.filter { snippet in
+        let lookup = collectionLookup
+        let descendantIDs = descendantIDsByCollectionID
+
+        return snippets.filter { snippet in
             if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
 
             let belongsDirectlyToCollection = { (colID: PersistentIdentifier) -> Bool in
@@ -97,19 +148,16 @@ struct ContentView: View {
             }
 
             let belongsToCollection = { (colID: PersistentIdentifier) -> Bool in
-                if let collection = collections.first(where: { $0.persistentModelID == colID }) {
-                    let allowedIDs = collection.allDescendantIDs
-                    return snippet.collections.contains(where: { allowedIDs.contains($0.persistentModelID) })
-                }
-                return false
+                guard lookup[colID] != nil, let allowedIDs = descendantIDs[colID] else { return false }
+                return snippet.collections.contains(where: { allowedIDs.contains($0.persistentModelID) })
             }
 
             if let selectedCollectionID {
                 if !belongsDirectlyToCollection(selectedCollectionID) { return false }
-            } else if sidebarSelectionContext == .allSnippets && selectedSearchCollections.isEmpty {
-                if snippet.collections.contains(where: { !$0.isDeleted }) {
-                    return false
-                }
+            }
+
+            if showUncategorizedOnly && snippet.collections.contains(where: { !$0.isDeleted }) {
+                return false
             }
 
             if !selectedSearchCollections.isEmpty {
@@ -123,15 +171,21 @@ struct ContentView: View {
     }
 
     private var searchFilteredSnippets: [Snippet] {
-        snippets.filter { snippet in
+        let lookup = collectionLookup
+        let descendantIDs = descendantIDsByCollectionID
+
+        return snippets.filter { snippet in
             if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
 
             if showFavoritesOnly && !snippet.isFavorite { return false }
 
+            if showUncategorizedOnly && snippet.collections.contains(where: { !$0.isDeleted }) {
+                return false
+            }
+
             guard !selectedSearchCollections.isEmpty else { return true }
             return selectedSearchCollections.contains { collectionID in
-                guard let collection = collections.first(where: { $0.persistentModelID == collectionID }) else { return false }
-                let allowedIDs = collection.allDescendantIDs
+                guard lookup[collectionID] != nil, let allowedIDs = descendantIDs[collectionID] else { return false }
                 return snippet.collections.contains { allowedIDs.contains($0.persistentModelID) }
             }
         }
@@ -175,14 +229,27 @@ struct ContentView: View {
             let children = selectedCollection.children.sorted(by: collectionSort)
             return showFavoritesOnly ? children.filter(\.isFavorite) : children
         }
+        if
+            let selectedCollection,
+            sidebarSelectionContext == .favoriteCollection(selectedCollection.persistentModelID)
+        {
+            let children = selectedCollection.children.sorted(by: collectionSort)
+            return showFavoritesOnly ? children.filter(\.isFavorite) : children
+        }
 
-        guard selectedCollectionID == nil, sidebarSelectionContext == .allSnippets else { return [] }
+        if sidebarSelectionContext == .allSnippets {
+            let allValidCollections = collections.filter { !$0.isDeleted }.sorted(by: collectionSort)
+            return showFavoritesOnly ? allValidCollections.filter(\.isFavorite) : allValidCollections
+        }
+
+        let showsTopLevelCollections = sidebarSelectionContext == .frequentlyUsed
+            || sidebarSelectionContext == .favorites
+        guard selectedCollectionID == nil, showsTopLevelCollections else { return [] }
         return showFavoritesOnly ? topLevelCollections.filter(\.isFavorite) : topLevelCollections
     }
 
     private var availableLanguages: [SupportedLanguage] {
-        let used = Set(snippets.compactMap { SupportedLanguage(rawValue: $0.language) })
-        return SupportedLanguage.allCases.filter { used.contains($0) }
+        hasBuiltDerivedCaches ? cachedAvailableLanguages : buildAvailableLanguages()
     }
 
     private var sidebarFilteredLanguages: [SupportedLanguage] {
@@ -192,15 +259,18 @@ struct ContentView: View {
     }
 
     private var frequentlyUsedSnippets: [Snippet] {
-        Array(
-            snippets.sorted {
-                if $0.copyCount != $1.copyCount {
-                    return $0.copyCount > $1.copyCount
-                }
-                return $0.updatedAt > $1.updatedAt
+        var top: [Snippet] = []
+
+        for snippet in snippets {
+            if top.count < 5 {
+                insertFrequentlyUsed(snippet, into: &top)
+            } else if let last = top.last, frequentlyUsedPrecedes(snippet, last) {
+                top.removeLast()
+                insertFrequentlyUsed(snippet, into: &top)
             }
-            .prefix(5)
-        )
+        }
+
+        return top
     }
 
     private var favoriteSnippets: [Snippet] {
@@ -222,7 +292,19 @@ struct ContentView: View {
 
     private var selectedCollection: SnippetCollection? {
         guard let id = selectedCollectionID else { return nil }
-        return collections.first(where: { $0.persistentModelID == id })
+        return collectionLookup[id]
+    }
+
+    private func frequentlyUsedPrecedes(_ lhs: Snippet, _ rhs: Snippet) -> Bool {
+        if lhs.copyCount != rhs.copyCount {
+            return lhs.copyCount > rhs.copyCount
+        }
+        return lhs.updatedAt > rhs.updatedAt
+    }
+
+    private func insertFrequentlyUsed(_ snippet: Snippet, into top: inout [Snippet]) {
+        let index = top.firstIndex { frequentlyUsedPrecedes(snippet, $0) } ?? top.endIndex
+        top.insert(snippet, at: index)
     }
 
     private func collectionSort(_ lhs: SnippetCollection, _ rhs: SnippetCollection) -> Bool {
@@ -233,6 +315,31 @@ struct ContentView: View {
     }
 
     private var backgroundPalette: [Color] {
+        hasBuiltDerivedCaches ? cachedBackgroundPalette : buildBackgroundPalette()
+    }
+
+    private var snippetLanguageSignature: Int {
+        var hasher = Hasher()
+        hasher.combine(snippets.count)
+        for snippet in snippets {
+            hasher.combine(snippet.persistentModelID)
+            hasher.combine(snippet.language)
+        }
+        return hasher.finalize()
+    }
+
+    private func rebuildDerivedCaches() {
+        cachedAvailableLanguages = buildAvailableLanguages()
+        cachedBackgroundPalette = buildBackgroundPalette()
+        hasBuiltDerivedCaches = true
+    }
+
+    private func buildAvailableLanguages() -> [SupportedLanguage] {
+        let used = Set(snippets.compactMap { SupportedLanguage(rawValue: $0.language) })
+        return SupportedLanguage.allCases.filter { used.contains($0) }
+    }
+
+    private func buildBackgroundPalette() -> [Color] {
         var colors: [Color] = []
         var seenHex = Set<String>()
 
@@ -246,6 +353,21 @@ struct ContentView: View {
             colors.append(theme.accentColor(for: language))
         }
         return colors
+    }
+
+    private func debounceSearch(_ newValue: String) {
+        searchDebounceTask?.cancel()
+
+        if newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            debouncedSearchText = newValue
+            return
+        }
+
+        searchDebounceTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            debouncedSearchText = newValue
+        }
     }
 
     var body: some View {
@@ -278,6 +400,7 @@ struct ContentView: View {
                             showFavoritesOnly: $showFavoritesOnly,
                             selectedLanguages: $selectedLanguages,
                             selectedSearchCollections: $selectedSearchCollections,
+                            showUncategorizedOnly: $showUncategorizedOnly,
                             availableLanguages: availableLanguages,
                             availableCollections: collections,
                             subcollections: gallerySubcollections,
@@ -320,7 +443,7 @@ struct ContentView: View {
                             onEditCollection: { collection in beginEditCollection(collection) },
                             onDeleteCollection: { collection in delete(collection) },
                             onEditSnippet: { snippet in editingSnippet = snippet },
-                            onDelete: { snippet in delete(snippet) },
+                            onDelete: { snippet, onConfirmed in delete(snippet, onConfirmed: onConfirmed) },
                             onUndoDelete: { undoLastDeletion() },
                             onMoveSnippetToLibrary: { snippet in moveSnippetToLibrary(snippet) },
                             onMoveSnippetToCollection: { snippet, collection in moveSnippet(snippet, to: collection) },
@@ -430,6 +553,39 @@ struct ContentView: View {
                         }
                         .zIndex(4)
                     }
+
+                    if showUndoToast {
+                        VStack {
+                            Spacer()
+                            HStack(spacing: 12) {
+                                Text(undoToastMessage)
+                                    .foregroundStyle(theme.text)
+                                Button("Undo") {
+                                    withAnimation {
+                                        _ = undoLastDeletion()
+                                        showUndoToast = false
+                                    }
+                                }
+                                .bold()
+                                .foregroundStyle(theme.accent)
+                                .buttonStyle(.plain)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background {
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(theme.surfaceElevated)
+                                    .shadow(radius: 10, y: 5)
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .strokeBorder(theme.borderStrong, lineWidth: 1)
+                                    }
+                            }
+                            .padding(.bottom, 60)
+                        }
+                        .zIndex(100)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
                 }
                 .animation(.spring(response: 0.4, dampingFraction: 0.88), value: selectedSnippetID)
                 .animation(.spring(response: 0.4, dampingFraction: 0.88), value: isPresentingNew)
@@ -443,6 +599,20 @@ struct ContentView: View {
         }
         .task {
             performTrashCleanup()
+            debouncedSearchText = searchText
+            rebuildDerivedCaches()
+        }
+        .onChange(of: searchText) { _, newValue in
+            debounceSearch(newValue)
+        }
+        .onChange(of: snippets.count) { _, _ in
+            rebuildDerivedCaches()
+        }
+        .onChange(of: snippetLanguageSignature) { _, _ in
+            rebuildDerivedCaches()
+        }
+        .onChange(of: colorScheme) { _, _ in
+            rebuildDerivedCaches()
         }
         .sheet(item: $editingSnippet) { snippet in
             SnippetEditorView(mode: .edit(snippet), availableCollections: collections) { _ in
@@ -464,6 +634,51 @@ struct ContentView: View {
                 onCancel: { isPresentingCollectionEditor = false },
                 onSave: { commitCollectionEditor() }
             )
+        }
+        .confirmationDialog(
+            "Delete this snippet?",
+            isPresented: Binding(
+                get: { snippetToDelete != nil },
+                set: { if !$0 { snippetToDelete = nil; pendingSnippetDeleteConfirm = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete Snippet", role: .destructive) {
+                if let snippet = snippetToDelete {
+                    pendingSnippetDeleteConfirm?()
+                    DispatchQueue.main.async {
+                        self.performDeleteSnippet(snippet)
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            if let snippet = snippetToDelete {
+                Text("This will move \"\(snippet.title.isEmpty ? "Untitled" : snippet.title)\" to the trash. You can restore it within 30 days.")
+            }
+        }
+        .confirmationDialog(
+            "Delete Collection?",
+            isPresented: Binding(
+                get: { collectionToDelete != nil },
+                set: { if !$0 { collectionToDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete Collection Only", role: .destructive) {
+                if let collection = collectionToDelete {
+                    performDelete(collection, permanent: collectionToDeletePermanent)
+                }
+            }
+            Button("Delete Collection & Contents", role: .destructive) {
+                if let collection = collectionToDelete {
+                    deleteCollectionContentsRecursively(collection, permanent: collectionToDeletePermanent)
+                    performDelete(collection, permanent: collectionToDeletePermanent)
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("What would you like to do with this collection and its contents?")
         }
     }
 
@@ -550,6 +765,7 @@ struct ContentView: View {
     private var modernSidebar: some View {
         ModernSidebar(
             snippets: snippets,
+            uncategorizedSnippets: uncategorizedSnippets,
             collections: collections,
             frequentlyUsedSnippets: frequentlyUsedSnippets,
             favoriteSnippets: favoriteSnippets,
@@ -568,6 +784,7 @@ struct ContentView: View {
             isFrequentlyUsedSectionExpanded: $isFrequentlyUsedSectionExpanded,
             isLanguagesSectionExpanded: $isLanguagesSectionExpanded,
             isAllSnippetsExpanded: $isAllSnippetsExpanded,
+            isCollectionsSectionExpanded: $isCollectionsSectionExpanded,
             expandedCollections: $expandedCollections,
             onNew: { beginCreateCollection() },
             onEditCollection: { collection in beginEditCollection(collection) },
@@ -583,42 +800,17 @@ struct ContentView: View {
 
 
 
-    private func delete(_ snippet: Snippet) {
+    private func delete(_ snippet: Snippet, onConfirmed: (() -> Void)? = nil) {
         if suppressSnippetDeleteWarning {
-            performDeleteSnippet(snippet)
+            onConfirmed?()
+            DispatchQueue.main.async {
+                self.performDeleteSnippet(snippet)
+            }
             return
         }
 
-        #if canImport(AppKit)
-        let alert = NSAlert()
-        alert.messageText = "Delete this snippet?"
-        alert.informativeText = "This will move \"\(snippet.title.isEmpty ? "Untitled" : snippet.title)\" to the trash. You can restore it within 30 days."
-        alert.alertStyle = .warning
-
-        _ = alert.addButton(withTitle: "Delete Snippet")
-        alert.addButton(withTitle: "Cancel")
-        alert.buttons.first?.hasDestructiveAction = true
-
-        alert.showsSuppressionButton = true
-        alert.suppressionButton?.title = "Do not ask again"
-
-        let handler = { @MainActor (response: NSApplication.ModalResponse) in
-            if response == .alertFirstButtonReturn {
-                if alert.suppressionButton?.state == .on {
-                    self.suppressSnippetDeleteWarning = true
-                }
-                self.performDeleteSnippet(snippet)
-            }
-        }
-
-        if let window = NSApp.keyWindow {
-            alert.beginSheetModal(for: window, completionHandler: handler)
-        } else {
-            handler(alert.runModal())
-        }
-        #else
-        performDeleteSnippet(snippet)
-        #endif
+        snippetToDelete = snippet
+        pendingSnippetDeleteConfirm = onConfirmed
     }
 
     private func performDeleteSnippet(_ snippet: Snippet) {
@@ -631,6 +823,10 @@ struct ContentView: View {
         snippet.deletedAt = Date.now
         snippet.updatedAt = .now
         try? modelContext.save()
+        
+        undoToastMessage = "Snippet moved to Trash."
+        withAnimation { showUndoToast = true }
+        hideToastAfterDelay()
     }
 
     private func undoLastDeletion() -> PersistentIdentifier? {
@@ -785,46 +981,9 @@ struct ContentView: View {
 
     private func delete(_ collection: SnippetCollection, permanent: Bool = false) {
         if !permanent && !suppressCollectionDeleteWarning {
-            #if canImport(AppKit)
-            let alert = NSAlert()
-            alert.messageText = "Delete Collection?"
-            alert.informativeText = "What would you like to do with this collection and its contents?"
-            alert.alertStyle = .warning
-            
-            _ = alert.addButton(withTitle: "Delete Collection Only")
-            let deleteWithContentsButton = alert.addButton(withTitle: "Delete Collection & Contents")
-            deleteWithContentsButton.hasDestructiveAction = true
-            alert.addButton(withTitle: "Cancel")
-            
-            alert.showsSuppressionButton = true
-            alert.suppressionButton?.title = "Do not ask again"
-            
-            let handler = { @MainActor (response: NSApplication.ModalResponse) in
-                if response == .alertFirstButtonReturn {
-                    if alert.suppressionButton?.state == .on {
-                        self.suppressCollectionDeleteWarning = true
-                    }
-                    self.performDelete(collection, permanent: permanent)
-                } else if response == .alertSecondButtonReturn {
-                    if alert.suppressionButton?.state == .on {
-                        self.suppressCollectionDeleteWarning = true
-                    }
-                    self.deleteCollectionContentsRecursively(collection, permanent: permanent)
-                    self.performDelete(collection, permanent: permanent)
-                }
-            }
-
-            if let window = NSApplication.shared.windows.first(where: { $0.isKeyWindow }) {
-                alert.beginSheetModal(for: window) { sheetResponse in
-                    handler(sheetResponse)
-                }
-                return
-            } else {
-                let response = alert.runModal()
-                handler(response)
-                return
-            }
-            #endif
+            collectionToDelete = collection
+            collectionToDeletePermanent = permanent
+            return
         }
         performDelete(collection, permanent: permanent)
     }
@@ -847,7 +1006,8 @@ struct ContentView: View {
             if selectedCollectionID == collection.persistentModelID {
                 selectedCollectionID = nil
             }
-            if sidebarSelectionContext == .collection(collection.persistentModelID) {
+            if sidebarSelectionContext == .collection(collection.persistentModelID)
+                || sidebarSelectionContext == .favoriteCollection(collection.persistentModelID) {
                 sidebarSelectionContext = .allSnippets
             }
             modelContext.delete(collection)
@@ -858,11 +1018,27 @@ struct ContentView: View {
             if selectedCollectionID == collection.persistentModelID {
                 selectedCollectionID = nil
             }
-            if sidebarSelectionContext == .collection(collection.persistentModelID) {
+            if sidebarSelectionContext == .collection(collection.persistentModelID)
+                || sidebarSelectionContext == .favoriteCollection(collection.persistentModelID) {
                 sidebarSelectionContext = .allSnippets
             }
         }
         try? modelContext.save()
+        
+        if !permanent {
+            undoToastMessage = "Collection moved to Trash."
+            withAnimation { showUndoToast = true }
+            hideToastAfterDelay()
+        }
+    }
+
+    private func hideToastAfterDelay() {
+        toastHideTask?.cancel()
+        toastHideTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation { showUndoToast = false }
+        }
     }
 
     private func restore(_ collection: SnippetCollection) {
@@ -872,18 +1048,21 @@ struct ContentView: View {
     }
 
     private func moveSnippetToLibrary(_ snippet: Snippet) {
-        for collection in collections {
+        let currentCollections = snippet.collections
+        for collection in currentCollections {
             collection.snippets.removeAll(where: { $0.persistentModelID == snippet.persistentModelID })
             collection.updatedAt = .now
         }
-        snippet.collections = []
+        snippet.collections.removeAll()
         snippet.updatedAt = .now
         try? modelContext.save()
     }
 
     private func moveSnippet(_ snippet: Snippet, to collection: SnippetCollection) {
-        for other in collections {
+        let currentCollections = snippet.collections
+        for other in currentCollections where other.persistentModelID != collection.persistentModelID {
             other.snippets.removeAll(where: { $0.persistentModelID == snippet.persistentModelID })
+            other.updatedAt = .now
         }
         snippet.collections = [collection]
         if !collection.snippets.contains(where: { $0.persistentModelID == snippet.persistentModelID }) {

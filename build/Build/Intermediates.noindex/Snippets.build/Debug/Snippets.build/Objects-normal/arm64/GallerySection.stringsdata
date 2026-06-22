@@ -1,0 +1,40 @@
+{
+  "source": "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/GallerySection.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%@, %lld, %@",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 134
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 92
+        }
+      },
+      {
+        "comment": "",
+        "key": "Item 1",
+        "location": {
+          "startingColumn": 1,
+          "startingLine": 163
+        }
+      },
+      {
+        "comment": "",
+        "key": "Item 2",
+        "location": {
+          "startingColumn": 1,
+          "startingLine": 163
+        }
+      }
+    ]
+  },
+  "version": 1
+}

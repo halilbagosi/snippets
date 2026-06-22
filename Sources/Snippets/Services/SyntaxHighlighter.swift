@@ -32,7 +32,55 @@ struct LanguageRules {
     var hashIsPreprocessor: Bool = false
 }
 
+@MainActor
 enum SyntaxHighlighter {
+
+    // MARK: - Caches
+
+    /// Cache for fully-highlighted NSAttributedStrings (used by attributedString(for:...))
+    private static let highlightCache: NSCache<NSString, NSAttributedString> = {
+        let cache = NSCache<NSString, NSAttributedString>()
+        cache.countLimit = 50
+        cache.totalCostLimit = 5 * 1024 * 1024
+        return cache
+    }()
+
+    /// Cache for NSFont instances keyed by fontSize
+    private static var cachedFonts: [CGFloat: NSFont] = [:]
+
+    /// Cache for NSColor instances keyed by "tokenKind_themeScheme"
+    private static var cachedColors: [String: NSColor] = [:]
+
+    private static func cachedFont(size: CGFloat) -> NSFont {
+        if let font = cachedFonts[size] { return font }
+        let font = NSFont.monospacedSystemFont(ofSize: size, weight: .regular)
+        cachedFonts[size] = font
+        return font
+    }
+
+    private static func cachedColor(for kind: TokenKind, theme: Theme) -> NSColor {
+        let key = "\(kind)_\(schemeCacheKey(for: theme))"
+        if let color = cachedColors[key] { return color }
+        let color = _resolveColor(for: kind, theme: theme)
+        cachedColors[key] = color
+        return color
+    }
+
+    private static func schemeCacheKey(for theme: Theme) -> String {
+        theme.scheme == .dark ? "dark" : "light"
+    }
+
+    private static func _resolveColor(for kind: TokenKind, theme: Theme) -> NSColor {
+        switch kind {
+        case .keyword, .attribute: return NSColor(theme.keyword)
+        case .type, .property, .tag: return NSColor(theme.symbol)
+        case .number: return NSColor(theme.symbol)
+        case .string: return NSColor(theme.string)
+        case .comment: return NSColor(theme.comment)
+        }
+    }
+
+    // MARK: - Public API
 
     static func applyAttributes(
         to storage: NSTextStorage,
@@ -43,7 +91,7 @@ enum SyntaxHighlighter {
         let source = storage.string
         let fullRange = NSRange(location: 0, length: (source as NSString).length)
 
-        let baseFont = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
+        let baseFont = cachedFont(size: fontSize)
         let baseColor = NSColor(theme.text)
 
         storage.beginEditing()
@@ -52,10 +100,10 @@ enum SyntaxHighlighter {
             .foregroundColor: baseColor
         ], range: fullRange)
 
-        let rules = rules(for: language)
-        let tokens = CodeTokenizer(source: source, rules: rules).tokenize()
+        let langRules = rules(for: language)
+        let tokens = CodeTokenizer(source: source, rules: langRules).tokenize()
         for token in tokens {
-            let color = color(for: token.kind, theme: theme)
+            let color = cachedColor(for: token.kind, theme: theme)
             storage.addAttribute(.foregroundColor, value: color, range: token.range)
         }
         storage.endEditing()
@@ -67,177 +115,209 @@ enum SyntaxHighlighter {
         theme: Theme,
         fontSize: CGFloat = 13
     ) -> NSAttributedString {
+        // Check cache first
+        let cacheKey = "\(source.hashValue)_\(source.utf8.count)_\(language.rawValue)_\(schemeCacheKey(for: theme))_\(fontSize)" as NSString
+        if let cached = highlightCache.object(forKey: cacheKey) {
+            return cached
+        }
+
         let storage = NSTextStorage(string: source)
         applyAttributes(to: storage, language: language, theme: theme, fontSize: fontSize)
-        return NSAttributedString(attributedString: storage)
+        let result = NSAttributedString(attributedString: storage)
+
+        // Store in cache before returning
+        let estimatedCost = max(1, source.utf8.count * 4)
+        highlightCache.setObject(result, forKey: cacheKey, cost: estimatedCost)
+        return result
     }
 
     private static func color(for kind: TokenKind, theme: Theme) -> NSColor {
-        switch kind {
-        case .keyword, .attribute: return NSColor(theme.keyword)
-        case .type, .property, .tag: return NSColor(theme.symbol)
-        case .number: return NSColor(theme.symbol)
-        case .string: return NSColor(theme.string)
-        case .comment: return NSColor(theme.comment)
-        }
+        return cachedColor(for: kind, theme: theme)
     }
+
+    // MARK: - Static Lazy Language Rules
+
+    private static let swiftRules: LanguageRules = {
+        var r = LanguageRules()
+        r.attributePrefix = "@"
+        r.keywords = [
+            "import", "func", "var", "let", "if", "else", "guard", "return", "while", "for",
+            "in", "switch", "case", "default", "break", "continue", "class", "struct", "enum",
+            "protocol", "extension", "init", "deinit", "public", "private", "internal",
+            "fileprivate", "open", "static", "final", "override", "self", "Self", "super",
+            "nil", "true", "false", "throw", "throws", "rethrows", "try", "catch", "do",
+            "defer", "where", "as", "is", "async", "await", "some", "any", "inout",
+            "mutating", "nonmutating", "associatedtype", "typealias", "operator", "prefix",
+            "postfix", "infix", "lazy", "weak", "unowned", "convenience", "required",
+            "optional", "indirect", "subscript", "set", "get", "willSet", "didSet"
+        ]
+        r.typeBuiltins = ["Int", "Double", "Float", "String", "Bool", "Array", "Dictionary", "Set", "Optional", "Any", "AnyObject", "Never", "Void"]
+        return r
+    }()
+
+    private static let jsRules: LanguageRules = {
+        var r = LanguageRules()
+        r.keywords = [
+            "import", "export", "from", "function", "var", "let", "const", "if", "else",
+            "return", "while", "for", "in", "of", "switch", "case", "default", "break",
+            "continue", "class", "extends", "new", "this", "super", "null", "undefined",
+            "true", "false", "throw", "try", "catch", "finally", "async", "await", "yield",
+            "typeof", "instanceof", "do", "delete", "void", "interface", "type", "enum",
+            "public", "private", "protected", "readonly", "implements", "abstract",
+            "namespace", "module", "declare", "as", "is", "keyof", "infer", "static",
+            "get", "set"
+        ]
+        r.stringDelimiters = ["\"", "'", "`"]
+        r.allowMultilineStringFor = ["`"]
+        r.typeBuiltins = ["string", "number", "boolean", "any", "void", "never", "unknown", "object", "Array"]
+        return r
+    }()
+
+    private static let pythonRules: LanguageRules = {
+        var r = LanguageRules()
+        r.lineCommentPrefix = "#"
+        r.blockComment = nil
+        r.hashIsLineComment = true
+        r.keywords = [
+            "import", "from", "as", "def", "class", "if", "elif", "else", "return",
+            "while", "for", "in", "not", "and", "or", "is", "None", "True", "False",
+            "try", "except", "finally", "raise", "with", "lambda", "pass", "break",
+            "continue", "global", "nonlocal", "yield", "async", "await", "del", "assert"
+        ]
+        r.typeBuiltins = ["int", "float", "str", "bool", "list", "dict", "tuple", "set", "bytes", "object"]
+        r.allowsCapitalizedTypes = true
+        return r
+    }()
+
+    private static let shaderRules: LanguageRules = {
+        var r = LanguageRules()
+        r.keywords = [
+            "void", "uniform", "varying", "attribute", "in", "out", "inout", "return",
+            "if", "else", "for", "while", "do", "break", "continue", "struct", "const",
+            "fragment", "vertex", "kernel", "using", "namespace", "metal", "discard",
+            "true", "false", "layout", "precision", "highp", "mediump", "lowp",
+            "include", "version", "define"
+        ]
+        r.typeBuiltins = [
+            "vec2", "vec3", "vec4", "mat2", "mat3", "mat4", "mat2x2", "mat2x3", "mat2x4",
+            "mat3x2", "mat3x3", "mat3x4", "mat4x2", "mat4x3", "mat4x4",
+            "float", "int", "bool", "uint", "sampler1D", "sampler2D", "sampler3D",
+            "samplerCube", "sampler2DArray", "texture2d", "texture3d", "texturecube",
+            "half", "half2", "half3", "half4", "double", "ivec2", "ivec3", "ivec4",
+            "uvec2", "uvec3", "uvec4", "bvec2", "bvec3", "bvec4", "float2", "float3",
+            "float4", "int2", "int3", "int4", "uint2", "uint3", "uint4"
+        ]
+        r.allowsCapitalizedTypes = false
+        r.hashIsPreprocessor = true
+        return r
+    }()
+
+    private static let rustRules: LanguageRules = {
+        var r = LanguageRules()
+        r.keywords = [
+            "fn", "let", "mut", "if", "else", "match", "return", "while", "for", "in",
+            "loop", "break", "continue", "struct", "enum", "trait", "impl", "pub", "use",
+            "mod", "self", "Self", "crate", "super", "where", "as", "move", "ref", "box",
+            "true", "false", "async", "await", "dyn", "unsafe", "extern", "static",
+            "const", "type"
+        ]
+        r.typeBuiltins = ["i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "f32", "f64", "bool", "char", "str", "String", "Vec", "Option", "Result", "Box", "Rc", "Arc"]
+        return r
+    }()
+
+    private static let goRules: LanguageRules = {
+        var r = LanguageRules()
+        r.keywords = [
+            "package", "import", "func", "var", "const", "if", "else", "return", "for",
+            "range", "switch", "case", "default", "break", "continue", "struct", "interface",
+            "type", "map", "chan", "go", "defer", "select", "fallthrough", "true", "false",
+            "nil", "new", "make"
+        ]
+        r.typeBuiltins = ["int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "float32", "float64", "string", "bool", "byte", "rune", "error"]
+        r.stringDelimiters = ["\"", "'", "`"]
+        r.allowMultilineStringFor = ["`"]
+        return r
+    }()
+
+    private static let kotlinRules: LanguageRules = {
+        var r = LanguageRules()
+        r.attributePrefix = "@"
+        r.keywords = [
+            "import", "package", "fun", "val", "var", "if", "else", "when", "return",
+            "while", "for", "in", "out", "do", "break", "continue", "class", "object",
+            "interface", "enum", "data", "sealed", "inline", "operator", "companion",
+            "init", "null", "true", "false", "this", "super", "throw", "try", "catch",
+            "finally", "is", "as", "abstract", "open", "override", "public", "private",
+            "internal", "protected", "lateinit", "by", "where", "suspend"
+        ]
+        r.typeBuiltins = ["Int", "Long", "Short", "Byte", "Float", "Double", "Boolean", "Char", "String", "Any", "Unit", "Nothing", "List", "Map", "Set", "Array"]
+        return r
+    }()
+
+    private static let cppRules: LanguageRules = {
+        var r = LanguageRules()
+        r.hashIsPreprocessor = true
+        r.keywords = [
+            "if", "else", "return", "while", "for", "do", "switch", "case", "default",
+            "break", "continue", "class", "struct", "enum", "namespace", "using", "public",
+            "private", "protected", "virtual", "override", "template", "typename", "const",
+            "static", "extern", "new", "delete", "this", "true", "false", "nullptr", "NULL",
+            "auto", "void", "sizeof", "typedef", "operator", "friend", "inline", "explicit",
+            "constexpr", "noexcept", "decltype", "throw", "try", "catch", "union", "register",
+            "volatile", "mutable", "include", "define", "ifdef", "ifndef", "endif", "pragma"
+        ]
+        r.typeBuiltins = ["int", "float", "double", "char", "bool", "long", "short", "unsigned", "signed", "wchar_t", "size_t", "string", "vector", "map", "set", "pair", "shared_ptr", "unique_ptr", "weak_ptr", "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int8_t", "int16_t", "int32_t", "int64_t"]
+        return r
+    }()
+
+    private static let cssRules: LanguageRules = {
+        var r = LanguageRules()
+        r.lineCommentPrefix = nil
+        r.keywords = []
+        r.typeBuiltins = []
+        r.allowsCapitalizedTypes = false
+        return r
+    }()
+
+    private static let htmlRules: LanguageRules = {
+        var r = LanguageRules()
+        r.lineCommentPrefix = nil
+        r.blockComment = ("<!--", "-->")
+        r.keywords = []
+        r.allowsCapitalizedTypes = false
+        return r
+    }()
+
+    private static let jsonRules: LanguageRules = {
+        var r = LanguageRules()
+        r.lineCommentPrefix = nil
+        r.blockComment = nil
+        r.keywords = ["true", "false", "null"]
+        r.allowsCapitalizedTypes = false
+        return r
+    }()
+
+    private static let unknownRules: LanguageRules = {
+        var r = LanguageRules()
+        r.keywords = []
+        r.typeBuiltins = []
+        return r
+    }()
 
     private static func rules(for language: SupportedLanguage) -> LanguageRules {
         switch language {
-        case .swift:
-            var r = LanguageRules()
-            r.attributePrefix = "@"
-            r.keywords = [
-                "import", "func", "var", "let", "if", "else", "guard", "return", "while", "for",
-                "in", "switch", "case", "default", "break", "continue", "class", "struct", "enum",
-                "protocol", "extension", "init", "deinit", "public", "private", "internal",
-                "fileprivate", "open", "static", "final", "override", "self", "Self", "super",
-                "nil", "true", "false", "throw", "throws", "rethrows", "try", "catch", "do",
-                "defer", "where", "as", "is", "async", "await", "some", "any", "inout",
-                "mutating", "nonmutating", "associatedtype", "typealias", "operator", "prefix",
-                "postfix", "infix", "lazy", "weak", "unowned", "convenience", "required",
-                "optional", "indirect", "subscript", "set", "get", "willSet", "didSet"
-            ]
-            r.typeBuiltins = ["Int", "Double", "Float", "String", "Bool", "Array", "Dictionary", "Set", "Optional", "Any", "AnyObject", "Never", "Void"]
-            return r
-
-        case .javascript, .typescript, .react:
-            var r = LanguageRules()
-            r.keywords = [
-                "import", "export", "from", "function", "var", "let", "const", "if", "else",
-                "return", "while", "for", "in", "of", "switch", "case", "default", "break",
-                "continue", "class", "extends", "new", "this", "super", "null", "undefined",
-                "true", "false", "throw", "try", "catch", "finally", "async", "await", "yield",
-                "typeof", "instanceof", "do", "delete", "void", "interface", "type", "enum",
-                "public", "private", "protected", "readonly", "implements", "abstract",
-                "namespace", "module", "declare", "as", "is", "keyof", "infer", "static",
-                "get", "set"
-            ]
-            r.stringDelimiters = ["\"", "'", "`"]
-            r.allowMultilineStringFor = ["`"]
-            r.typeBuiltins = ["string", "number", "boolean", "any", "void", "never", "unknown", "object", "Array"]
-            return r
-
-        case .python:
-            var r = LanguageRules()
-            r.lineCommentPrefix = "#"
-            r.blockComment = nil
-            r.hashIsLineComment = true
-            r.keywords = [
-                "import", "from", "as", "def", "class", "if", "elif", "else", "return",
-                "while", "for", "in", "not", "and", "or", "is", "None", "True", "False",
-                "try", "except", "finally", "raise", "with", "lambda", "pass", "break",
-                "continue", "global", "nonlocal", "yield", "async", "await", "del", "assert"
-            ]
-            r.typeBuiltins = ["int", "float", "str", "bool", "list", "dict", "tuple", "set", "bytes", "object"]
-            r.allowsCapitalizedTypes = true
-            return r
-
-        case .glsl, .metal, .hlsl:
-            var r = LanguageRules()
-            r.keywords = [
-                "void", "uniform", "varying", "attribute", "in", "out", "inout", "return",
-                "if", "else", "for", "while", "do", "break", "continue", "struct", "const",
-                "fragment", "vertex", "kernel", "using", "namespace", "metal", "discard",
-                "true", "false", "layout", "precision", "highp", "mediump", "lowp",
-                "include", "version", "define"
-            ]
-            r.typeBuiltins = [
-                "vec2", "vec3", "vec4", "mat2", "mat3", "mat4", "mat2x2", "mat2x3", "mat2x4",
-                "mat3x2", "mat3x3", "mat3x4", "mat4x2", "mat4x3", "mat4x4",
-                "float", "int", "bool", "uint", "sampler1D", "sampler2D", "sampler3D",
-                "samplerCube", "sampler2DArray", "texture2d", "texture3d", "texturecube",
-                "half", "half2", "half3", "half4", "double", "ivec2", "ivec3", "ivec4",
-                "uvec2", "uvec3", "uvec4", "bvec2", "bvec3", "bvec4", "float2", "float3",
-                "float4", "int2", "int3", "int4", "uint2", "uint3", "uint4"
-            ]
-            r.allowsCapitalizedTypes = false
-            r.hashIsPreprocessor = true
-            return r
-
-        case .rust:
-            var r = LanguageRules()
-            r.keywords = [
-                "fn", "let", "mut", "if", "else", "match", "return", "while", "for", "in",
-                "loop", "break", "continue", "struct", "enum", "trait", "impl", "pub", "use",
-                "mod", "self", "Self", "crate", "super", "where", "as", "move", "ref", "box",
-                "true", "false", "async", "await", "dyn", "unsafe", "extern", "static",
-                "const", "type"
-            ]
-            r.typeBuiltins = ["i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "f32", "f64", "bool", "char", "str", "String", "Vec", "Option", "Result", "Box", "Rc", "Arc"]
-            return r
-
-        case .go:
-            var r = LanguageRules()
-            r.keywords = [
-                "package", "import", "func", "var", "const", "if", "else", "return", "for",
-                "range", "switch", "case", "default", "break", "continue", "struct", "interface",
-                "type", "map", "chan", "go", "defer", "select", "fallthrough", "true", "false",
-                "nil", "new", "make"
-            ]
-            r.typeBuiltins = ["int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "float32", "float64", "string", "bool", "byte", "rune", "error"]
-            r.stringDelimiters = ["\"", "'", "`"]
-            r.allowMultilineStringFor = ["`"]
-            return r
-
-        case .kotlin:
-            var r = LanguageRules()
-            r.attributePrefix = "@"
-            r.keywords = [
-                "import", "package", "fun", "val", "var", "if", "else", "when", "return",
-                "while", "for", "in", "out", "do", "break", "continue", "class", "object",
-                "interface", "enum", "data", "sealed", "inline", "operator", "companion",
-                "init", "null", "true", "false", "this", "super", "throw", "try", "catch",
-                "finally", "is", "as", "abstract", "open", "override", "public", "private",
-                "internal", "protected", "lateinit", "by", "where", "suspend"
-            ]
-            r.typeBuiltins = ["Int", "Long", "Short", "Byte", "Float", "Double", "Boolean", "Char", "String", "Any", "Unit", "Nothing", "List", "Map", "Set", "Array"]
-            return r
-
-        case .cpp:
-            var r = LanguageRules()
-            r.hashIsPreprocessor = true
-            r.keywords = [
-                "if", "else", "return", "while", "for", "do", "switch", "case", "default",
-                "break", "continue", "class", "struct", "enum", "namespace", "using", "public",
-                "private", "protected", "virtual", "override", "template", "typename", "const",
-                "static", "extern", "new", "delete", "this", "true", "false", "nullptr", "NULL",
-                "auto", "void", "sizeof", "typedef", "operator", "friend", "inline", "explicit",
-                "constexpr", "noexcept", "decltype", "throw", "try", "catch", "union", "register",
-                "volatile", "mutable", "include", "define", "ifdef", "ifndef", "endif", "pragma"
-            ]
-            r.typeBuiltins = ["int", "float", "double", "char", "bool", "long", "short", "unsigned", "signed", "wchar_t", "size_t", "string", "vector", "map", "set", "pair", "shared_ptr", "unique_ptr", "weak_ptr", "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int8_t", "int16_t", "int32_t", "int64_t"]
-            return r
-
-        case .css:
-            var r = LanguageRules()
-            r.lineCommentPrefix = nil
-            r.keywords = []
-            r.typeBuiltins = []
-            r.allowsCapitalizedTypes = false
-            return r
-
-        case .html:
-            var r = LanguageRules()
-            r.lineCommentPrefix = nil
-            r.blockComment = ("<!--", "-->")
-            r.keywords = []
-            r.allowsCapitalizedTypes = false
-            return r
-
-        case .json:
-            var r = LanguageRules()
-            r.lineCommentPrefix = nil
-            r.blockComment = nil
-            r.keywords = ["true", "false", "null"]
-            r.allowsCapitalizedTypes = false
-            return r
-
-        case .unknown:
-            var r = LanguageRules()
-            r.keywords = []
-            r.typeBuiltins = []
-            return r
+        case .swift: return swiftRules
+        case .javascript, .typescript, .react: return jsRules
+        case .python: return pythonRules
+        case .glsl, .metal, .hlsl: return shaderRules
+        case .rust: return rustRules
+        case .go: return goRules
+        case .kotlin: return kotlinRules
+        case .cpp: return cppRules
+        case .css: return cssRules
+        case .html: return htmlRules
+        case .json: return jsonRules
+        case .unknown: return unknownRules
         }
     }
 }
@@ -248,9 +328,30 @@ private final class CodeTokenizer {
     private var pos: Int = 0
     private var tokens: [Token] = []
 
+    // Pre-cached UTF16 arrays for comment delimiters (avoids re-conversion on every call)
+    private let lineCommentUTF16: [unichar]?
+    private let blockOpenUTF16: [unichar]?
+    private let blockCloseUTF16: [unichar]?
+    private let blockCloseFirstChar: unichar
+
+    // Pre-built set of valid keyword/type identifier lengths for fast rejection
+    private let knownIdentifierLengths: Set<Int>
+
     init(source: String, rules: LanguageRules) {
         self.nsString = source as NSString
         self.rules = rules
+
+        // Pre-cache UTF16 for comment delimiters
+        self.lineCommentUTF16 = rules.lineCommentPrefix.map { Array($0.utf16) }
+        self.blockOpenUTF16 = rules.blockComment.map { Array($0.open.utf16) }
+        self.blockCloseUTF16 = rules.blockComment.map { Array($0.close.utf16) }
+        self.blockCloseFirstChar = rules.blockComment.map { Array($0.close.utf16).first ?? 0 } ?? 0
+
+        // Build set of known keyword/type lengths for early rejection in matchIdentifier
+        var lengths = Set<Int>()
+        for kw in rules.keywords { lengths.insert(kw.utf16.count) }
+        for tb in rules.typeBuiltins { lengths.insert(tb.utf16.count) }
+        self.knownIdentifierLengths = lengths
     }
 
     func tokenize() -> [Token] {
@@ -267,18 +368,20 @@ private final class CodeTokenizer {
     }
 
     private func matchComment() -> Token? {
-        if let prefix = rules.lineCommentPrefix, hasPrefix(prefix) {
-            return scanLineComment(prefixLength: (prefix as NSString).length)
+        if let utf16 = lineCommentUTF16, hasPrefixUTF16(utf16) {
+            return scanLineComment(prefixLength: utf16.count)
         }
         if rules.hashIsLineComment, char(at: pos) == 0x23 /* # */ {
             return scanLineComment(prefixLength: 1)
         }
-        if let block = rules.blockComment, hasPrefix(block.open) {
+        if let openUTF16 = blockOpenUTF16, let closeUTF16 = blockCloseUTF16, hasPrefixUTF16(openUTF16) {
             let start = pos
-            pos += (block.open as NSString).length
+            pos += openUTF16.count
+            let closeFirst = blockCloseFirstChar
             while pos < nsString.length {
-                if hasPrefix(block.close) {
-                    pos += (block.close as NSString).length
+                // Fast first-char check before full prefix comparison
+                if char(at: pos) == closeFirst && hasPrefixUTF16(closeUTF16) {
+                    pos += closeUTF16.count
                     return Token(range: NSRange(location: start, length: pos - start), kind: .comment)
                 }
                 pos += 1
@@ -363,17 +466,33 @@ private final class CodeTokenizer {
         while pos < nsString.length, isIdentifierChar(char(at: pos)) {
             pos += 1
         }
-        let range = NSRange(location: start, length: pos - start)
-        let text = nsString.substring(with: range)
-        if rules.keywords.contains(text) {
-            return Token(range: range, kind: .keyword)
+        let length = pos - start
+        let range = NSRange(location: start, length: length)
+
+        // Skip substring extraction if length doesn't match any known keyword/type length
+        // (unless we need to check capitalizedTypes which has variable length)
+        let lengthMatches = knownIdentifierLengths.contains(length)
+
+        if lengthMatches {
+            let text = nsString.substring(with: range)
+            if rules.keywords.contains(text) {
+                return Token(range: range, kind: .keyword)
+            }
+            if rules.typeBuiltins.contains(text) {
+                return Token(range: range, kind: .type)
+            }
+            // Use O(1) utf16.count instead of O(n) text.count
+            if rules.allowsCapitalizedTypes, let first = text.first, first.isUppercase, text.utf16.count > 1 {
+                return Token(range: range, kind: .type)
+            }
+        } else if rules.allowsCapitalizedTypes && length > 1 {
+            // No keyword/type match possible, but still check capitalized types
+            let firstChar = char(at: start)
+            if firstChar >= 0x41 && firstChar <= 0x5A { // A-Z
+                return Token(range: range, kind: .type)
+            }
         }
-        if rules.typeBuiltins.contains(text) {
-            return Token(range: range, kind: .type)
-        }
-        if rules.allowsCapitalizedTypes, let first = text.first, first.isUppercase, text.count > 1 {
-            return Token(range: range, kind: .type)
-        }
+
         return nil
     }
 
@@ -412,15 +531,30 @@ private final class CodeTokenizer {
         return Token(range: NSRange(location: start, length: pos - start), kind: .number)
     }
 
+    // MARK: - Character Utilities
+
     private func char(at index: Int) -> unichar {
         guard index < nsString.length else { return 0 }
         return nsString.character(at: index)
     }
 
+    /// Optimized hasPrefix using pre-cached UTF16 arrays — avoids substring allocation entirely.
+    private func hasPrefixUTF16(_ sUTF16: [unichar]) -> Bool {
+        guard pos + sUTF16.count <= nsString.length else { return false }
+        for i in 0..<sUTF16.count {
+            if nsString.character(at: pos + i) != sUTF16[i] { return false }
+        }
+        return true
+    }
+
+    /// Legacy hasPrefix for arbitrary strings — uses character-by-character comparison (no substring allocation).
     private func hasPrefix(_ s: String) -> Bool {
-        let len = (s as NSString).length
-        guard pos + len <= nsString.length else { return false }
-        return nsString.substring(with: NSRange(location: pos, length: len)) == s
+        let sUTF16 = Array(s.utf16)
+        guard pos + sUTF16.count <= nsString.length else { return false }
+        for i in 0..<sUTF16.count {
+            if nsString.character(at: pos + i) != sUTF16[i] { return false }
+        }
+        return true
     }
 
     private func isIdentifierStart(_ c: unichar) -> Bool {

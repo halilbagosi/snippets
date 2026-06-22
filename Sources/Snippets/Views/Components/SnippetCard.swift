@@ -27,14 +27,6 @@ struct SnippetCard: View {
         SupportedLanguage(rawValue: snippet.language) ?? .unknown
     }
 
-    private var primaryMedia: MediaItem? {
-        snippet.mediaItems.sorted { $0.addedAt < $1.addedAt }.first
-    }
-
-    private var orderedMediaItems: [MediaItem] {
-        snippet.mediaItems.sorted { $0.addedAt < $1.addedAt }
-    }
-
     private var hoverCenter: CGPoint {
         CGPoint(x: max(cardSize.width, 1) * 0.5, y: max(cardSize.height, 1) * 0.5)
     }
@@ -106,16 +98,22 @@ struct SnippetCard: View {
     }
 
     private var formattedDate: String {
+        Self.dateFormatter.string(from: snippet.createdAt)
+    }
+
+    @MainActor
+    private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
-        return formatter.string(from: snippet.createdAt)
-    }
+        return formatter
+    }()
 
     var body: some View {
         let theme = Theme.current(colorScheme)
         let languageAccent = theme.accentColor(for: language).saturation(10)
         let effectiveIsHovered = (isSelectionMode || appearanceSettings.disableHoverEffects) ? false : isHovered
+        let mediaItems = snippet.mediaItems.sorted { $0.addedAt < $1.addedAt }
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top) {
@@ -140,9 +138,9 @@ struct SnippetCard: View {
             .padding(.bottom, 4)
 
             Group {
-                if !orderedMediaItems.isEmpty {
-                    let mediaCount = orderedMediaItems.count
-                    if mediaCount == 1, let media = primaryMedia {
+                if !mediaItems.isEmpty {
+                    let mediaCount = mediaItems.count
+                    if mediaCount == 1, let media = mediaItems.first {
                         GeometryReader { geo in
                             GalleryAttachmentPreview(
                                 item: media,
@@ -152,7 +150,7 @@ struct SnippetCard: View {
                             )
                         }
                     } else {
-                        CardMediaGrid(items: orderedMediaItems)
+                        CardMediaGrid(items: mediaItems)
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 0) {
@@ -173,16 +171,17 @@ struct SnippetCard: View {
                     .strokeBorder(theme.border, lineWidth: 1)
             }
             .overlay {
-                CardPreviewShaderOverlay(
-                    accent: languageAccent,
-                    isActive: effectiveIsHovered,
-                    hoverPoint: hoverUnitPoint,
-                    colorScheme: colorScheme
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .opacity(effectiveIsHovered ? 1 : 0)
-                .animation(.easeOut(duration: 0.12), value: effectiveIsHovered)
-                .allowsHitTesting(false)
+                if effectiveIsHovered {
+                    CardPreviewShaderOverlay(
+                        accent: languageAccent,
+                        isActive: true,
+                        hoverPoint: hoverUnitPoint,
+                        colorScheme: colorScheme
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+                }
             }
             .opacity(didAppear ? 1 : 0)
             .padding(.horizontal, 12)
@@ -230,7 +229,7 @@ struct SnippetCard: View {
                     }
                     .foregroundStyle(deletionBadgeColor)
                 } else {
-                    Text("Created on: \(formattedDate)")
+                    Text("\(formattedDate)")
                         .font(Mono.font(size: 10, weight: .medium))
                         .foregroundStyle(theme.textFaint)
                 }
@@ -262,17 +261,18 @@ struct SnippetCard: View {
                         .animation(.easeOut(duration: 0.12), value: isHovered)
                 }
                 .overlay {
-                    CardHoverShaderOverlay(
-                        accent: languageAccent,
-                        isActive: effectiveIsHovered,
-                        hoverPoint: hoverUnitPoint,
-                        hoverVector: hoverVector,
-                        colorScheme: colorScheme
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .opacity(effectiveIsHovered ? 1 : 0)
-                    .animation(.easeOut(duration: 0.12), value: effectiveIsHovered)
-                    .allowsHitTesting(false)
+                    if effectiveIsHovered {
+                        CardHoverShaderOverlay(
+                            accent: languageAccent,
+                            isActive: true,
+                            hoverPoint: hoverUnitPoint,
+                            hoverVector: hoverVector,
+                            colorScheme: colorScheme
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .transition(.opacity)
+                        .allowsHitTesting(false)
+                    }
                 }
         }
         .overlay {
@@ -557,6 +557,7 @@ private struct CardImagePreview: View {
     let item: MediaItem
     #if canImport(AppKit)
     @State private var image: NSImage? = nil
+    @State private var imageLoadTask: Task<Void, Never>? = nil
     #endif
 
     var body: some View {
@@ -581,12 +582,25 @@ private struct CardImagePreview: View {
             #endif
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
+        .onAppear(perform: loadImage)
+        .onDisappear {
             #if canImport(AppKit)
-            let url = MediaManager.resolvedURL(for: item.fileName)
-            image = NSImage(contentsOf: url)
+            imageLoadTask?.cancel()
             #endif
         }
+    }
+
+    private func loadImage() {
+        #if canImport(AppKit)
+        guard image == nil else { return }
+        imageLoadTask?.cancel()
+        let url = MediaManager.resolvedURL(for: item.fileName)
+        imageLoadTask = Task { @MainActor in
+            let data = await CardImageFileLoader.data(from: url)
+            guard !Task.isCancelled else { return }
+            image = data.flatMap(NSImage.init(data:))
+        }
+        #endif
     }
 }
 
@@ -601,6 +615,16 @@ private struct CardVideoPreview: View {
     }
 }
 
+#if canImport(AppKit)
+private enum CardImageFileLoader {
+    static func data(from url: URL) async -> Data? {
+        await Task.detached(priority: .userInitiated) {
+            try? Data(contentsOf: url)
+        }.value
+    }
+}
+#endif
+
 private extension View {
     @ViewBuilder
     func trashDoubleTap(inTrash: Bool, action: @escaping () -> Void) -> some View {
@@ -613,21 +637,17 @@ private extension View {
 }
 
 #Preview("SnippetCard") {
-    do {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try ModelContainer(for: Snippet.self, SnippetCollection.self, MediaItem.self, configurations: config)
-        let snippet = Snippet(
-            title: "Hello World",
-            snippetDescription: "A simple hello world script.",
-            language: "swift",
-            code: "print(\"Hello World\")"
-        )
-        return SnippetCard(snippet: snippet)
-            .padding()
-            .frame(width: 300)
-            .modelContainer(container)
-            .environment(AppearanceSettings())
-    } catch {
-        return Text("Failed to create preview container")
-    }
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: Snippet.self, SnippetCollection.self, MediaItem.self, configurations: config)
+    let snippet = Snippet(
+        title: "Hello World",
+        snippetDescription: "A simple hello world script.",
+        language: "swift",
+        code: "print(\"Hello World\")"
+    )
+    SnippetCard(snippet: snippet)
+        .padding()
+        .frame(width: 300)
+        .modelContainer(container)
+        .environment(AppearanceSettings())
 }

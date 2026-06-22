@@ -2,6 +2,9 @@ import SwiftUI
 
 struct DotGridBackground: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var isVisible = false
+
     var spacing: CGFloat = 22
     var dotSize: CGFloat = 1.4
     var gradientPalette: [Color] = []
@@ -14,6 +17,9 @@ struct DotGridBackground: View {
 
     var body: some View {
         let theme = Theme.current(colorScheme)
+        let palette = resolvedPalette
+        let isPaused = !isVisible || scenePhase != .active
+
         ZStack {
             if focusedMode && colorScheme == .light {
                 theme.canvas.blended(with: .black, ratio: 0.03)
@@ -21,27 +27,9 @@ struct DotGridBackground: View {
                 theme.canvas
             }
 
-            Canvas { context, size in
-                let dotColor = colorScheme == .dark
-                    ? Color.white.opacity(0.06)
-                    : Color.black.opacity(0.07)
-                let cols = Int(size.width / spacing) + 2
-                let rows = Int(size.height / spacing) + 2
-                for x in 0..<cols {
-                    for y in 0..<rows {
-                        let px = CGFloat(x) * spacing
-                        let py = CGFloat(y) * spacing
-                        let rect = CGRect(
-                            x: px - dotSize / 2,
-                            y: py - dotSize / 2,
-                            width: dotSize,
-                            height: dotSize
-                        )
-                        context.fill(Path(ellipseIn: rect), with: .color(dotColor))
-                    }
-                }
-            }
-            .allowsHitTesting(false)
+            DotGridLayer(spacing: spacing, dotSize: dotSize, colorScheme: colorScheme)
+                .drawingGroup(opaque: false, colorMode: .linear)
+                .allowsHitTesting(false)
 
             LinearGradient(
                 colors: colorScheme == .dark
@@ -52,8 +40,8 @@ struct DotGridBackground: View {
             )
             .allowsHitTesting(false)
 
-            if !focusedMode {
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
+            if !focusedMode, !palette.isEmpty {
+                TimelineView(.animation(minimumInterval: 1.0 / 12.0, paused: isPaused)) { timeline in
                     let elapsed = timeline.date.timeIntervalSinceReferenceDate
                     let isLight = colorScheme == .light
                     let tunedLightStrength = min(max(lightModeStrength, 0.2), 1.5)
@@ -62,7 +50,8 @@ struct DotGridBackground: View {
                     let coreOpacity = (isLight ? 0.15 : 0.08) * lightBoost
 
                     ZStack {
-                        ForEach(Array(resolvedPalette.enumerated()), id: \.offset) { index, color in
+                        ForEach(palette.indices, id: \.self) { index in
+                            let color = palette[index]
                             let idx = Double(index)
                             let phase = idx * (.pi / 2.7)
                             // Bias Y center downward into the card area (0.55–0.85 range).
@@ -82,7 +71,8 @@ struct DotGridBackground: View {
                         }
 
                         // Secondary soft pass to remove hard transitions and add liquid depth.
-                        ForEach(Array(resolvedPalette.enumerated()), id: \.offset) { index, color in
+                        ForEach(palette.indices, id: \.self) { index in
+                            let color = palette[index]
                             let idx = Double(index)
                             let phase = idx * (.pi / 3.1) + .pi / 5
                             let x = 0.5 + 0.30 * sin(elapsed * (0.058 + idx * 0.009) + phase)
@@ -119,6 +109,37 @@ struct DotGridBackground: View {
                         )
                     )
                     .allowsHitTesting(false)
+                }
+            }
+        }
+        .onAppear { isVisible = true }
+        .onDisappear { isVisible = false }
+    }
+}
+
+private struct DotGridLayer: View {
+    let spacing: CGFloat
+    let dotSize: CGFloat
+    let colorScheme: ColorScheme
+
+    var body: some View {
+        Canvas { context, size in
+            let dotColor = colorScheme == .dark
+                ? Color.white.opacity(0.06)
+                : Color.black.opacity(0.07)
+            let cols = Int(size.width / spacing) + 2
+            let rows = Int(size.height / spacing) + 2
+            for x in 0..<cols {
+                for y in 0..<rows {
+                    let px = CGFloat(x) * spacing
+                    let py = CGFloat(y) * spacing
+                    let rect = CGRect(
+                        x: px - dotSize / 2,
+                        y: py - dotSize / 2,
+                        width: dotSize,
+                        height: dotSize
+                    )
+                    context.fill(Path(ellipseIn: rect), with: .color(dotColor))
                 }
             }
         }

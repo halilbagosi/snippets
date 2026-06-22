@@ -1,0 +1,37 @@
+{
+  "/Users/halilbagosi/snippets/Sources/Snippets/Core/Services/Protocols/MediaManaging.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManaging.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManaging.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManaging.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManaging.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManaging.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/MetalGenieOverlay.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieOverlay.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieOverlay.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieOverlay.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieOverlay.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieOverlay.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/MetalGenieRenderer.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieRenderer.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieRenderer.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieRenderer.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieRenderer.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieRenderer.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SectionHeader.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SectionHeader.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SectionHeader.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SectionHeader.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SectionHeader.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SectionHeader.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Sidebar/ModernSidebar.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ModernSidebar.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ModernSidebar.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ModernSidebar.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ModernSidebar.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ModernSidebar.swiftdeps"
+  }
+}

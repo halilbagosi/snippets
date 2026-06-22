@@ -1,15 +1,15 @@
 import SwiftUI
 
-struct SectionHeader: View {
+struct SectionHeader<Trailing: View>: View {
     @Environment(\.colorScheme) private var colorScheme
     let prefix: String
     let label: String
-    var trailing: AnyView? = nil
+    let trailing: Trailing
 
-    init(prefix: String = "//", _ label: String, trailing: AnyView? = nil) {
+    init(prefix: String = "//", _ label: String, @ViewBuilder trailing: () -> Trailing) {
         self.prefix = prefix
         self.label = label
-        self.trailing = trailing
+        self.trailing = trailing()
     }
 
     var body: some View {
@@ -25,8 +25,16 @@ struct SectionHeader: View {
             Rectangle()
                 .fill(theme.border)
                 .frame(height: 1)
-            if let trailing { trailing }
+            trailing
         }
+    }
+}
+
+extension SectionHeader where Trailing == EmptyView {
+    init(prefix: String = "//", _ label: String) {
+        self.prefix = prefix
+        self.label = label
+        self.trailing = EmptyView()
     }
 }
 

@@ -59,6 +59,7 @@ struct TrashView: View {
                     showFavoritesOnly: .constant(false),
                     selectedLanguages: $selectedLanguages,
                     selectedSearchCollections: $selectedSearchCollections,
+                    showUncategorizedOnly: .constant(false),
                     availableLanguages: [],
                     availableCollections: [],
                     subcollections: trashedCollections,
@@ -68,7 +69,10 @@ struct TrashView: View {
                     onUndoDelete: nil,
                     isTrashMode: true,
                     onRestore: restore,
-                    onPermanentDelete: permanentlyDelete,
+                    onPermanentDelete: { snippet, onConfirmed in
+                        permanentlyDelete(snippet)
+                        onConfirmed()
+                    },
                     onRestoreCollection: restoreCollection,
                     onPermanentDeleteCollection: permanentlyDeleteCollection
                 )

@@ -1,0 +1,419 @@
+{
+  "" : {
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Snippets-primary.dia",
+    "emit-module-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Snippets-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Snippets-primary-emit-module.dia",
+    "pch" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Snippets-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Snippets-primary.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/App/AppEnvironment.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppEnvironment.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppEnvironment.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppEnvironment.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppEnvironment.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppEnvironment.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppEnvironment.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppEnvironment.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppEnvironment~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Core/Services/Protocols/MediaManaging.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManaging.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManaging.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManaging.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManaging.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManaging.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManaging.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManaging.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManaging~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Features/Editor/SnippetEditorViewModel.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorViewModel.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorViewModel.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorViewModel.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorViewModel.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorViewModel.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorViewModel.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorViewModel.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorViewModel~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Features/Gallery/SnippetGalleryViewModel.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryViewModel.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryViewModel.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryViewModel.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryViewModel.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryViewModel.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryViewModel.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryViewModel.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryViewModel~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Models/Collection.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Collection.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Collection.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Collection.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Collection.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Collection.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Collection.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Collection.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Collection~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Models/MediaItem.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaItem.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaItem.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaItem.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaItem.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaItem.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaItem.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaItem.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaItem~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Models/Snippet.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Snippet.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Snippet.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Snippet.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Snippet.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Snippet.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Snippet.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Snippet.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Snippet~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Services/Clipboard.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Clipboard.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Clipboard.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Clipboard.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Clipboard.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Clipboard.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Clipboard.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Clipboard.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Clipboard~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Services/LanguageDetector.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageDetector.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageDetector.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageDetector.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageDetector.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageDetector.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageDetector.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageDetector.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageDetector~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Services/MediaManager.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManager.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManager.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManager.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManager.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManager.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManager.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManager.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MediaManager~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Services/SyntaxHighlighter.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SyntaxHighlighter.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SyntaxHighlighter.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SyntaxHighlighter.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SyntaxHighlighter.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SyntaxHighlighter.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SyntaxHighlighter.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SyntaxHighlighter.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SyntaxHighlighter~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Services/Theme.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Theme.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Theme.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Theme.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Theme.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Theme.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Theme.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Theme.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Theme~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/SnippetsApp.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetsApp.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetsApp.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetsApp.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetsApp.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetsApp.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetsApp.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetsApp.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetsApp~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/CodeEditor.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeEditor.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeEditor.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeEditor.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeEditor.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeEditor.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeEditor.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeEditor.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeEditor~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/CodeView.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeView.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeView.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeView.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeView.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeView.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeView.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeView.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CodeView~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/CollectionIconView.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionIconView.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionIconView.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionIconView.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionIconView.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionIconView.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionIconView.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionIconView.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionIconView~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/DotGridBackground.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DotGridBackground.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DotGridBackground.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DotGridBackground.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DotGridBackground.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DotGridBackground.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DotGridBackground.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DotGridBackground.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DotGridBackground~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/EditorTabHeader.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/EditorTabHeader.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/EditorTabHeader.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/EditorTabHeader.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/EditorTabHeader.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/EditorTabHeader.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/EditorTabHeader.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/EditorTabHeader.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/EditorTabHeader~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/FilterTag.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/FilterTag.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/FilterTag.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/FilterTag.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/FilterTag.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/FilterTag.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/FilterTag.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/FilterTag.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/FilterTag~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/GallerySection.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GallerySection.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GallerySection.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GallerySection.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GallerySection.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GallerySection.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GallerySection.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GallerySection.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GallerySection~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/GenieOverlay.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GenieOverlay.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GenieOverlay.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GenieOverlay.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GenieOverlay.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GenieOverlay.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GenieOverlay.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GenieOverlay.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GenieOverlay~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/GlassCard.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GlassCard.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GlassCard.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GlassCard.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GlassCard.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GlassCard.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GlassCard.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GlassCard.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GlassCard~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/LanguageBadge.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageBadge.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageBadge.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageBadge.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageBadge.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageBadge.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageBadge.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageBadge.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LanguageBadge~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/LiquidGlassToggleStyle.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LiquidGlassToggleStyle.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LiquidGlassToggleStyle.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LiquidGlassToggleStyle.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LiquidGlassToggleStyle.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LiquidGlassToggleStyle.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LiquidGlassToggleStyle.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LiquidGlassToggleStyle.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LiquidGlassToggleStyle~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/LoopingVideoPlayerView.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LoopingVideoPlayerView.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LoopingVideoPlayerView.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LoopingVideoPlayerView.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LoopingVideoPlayerView.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LoopingVideoPlayerView.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LoopingVideoPlayerView.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LoopingVideoPlayerView.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/LoopingVideoPlayerView~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/MetalGenieOverlay.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieOverlay.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieOverlay.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieOverlay.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieOverlay.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieOverlay.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieOverlay.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieOverlay.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieOverlay~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/MetalGenieRenderer.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieRenderer.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieRenderer.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieRenderer.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieRenderer.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieRenderer.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieRenderer.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieRenderer.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/MetalGenieRenderer~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SectionHeader.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SectionHeader.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SectionHeader.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SectionHeader.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SectionHeader.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SectionHeader.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SectionHeader.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SectionHeader.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SectionHeader~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SnippetCard.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCard.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCard.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCard.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCard.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCard.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCard.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCard.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCard~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/SnippetCollectionCard.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCollectionCard.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCollectionCard.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCollectionCard.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCollectionCard.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCollectionCard.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCollectionCard.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCollectionCard.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetCollectionCard~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/StatusBar.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/StatusBar.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/StatusBar.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/StatusBar.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/StatusBar.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/StatusBar.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/StatusBar.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/StatusBar.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/StatusBar~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Components/ViewSnapshot.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ViewSnapshot.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ViewSnapshot.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ViewSnapshot.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ViewSnapshot.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ViewSnapshot.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ViewSnapshot.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ViewSnapshot.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ViewSnapshot~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/ContentView.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ContentView.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ContentView.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ContentView.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ContentView~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Sidebar/CollectionEditorSheet.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionEditorSheet.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionEditorSheet.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionEditorSheet.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionEditorSheet.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionEditorSheet.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionEditorSheet.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionEditorSheet.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/CollectionEditorSheet~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/Sidebar/ModernSidebar.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ModernSidebar.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ModernSidebar.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ModernSidebar.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ModernSidebar.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ModernSidebar.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ModernSidebar.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ModernSidebar.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ModernSidebar~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetDetailView.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetDetailView.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetDetailView.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetDetailView.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetDetailView.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetDetailView.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetDetailView.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetDetailView.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetDetailView~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetEditorView.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorView.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorView.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorView.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorView.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorView.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorView.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorView.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetEditorView~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/SnippetGalleryView.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryView.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryView.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryView.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryView.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryView.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryView.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryView.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/SnippetGalleryView~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/TrashView.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/TrashView.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/TrashView.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/TrashView.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/TrashView.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/TrashView.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/TrashView.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/TrashView.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/TrashView~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Views/ext/ColorExtensions.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ColorExtensions.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ColorExtensions.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ColorExtensions.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ColorExtensions.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ColorExtensions.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ColorExtensions.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ColorExtensions.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/ColorExtensions~partial.swiftmodule"
+  },
+  "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/halilbagosi/snippets/build/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}
