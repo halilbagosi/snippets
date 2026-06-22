@@ -49,7 +49,7 @@ struct ContentView: View {
     @State private var selectedCollectionID: PersistentIdentifier? = nil
     @State private var sidebarSearch: String = ""
     @State private var showFavoritesOnly: Bool = false
-    @State private var showUncategorizedOnly: Bool = false
+    @State private var showUncategorizedOnly: Bool = true
     @State private var isLibrarySectionExpanded: Bool = true
     @State private var isFavoritesSectionExpanded: Bool = true
     @State private var isFrequentlyUsedSectionExpanded: Bool = true
@@ -435,6 +435,7 @@ struct ContentView: View {
                             onClearSelection: {
                                 withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
                                     selectedSearchCollections.removeAll()
+                                    showUncategorizedOnly = false
                                     if selectedCollectionID == nil {
                                         sidebarSelectionContext = .allSnippets
                                     }
@@ -447,6 +448,8 @@ struct ContentView: View {
                             onUndoDelete: { undoLastDeletion() },
                             onMoveSnippetToLibrary: { snippet in moveSnippetToLibrary(snippet) },
                             onMoveSnippetToCollection: { snippet, collection in moveSnippet(snippet, to: collection) },
+                            onMoveCollectionToLibrary: { collection in moveCollectionToLibrary(collection) },
+                            onMoveCollectionToCollection: { collection, target in moveCollection(collection, to: target) },
                             onCopySnippetToCollection: { snippet, collection in copySnippet(snippet, to: collection) }
                         )
                         .blur(radius: selectedSnippet == nil ? 0 : 2)
@@ -613,6 +616,14 @@ struct ContentView: View {
         }
         .onChange(of: colorScheme) { _, _ in
             rebuildDerivedCaches()
+        }
+        .onChange(of: sidebarSelectionContext) { _, newValue in
+            if newValue == .allSnippets {
+                showUncategorizedOnly = true
+            } else {
+                showUncategorizedOnly = false
+            }
+            selectedSearchCollections.removeAll()
         }
         .sheet(item: $editingSnippet) { snippet in
             SnippetEditorView(mode: .edit(snippet), availableCollections: collections) { _ in
@@ -1071,5 +1082,20 @@ struct ContentView: View {
         collection.updatedAt = .now
         snippet.updatedAt = .now
         try? modelContext.save()
+    }
+
+    private func moveCollectionToLibrary(_ collection: SnippetCollection) {
+        collection.parent = nil
+        collection.updatedAt = .now
+        try? modelContext.save()
+    }
+
+    private func moveCollection(_ collection: SnippetCollection, to target: SnippetCollection) {
+        if collection.persistentModelID != target.persistentModelID && !collection.allDescendantIDs.contains(target.persistentModelID) {
+            collection.parent = target
+            collection.updatedAt = .now
+            target.updatedAt = .now
+            try? modelContext.save()
+        }
     }
 }

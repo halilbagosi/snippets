@@ -201,17 +201,7 @@ struct ModernSidebar: View {
             .tag(Selection.all)
             .dropDestination(for: String.self) { items, _ in return onHandleDrop(items, nil) }
 
-            if !uncategorizedSnippets.isEmpty {
-                DisclosureGroup(isExpanded: .constant(true)) {
-                    if sidebarFilteredLanguages.count == availableLanguages.count {
-                        ForEach(uncategorizedSnippets) { snippet in
-                            snippetRow(snippet, context: .allSnippets)
-                        }
-                    }
-                } label: {
-                    countRow(title: "Uncategorized", icon: "tray", iconColor: theme.textMuted, count: uncategorizedSnippets.count, isSelected: false)
-                }
-            }
+
         }
     }
 
@@ -365,10 +355,15 @@ struct ModernSidebar: View {
     @ViewBuilder
     private func moveToMenu(_ snippet: Snippet) -> some View {
         Menu("Move to") {
-            Button { onMoveSnippetToLibrary(snippet) } label: {
-                Label("All Snippets", systemImage: "square.grid.2x2")
+            if !snippet.collections.isEmpty {
+                Button { onMoveSnippetToLibrary(snippet) } label: {
+                    Label("All Snippets", systemImage: "square.grid.2x2")
+                }
             }
-            ForEach(collections) { collection in
+            let targetCollections = collections.filter { target in
+                !snippet.collections.contains(where: { $0.persistentModelID == target.persistentModelID })
+            }
+            ForEach(targetCollections) { collection in
                 Button { onMoveSnippetToCollection(snippet, collection) } label: {
                     Label(collection.name, systemImage: collection.displayIconName)
                 }
@@ -485,8 +480,13 @@ private struct CollectionTreeRow: View {
         .contextMenu {
             Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
             Menu("Move to") {
-                Button { onMoveSnippetToLibrary(snippet) } label: { Label("All Snippets", systemImage: "square.grid.2x2") }
-                ForEach(collections) { target in
+                if !snippet.collections.isEmpty {
+                    Button { onMoveSnippetToLibrary(snippet) } label: { Label("All Snippets", systemImage: "square.grid.2x2") }
+                }
+                let targetCollections = collections.filter { target in
+                    !snippet.collections.contains(where: { $0.persistentModelID == target.persistentModelID })
+                }
+                ForEach(targetCollections) { target in
                     Button { onMoveSnippetToCollection(snippet, target) } label: { Label(target.name, systemImage: target.displayIconName) }
                 }
             }

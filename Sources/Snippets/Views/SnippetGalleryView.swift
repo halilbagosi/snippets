@@ -33,6 +33,8 @@ struct SnippetGalleryView: View {
     var onUndoDelete: (() -> PersistentIdentifier?)? = nil
     var onMoveSnippetToLibrary: ((Snippet) -> Void)? = nil
     var onMoveSnippetToCollection: ((Snippet, SnippetCollection) -> Void)? = nil
+    var onMoveCollectionToLibrary: ((SnippetCollection) -> Void)? = nil
+    var onMoveCollectionToCollection: ((SnippetCollection, SnippetCollection) -> Void)? = nil
     var onCopySnippetToCollection: ((Snippet, SnippetCollection) -> Void)? = nil
     var isTrashMode: Bool = false
     var onRestore: ((Snippet) -> Void)? = nil
@@ -127,22 +129,32 @@ struct SnippetGalleryView: View {
         !selectedSearchCollections.isEmpty || showUncategorizedOnly
     }
     private var collectionFilterPopoverHeight: CGFloat {
-        let searchAreaHeight: CGFloat = 52
-        let clearAreaHeight: CGFloat = isFilterSelected ? 54 : 0
-        return searchAreaHeight + collectionFilterListHeight + clearAreaHeight
+        // Obsolete, using fixedSize dynamically in the view instead
+        0
     }
     private var collectionFilterListHeight: CGFloat {
-        if collectionFilterMatches.isEmpty { return 76 }
+        let hasSystemFilters = collectionFilterQuery.isEmpty
+        let matchesCount = collectionFilterMatches.count
 
-        let rowHeight: CGFloat = 37
-        let sectionHeaderHeight: CGFloat = 28
-        let sectionSpacing: CGFloat = collectionFilterSectionCount > 1 ? 8 : 0
-        let bottomPadding: CGFloat = 9
-        let contentHeight = CGFloat(collectionFilterMatches.count) * rowHeight
-            + CGFloat(collectionFilterSectionCount) * sectionHeaderHeight
-            + sectionSpacing
-            + bottomPadding
+        if !hasSystemFilters && matchesCount == 0 {
+            return 77 // 68 (No matches minHeight) + 9 (bottom padding)
+        }
 
+        var contentHeight: CGFloat = 0
+        
+        if hasSystemFilters {
+            contentHeight += 59 // systemFiltersSection height
+        }
+        
+        if matchesCount > 0 {
+            if hasSystemFilters {
+                contentHeight += 8 // parent VStack spacing
+            }
+            contentHeight += 22 + CGFloat(matchesCount) * 37 // collectionFilterSection height
+        }
+        
+        contentHeight += 9 // bottom padding
+        
         return min(contentHeight, collectionFilterMaxListHeight)
     }
     private var backButtonTransition: AnyTransition {
@@ -311,12 +323,55 @@ struct SnippetGalleryView: View {
             pressedResetTask?.cancel()
         }
         .sheet(isPresented: $showMoveSheet) {
+            let selectedSnippets = viewModel.selectedSnippets(from: snippets)
+            let selectedCollections = viewModel.selectedCollections(from: subcollections)
+            
+            let filteredCollections = availableCollections.filter { target in
+                if selectedCollections.contains(where: { $0.persistentModelID == target.persistentModelID }) {
+                    return false
+                }
+                
+                let hasSnippetInTarget = selectedSnippets.contains(where: { snip in
+                    snip.collections.contains(where: { $0.persistentModelID == target.persistentModelID })
+                })
+                if hasSnippetInTarget {
+                    return false
+                }
+                
+                let hasCollectionInTarget = selectedCollections.contains(where: { coll in
+                    coll.parent?.persistentModelID == target.persistentModelID
+                })
+                if hasCollectionInTarget {
+                    return false
+                }
+                
+                return true
+            }
+
+            let allSnippetsInCollections = selectedSnippets.isEmpty ? true : selectedSnippets.allSatisfy { !$0.collections.isEmpty }
+            let allCollectionsAreSubcollections = selectedCollections.isEmpty ? true : selectedCollections.allSatisfy { $0.parent != nil }
+            let hasAnySelection = !selectedSnippets.isEmpty || !selectedCollections.isEmpty
+            
+            let showLibraryOption = hasAnySelection && allSnippetsInCollections && allCollectionsAreSubcollections
+
             MoveToCollectionSheet(
-                collections: availableCollections,
+                collections: filteredCollections,
+                showLibraryOption: showLibraryOption,
                 onMove: { collection in
-                    let toMoveSnippets = viewModel.selectedSnippets(from: snippets)
-                    for snippet in toMoveSnippets {
-                        onMoveSnippetToCollection?(snippet, collection)
+                    if let target = collection {
+                        for snippet in selectedSnippets {
+                            onMoveSnippetToCollection?(snippet, target)
+                        }
+                        for coll in selectedCollections {
+                            onMoveCollectionToCollection?(coll, target)
+                        }
+                    } else {
+                        for snippet in selectedSnippets {
+                            onMoveSnippetToLibrary?(snippet)
+                        }
+                        for coll in selectedCollections {
+                            onMoveCollectionToLibrary?(coll)
+                        }
                     }
                     withAnimation {
                         viewModel.clearSelectionAndExitSelectMode()
@@ -787,7 +842,7 @@ struct SnippetGalleryView: View {
                                     }
                                 }
                             }
-                            .transition(.scale.combined(with: .opacity))
+                            .transition(.opacity)
 
                             if isTrashMode {
                                 FilterTag(
@@ -806,7 +861,7 @@ struct SnippetGalleryView: View {
                                 }
                                 .disabled(viewModel.selectedForAction.isEmpty)
                                 .opacity(viewModel.selectedForAction.isEmpty ? 0.5 : 1.0)
-                                .transition(.scale.combined(with: .opacity))
+                                .transition(.opacity)
                             }
 
                             if !isTrashMode {
@@ -820,7 +875,7 @@ struct SnippetGalleryView: View {
                                 }
                                 .disabled(viewModel.selectedForAction.isEmpty)
                                 .opacity(viewModel.selectedForAction.isEmpty ? 0.5 : 1.0)
-                                .transition(.scale.combined(with: .opacity))
+                                .transition(.opacity)
                             }
 
                             FilterTag(
@@ -848,7 +903,7 @@ struct SnippetGalleryView: View {
                             }
                             .disabled(viewModel.selectedForAction.isEmpty)
                             .opacity(viewModel.selectedForAction.isEmpty ? 0.5 : 1.0)
-                            .transition(.scale.combined(with: .opacity))
+                            .transition(.opacity)
                         }
 
                         if !viewModel.isSelectMode {
@@ -862,7 +917,7 @@ struct SnippetGalleryView: View {
                                     viewModel.isOldestToNewest.toggle()
                                 }
                             }
-                            .transition(.scale.combined(with: .opacity))
+                            .transition(.opacity)
 
                             if !isTrashMode {
                                 FilterTag(
@@ -877,7 +932,7 @@ struct SnippetGalleryView: View {
                                     collectionFilterPopover
                                         .presentationBackground(.ultraThinMaterial)
                                 }
-                                .transition(.scale.combined(with: .opacity))
+                                .transition(.opacity)
 
                                 FilterTag(
                                     label: "favorites",
@@ -889,7 +944,7 @@ struct SnippetGalleryView: View {
                                         showFavoritesOnly.toggle()
                                     }
                                 }
-                                .transition(.scale.combined(with: .opacity))
+                                .transition(.opacity)
                             }
                         }
                     }
@@ -959,39 +1014,42 @@ struct SnippetGalleryView: View {
             .frame(height: collectionFilterListHeight)
 
             if isFilterSelected {
-                Rectangle()
-                    .fill(.white.opacity(colorScheme == .dark ? 0.12 : 0.34))
-                    .frame(height: 1)
+                VStack(spacing: 0) {
+                    Rectangle()
+                        .fill(.white.opacity(colorScheme == .dark ? 0.12 : 0.34))
+                        .frame(height: 1)
 
-                Button {
-                    guard isFilterSelected else { return }
-                    if let onClearSelection = onClearSelection {
-                        onClearSelection()
-                    } else {
-                        selectedSearchCollections.removeAll()
-                        showUncategorizedOnly = false
+                    Button {
+                        guard isFilterSelected else { return }
+                        if let onClearSelection = onClearSelection {
+                            onClearSelection()
+                        } else {
+                            selectedSearchCollections.removeAll()
+                            showUncategorizedOnly = false
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "xmark.circle")
+                            Text("Clear Selection")
+                            Spacer()
+                            Text("\(selectedSearchCollections.count + (showUncategorizedOnly ? 1 : 0))")
+                                .monospacedDigit()
+                        }
+                        .font(Sans.font(size: 13, weight: .semibold))
+                        .foregroundStyle(theme.text)
+                        .padding(.horizontal, 14)
+                        .frame(height: 53)
+                        .contentShape(Rectangle())
                     }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "xmark.circle")
-                        Text("Clear Selection")
-                        Spacer()
-                        Text("\(selectedSearchCollections.count)")
-                            .monospacedDigit()
-                    }
-                    .font(Sans.font(size: 13, weight: .semibold))
-                    .foregroundStyle(theme.text)
-                    .padding(.horizontal, 14)
-                    .frame(height: 53)
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .frame(width: collectionFilterPopoverWidth, height: collectionFilterPopoverHeight)
-        .transaction { transaction in
-            transaction.animation = nil
-        }
+        .frame(width: collectionFilterPopoverWidth)
+        .fixedSize(horizontal: false, vertical: true)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isFilterSelected)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: collectionFilterMatches.count)
         .onDisappear {
             collectionFilterSearchText = ""
         }
@@ -1319,7 +1377,8 @@ struct SnippetGalleryView: View {
 private struct MoveToCollectionSheet: View {
     @Environment(\.colorScheme) private var colorScheme
     let collections: [SnippetCollection]
-    let onMove: (SnippetCollection) -> Void
+    let showLibraryOption: Bool
+    let onMove: (SnippetCollection?) -> Void
     let onCancel: () -> Void
 
     private var theme: Theme { Theme.current(colorScheme) }
@@ -1329,6 +1388,37 @@ private struct MoveToCollectionSheet: View {
             ScrollView {
                 DSGlassContainer(spacing: 0) {
                     VStack(spacing: 0) {
+                        if showLibraryOption {
+                            Button(action: { onMove(nil) }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "square.grid.2x2")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(theme.accent)
+                                        .frame(width: 24, height: 24)
+
+                                    Text("All Snippets")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(.primary)
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundStyle(.secondary.opacity(0.5))
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+
+                            if !collections.isEmpty {
+                                Rectangle()
+                                    .fill(.white.opacity(colorScheme == .dark ? 0.12 : 0.34))
+                                    .frame(height: 1)
+                            }
+                        }
+
                         ForEach(Array(collections.enumerated()), id: \.element.persistentModelID) { index, collection in
                             Button(action: { onMove(collection) }) {
                                 HStack(spacing: 12) {

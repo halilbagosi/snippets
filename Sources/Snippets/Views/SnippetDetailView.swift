@@ -66,6 +66,7 @@ struct SnippetDetailView: View {
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(theme.text)
                     .frame(width: 30, height: 30)
+                    .contentShape(Circle())
                     .liquidGlassSurface(
                         in: Circle(),
                         shadowRadius: 12,
@@ -103,8 +104,6 @@ struct SnippetDetailView: View {
                 }
                 
                 Spacer(minLength: 16)
-                
-                actionBar
             }
             
             HStack(spacing: 10) {
@@ -133,6 +132,10 @@ struct SnippetDetailView: View {
                             }
                     }
                 }
+                
+                Spacer(minLength: 16)
+                
+                actionBar
             }
         }
     }

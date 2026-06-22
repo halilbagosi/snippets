@@ -154,7 +154,7 @@ struct CollapsibleSectionContent<Content: View>: View {
     var body: some View {
         if isExpanded {
             content
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .transition(.opacity)
                 .animation(animation, value: isExpanded)
         }
     }
