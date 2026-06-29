@@ -14,19 +14,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        configureWindows(NSApp.windows)
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(50))
             NSApp.activate(ignoringOtherApps: true)
-            configureWindows(NSApp.windows)
-            for window in NSApp.windows where window.canBecomeMain {
+                for window in NSApp.windows where window.canBecomeMain {
                 window.makeKeyAndOrderFront(nil)
             }
         }
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        configureWindows(sender.windows)
         for window in sender.windows where window.canBecomeMain {
             window.makeKeyAndOrderFront(nil)
         }
@@ -36,17 +33,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
-    private func configureWindows(_ windows: [NSWindow]) {
-        for window in windows where window.canBecomeMain {
-            window.styleMask.formUnion([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
-            window.titlebarAppearsTransparent = true
-            window.titleVisibility = .hidden
-            window.collectionBehavior.insert(.fullScreenPrimary)
-            window.collectionBehavior.insert(.managed)
-            window.minSize = NSSize(width: 1100, height: 720)
-            window.standardWindowButton(.zoomButton)?.isEnabled = true
-        }
-    }
 }
 #endif
 
@@ -74,13 +60,24 @@ struct SnippetsApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(environment)
-                .environment(appearanceSettings)
-                .preferredColorScheme(appearanceSettings.resolvedColorScheme)
-                .frame(minWidth: 1100, minHeight: 720)
+            if #available(macOS 15.0, *) {
+                ContentView()
+                    .environment(environment)
+                    .environment(appearanceSettings)
+                    .preferredColorScheme(appearanceSettings.resolvedColorScheme)
+                    .frame(minWidth: 1100, minHeight: 720)
+                    .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+            } else {
+                ContentView()
+                    .environment(environment)
+                    .environment(appearanceSettings)
+                    .preferredColorScheme(appearanceSettings.resolvedColorScheme)
+                    .frame(minWidth: 1100, minHeight: 720)
+            }
+            
         }
         #if os(macOS)
+        .windowToolbarStyle(.unified(showsTitle: false))
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) { }

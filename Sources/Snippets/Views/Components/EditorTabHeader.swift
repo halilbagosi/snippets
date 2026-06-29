@@ -4,21 +4,11 @@ struct EditorTabHeader: View {
     @Environment(\.colorScheme) private var colorScheme
     let filename: String
     var language: SupportedLanguage = .unknown
-    var showTrafficLights: Bool = true
     var trailing: AnyView? = nil
 
     var body: some View {
         let theme = Theme.current(colorScheme)
         HStack(spacing: 12) {
-            if showTrafficLights {
-                HStack(spacing: 7) {
-                    Circle().fill(theme.trafficRed).frame(width: 11, height: 11)
-                    Circle().fill(theme.trafficYellow).frame(width: 11, height: 11)
-                    Circle().fill(theme.trafficGreen).frame(width: 11, height: 11)
-                }
-                .padding(.trailing, 4)
-            }
-
             HStack(spacing: 6) {
                 Image(systemName: language.symbolName)
                     .font(Mono.font(size: 11, weight: .semibold))
@@ -61,7 +51,7 @@ struct EditorTabHeader: View {
 #Preview("EditorTabHeader") {
     VStack(spacing: 20) {
         EditorTabHeader(filename: "main.swift", language: .swift)
-        EditorTabHeader(filename: "style.css", language: .css, showTrafficLights: false)
+        EditorTabHeader(filename: "style.css", language: .css)
     }
     .padding()
 }

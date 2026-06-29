@@ -1,8 +1,8 @@
-struct Test {
-    var a: Int = 1
-    var b: Int = 2
-    var c: Int = 3
-    var d: Int = 4
+import SwiftUI
+struct TestView: View {
+    var body: some View {
+        Text("Hello")
+            .toolbar(removing: .title)
+            .toolbar(removing: .sidebarToggle)
+    }
 }
-let t = Test(a: 10, c: 30)
-print(t)

@@ -600,6 +600,10 @@ struct ContentView: View {
                 }
             }
         }
+        .toolbar {
+            sidebarToolbar
+        }
+        .removingLegacySidebarToggle()
         .task {
             performTrashCleanup()
             debouncedSearchText = searchText
@@ -766,7 +770,49 @@ struct ContentView: View {
             .persistentModelID
     }
 
-    @ViewBuilder
+    @ToolbarContentBuilder
+    private var sidebarToolbar: some ToolbarContent {
+        if #available(macOS 26.0, *) {
+            ToolbarSpacer(.fixed, placement: .navigation)
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    beginCreateCollection()
+                } label: {
+                    Label("New Collection", systemImage: "plus")
+                }
+                .buttonStyle(.glassProminent)
+                .controlSize(.regular)
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+            }
+        } else {
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        if columnVisibility == .all {
+                            columnVisibility = .detailOnly
+                        } else {
+                            columnVisibility = .all
+                        }
+                    }
+                } label: {
+                    Label("Toggle Sidebar", systemImage: "sidebar.left")
+                }
+                .buttonStyle(.borderless)
+            }
+
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    beginCreateCollection()
+                } label: {
+                    Label("New Collection", systemImage: "plus")
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+            }
+        }
+    }
+
     private var sidebar: some View {
         modernSidebar
     }
@@ -797,7 +843,6 @@ struct ContentView: View {
             isAllSnippetsExpanded: $isAllSnippetsExpanded,
             isCollectionsSectionExpanded: $isCollectionsSectionExpanded,
             expandedCollections: $expandedCollections,
-            onNew: { beginCreateCollection() },
             onEditCollection: { collection in beginEditCollection(collection) },
             onDeleteCollection: { collection in delete(collection) },
             onEditSnippet: { snippet in editingSnippet = snippet },
@@ -1096,6 +1141,17 @@ struct ContentView: View {
             collection.updatedAt = .now
             target.updatedAt = .now
             try? modelContext.save()
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func removingLegacySidebarToggle() -> some View {
+        if #available(macOS 26.0, *) {
+            self
+        } else {
+            self.toolbar(removing: .sidebarToggle)
         }
     }
 }

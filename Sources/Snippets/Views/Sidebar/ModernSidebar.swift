@@ -39,7 +39,6 @@ struct ModernSidebar: View {
     @Binding var isCollectionsSectionExpanded: Bool
     @Binding var expandedCollections: Set<PersistentIdentifier>
 
-    let onNew: () -> Void
     let onEditCollection: (SnippetCollection) -> Void
     let onDeleteCollection: (SnippetCollection) -> Void
     let onEditSnippet: (Snippet) -> Void
@@ -60,7 +59,7 @@ struct ModernSidebar: View {
     }
 
     private var theme: Theme { Theme.current(colorScheme) }
-    private var shouldUseActiveSelectionIconColor: Bool {
+    private var isSelectionActive: Bool {
         controlActiveState != .inactive
     }
 
@@ -155,33 +154,6 @@ struct ModernSidebar: View {
         .focused($isListFocused)
         .listStyle(.sidebar)
         .scrollContentBackground(.automatic)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            Button(action: onNew) {
-                Label("New Collection", systemImage: "plus")
-                    .font(.system(size: 13, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(theme.text)
-            .liquidGlassSurface(
-                in: RoundedRectangle(cornerRadius: 10, style: .continuous),
-                tint: theme.accent,
-                interactive: true,
-                borderOpacity: colorScheme == .dark ? 0.22 : 0.40,
-                shadowRadius: 0,
-                shadowY: 0
-            )
-            .overlay {
-                if colorScheme == .light {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(theme.accent.opacity(0.15))
-                        .allowsHitTesting(false)
-                }
-            }
-            .keyboardShortcut("n", modifiers: [.command, .shift])
-            .padding(DSToken.Spacing.sm)
-        }
     }
 
     // MARK: - Sections
@@ -196,9 +168,17 @@ struct ModernSidebar: View {
                     }
                 }
             } label: {
-                countRow(title: "All Snippets", icon: "square.grid.2x2", iconColor: Color.accentColor, count: snippets.count, isSelected: selection.wrappedValue == .all)
+                Button {
+                    selectedLanguages.removeAll()
+                    selectedSearchCollections.removeAll()
+                    selectedSnippetID = nil
+                    selectedCollectionID = nil
+                    sidebarSelectionContext = .allSnippets
+                } label: {
+                    countRow(title: "All Snippets", icon: "square.grid.2x2", iconColor: theme.accent, count: snippets.count, isSelected: selection.wrappedValue == .all)
+                }
+                .buttonStyle(.plain)
             }
-            .tag(Selection.all)
             .dropDestination(for: String.self) { items, _ in return onHandleDrop(items, nil) }
 
 
@@ -214,9 +194,12 @@ struct ModernSidebar: View {
                     collections: collections,
                     expandedCollections: $expandedCollections,
                     selectionValue: selection.wrappedValue,
-                    selectedSnippetID: selectedSnippetID,
-                    sidebarSelectionContext: sidebarSelectionContext,
-                    shouldUseActiveSelectionIconColor: shouldUseActiveSelectionIconColor,
+                    selectedSnippetID: $selectedSnippetID,
+                    selectedCollectionID: $selectedCollectionID,
+                    sidebarSelectionContext: $sidebarSelectionContext,
+                    selectedLanguages: $selectedLanguages,
+                    selectedSearchCollections: $selectedSearchCollections,
+                    isSelectionActive: isSelectionActive,
                     onEditCollection: onEditCollection,
                     onDeleteCollection: onDeleteCollection,
                     onEditSnippet: onEditSnippet,
@@ -235,15 +218,32 @@ struct ModernSidebar: View {
         Section("FAVORITES", isExpanded: $isFavoritesSectionExpanded) {
             ForEach(favoriteCollections) { collection in
                 let isSelected = selection.wrappedValue == .favoriteCollection(collection.persistentModelID)
-                Label {
-                    Text(collection.name)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                } icon: {
-                    Image(systemName: SnippetCollection.isValidSFSymbolName(collection.iconName) ? collection.iconName : SnippetCollection.defaultIconName)
-                        .foregroundStyle(isSelected && shouldUseActiveSelectionIconColor ? Color.white : Color(red: 1.0, green: 0.80, blue: 0.20))
+                let accent = collection.displayColor
+                Button {
+                    selectedCollectionID = collection.persistentModelID
+                    selectedSearchCollections.removeAll()
+                    selectedSnippetID = nil
+                    sidebarSelectionContext = .favoriteCollection(collection.persistentModelID)
+                } label: {
+                    Label {
+                        Text(collection.name.lowercased())
+                            .font(Mono.font(size: 11, weight: isSelected ? .semibold : .medium))
+                            .foregroundStyle(isSelected ? theme.text : theme.textMuted)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    } icon: {
+                        Image(systemName: collection.displayIconName)
+                            .foregroundStyle(accent)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .sidebarMatchedSelection(
+                        accent: accent,
+                        isSelected: isSelected,
+                        colorScheme: colorScheme,
+                        isActive: isSelectionActive
+                    )
                 }
-                .tag(Selection.favoriteCollection(collection.persistentModelID))
+                .buttonStyle(.plain)
                 .contextMenu {
                     Button { onEditCollection(collection) } label: { Label("Edit collection", systemImage: "pencil") }
                     Button(role: .destructive) { onDeleteCollection(collection) } label: { Label("Delete collection", systemImage: "trash") }
@@ -251,15 +251,33 @@ struct ModernSidebar: View {
             }
             ForEach(favoriteSnippets) { snippet in
                 let isSelected = selectedSnippetID == snippet.persistentModelID && sidebarSelectionContext == .favorites
-                Label {
-                    Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                } icon: {
-                    Image(systemName: "star.fill")
-                        .foregroundStyle(isSelected && shouldUseActiveSelectionIconColor ? Color.white : Color(red: 1.0, green: 0.80, blue: 0.20))
+                let accent = Color(red: 1.0, green: 0.80, blue: 0.20)
+                Button {
+                    selectedSnippetID = snippet.persistentModelID
+                    selectedCollectionID = nil
+                    sidebarSelectionContext = .favorites
+                    selectedLanguages.removeAll()
+                    selectedSearchCollections.removeAll()
+                } label: {
+                    Label {
+                        Text(snippet.title.isEmpty ? "untitled" : snippet.title.lowercased())
+                            .font(Mono.font(size: 11, weight: isSelected ? .semibold : .medium))
+                            .foregroundStyle(isSelected ? theme.text : theme.textMuted)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    } icon: {
+                        Image(systemName: "star.fill")
+                            .foregroundStyle(accent)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .sidebarMatchedSelection(
+                        accent: accent,
+                        isSelected: isSelected,
+                        colorScheme: colorScheme,
+                        isActive: isSelectionActive
+                    )
                 }
-                .tag(Selection.snippet(snippet.persistentModelID, .favorites))
+                .buttonStyle(.plain)
                 .contextMenu {
                     Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
                     Button(role: .destructive) { onDeleteSnippet(snippet) } label: { Label("Delete snippet", systemImage: "trash") }
@@ -290,8 +308,16 @@ struct ModernSidebar: View {
                 let count = counts[language.rawValue, default: 0]
                 let accent = Color(hex: language.accentHex) ?? Color.accentColor
                 let isSelected = selection.wrappedValue == .language(language.rawValue)
-                countRow(title: language.rawValue, icon: language.symbolName, iconColor: accent, count: count, isSelected: isSelected)
-                    .tag(Selection.language(language.rawValue))
+                Button {
+                    selectedLanguages = [language]
+                    selectedSearchCollections.removeAll()
+                    selectedSnippetID = nil
+                    selectedCollectionID = nil
+                    sidebarSelectionContext = .allSnippets
+                } label: {
+                    countRow(title: language.rawValue, icon: language.symbolName, iconColor: accent, count: count, isSelected: isSelected)
+                }
+                .buttonStyle(.plain)
             }
 
             if sidebarFilteredLanguages.isEmpty && !sidebarSearch.isEmpty {
@@ -305,8 +331,16 @@ struct ModernSidebar: View {
     @ViewBuilder
     private var recentlyDeletedSection: some View {
         Section {
-            countRow(title: "Recently Deleted", icon: "trash", iconColor: .red, count: trashedItemCount, isSelected: selection.wrappedValue == .trash)
-                .tag(Selection.trash)
+            Button {
+                selectedLanguages.removeAll()
+                selectedSearchCollections.removeAll()
+                selectedSnippetID = nil
+                selectedCollectionID = nil
+                sidebarSelectionContext = .trash
+            } label: {
+                countRow(title: "Recently Deleted", icon: "trash", iconColor: .red, count: trashedItemCount, isSelected: selection.wrappedValue == .trash)
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -317,37 +351,61 @@ struct ModernSidebar: View {
         let isSelected = selectedSnippetID == snippet.persistentModelID && sidebarSelectionContext == context
         let language = SupportedLanguage(rawValue: snippet.language) ?? .unknown
         let accent = Color(hex: language.accentHex) ?? Color.accentColor
-        let activeAccent = isSelected && shouldUseActiveSelectionIconColor ? Color.white : accent
-        Label {
-            Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        } icon: {
-            Circle()
-                .fill(activeAccent)
-                .frame(width: 8, height: 8)
+        Button {
+            selectedSnippetID = snippet.persistentModelID
+            selectedCollectionID = nil
+            sidebarSelectionContext = context
+            selectedLanguages.removeAll()
+            selectedSearchCollections.removeAll()
+        } label: {
+            Label {
+                Text(snippet.title.isEmpty ? "untitled" : snippet.title.lowercased())
+                    .font(Mono.font(size: 11, weight: isSelected ? .semibold : .medium))
+                    .foregroundStyle(isSelected ? theme.text : theme.textMuted)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            } icon: {
+                Circle()
+                    .fill(accent)
+                    .frame(width: 8, height: 8)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .sidebarMatchedSelection(
+                accent: accent,
+                isSelected: isSelected,
+                colorScheme: colorScheme,
+                isActive: isSelectionActive
+            )
         }
-        .tag(Selection.snippet(snippet.persistentModelID, context))
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
     private func countRow(title: String, icon: String, iconColor: Color, count: Int, isSelected: Bool = false) -> some View {
-        let activeIconColor = isSelected && shouldUseActiveSelectionIconColor ? Color.white : iconColor
         HStack {
             Label {
-                Text(title)
+                Text(title.lowercased())
+                    .font(Mono.font(size: 12, weight: isSelected ? .semibold : .medium))
+                    .foregroundStyle(isSelected ? theme.text : theme.textMuted)
             } icon: {
                 Image(systemName: icon)
-                    .foregroundStyle(activeIconColor)
+                    .font(Mono.font(size: 11, weight: .semibold))
+                    .foregroundStyle(iconColor)
             }
             Spacer()
             if count > 0 {
                 Text("\(count)")
-                    .font(.caption)
-                    .foregroundStyle(isSelected ? .white.opacity(0.8) : .secondary)
+                    .font(Mono.font(size: 10, weight: .semibold))
+                    .foregroundStyle(isSelected ? theme.text.opacity(0.74) : theme.textFaint)
             }
         }
-        .contentShape(Rectangle())
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .sidebarMatchedSelection(
+            accent: iconColor,
+            isSelected: isSelected,
+            colorScheme: colorScheme,
+            isActive: isSelectionActive
+        )
     }
 
     // MARK: - Context Menu Helpers
@@ -385,13 +443,17 @@ struct ModernSidebar: View {
 }
 
 private struct CollectionTreeRow: View {
+    @Environment(\.colorScheme) var colorScheme
     let collection: SnippetCollection
     let collections: [SnippetCollection]
     @Binding var expandedCollections: Set<PersistentIdentifier>
     let selectionValue: ModernSidebar.Selection?
-    let selectedSnippetID: PersistentIdentifier?
-    let sidebarSelectionContext: ContentView.SidebarSelectionContext?
-    let shouldUseActiveSelectionIconColor: Bool
+    @Binding var selectedSnippetID: PersistentIdentifier?
+    @Binding var selectedCollectionID: PersistentIdentifier?
+    @Binding var sidebarSelectionContext: ContentView.SidebarSelectionContext?
+    @Binding var selectedLanguages: Set<SupportedLanguage>
+    @Binding var selectedSearchCollections: Set<PersistentIdentifier>
+    let isSelectionActive: Bool
     let onEditCollection: (SnippetCollection) -> Void
     let onDeleteCollection: (SnippetCollection) -> Void
     let onEditSnippet: (Snippet) -> Void
@@ -400,6 +462,8 @@ private struct CollectionTreeRow: View {
     let onMoveSnippetToCollection: (Snippet, SnippetCollection) -> Void
     let onCopySnippetToCollection: (Snippet, SnippetCollection) -> Void
     let onHandleDrop: ([String], SnippetCollection?) -> Bool
+
+    private var theme: Theme { Theme.current(colorScheme) }
 
     private var isExpanded: Binding<Bool> {
         Binding(
@@ -426,9 +490,12 @@ private struct CollectionTreeRow: View {
                     collections: collections,
                     expandedCollections: $expandedCollections,
                     selectionValue: selectionValue,
-                    selectedSnippetID: selectedSnippetID,
-                    sidebarSelectionContext: sidebarSelectionContext,
-                    shouldUseActiveSelectionIconColor: shouldUseActiveSelectionIconColor,
+                    selectedSnippetID: $selectedSnippetID,
+                    selectedCollectionID: $selectedCollectionID,
+                    sidebarSelectionContext: $sidebarSelectionContext,
+                    selectedLanguages: $selectedLanguages,
+                    selectedSearchCollections: $selectedSearchCollections,
+                    isSelectionActive: isSelectionActive,
                     onEditCollection: onEditCollection,
                     onDeleteCollection: onDeleteCollection,
                     onEditSnippet: onEditSnippet,
@@ -444,19 +511,27 @@ private struct CollectionTreeRow: View {
                 snippetRow(snippet)
             }
         } label: {
-            countRow(
-                title: collection.name,
-                icon: collection.displayIconName,
-                iconColor: collection.displayColor,
-                count: activeSnippets.count,
-                isSelected: selectionValue == .collection(collection.persistentModelID)
-            )
+            Button {
+                selectedCollectionID = collection.persistentModelID
+                selectedSearchCollections.removeAll()
+                selectedSnippetID = nil
+                sidebarSelectionContext = .collection(collection.persistentModelID)
+                selectedLanguages.removeAll()
+            } label: {
+                countRow(
+                    title: collection.name,
+                    icon: collection.displayIconName,
+                    iconColor: collection.displayColor,
+                    count: activeSnippets.count,
+                    isSelected: selectionValue == .collection(collection.persistentModelID)
+                )
+            }
+            .buttonStyle(.plain)
             .contextMenu {
                 Button { onEditCollection(collection) } label: { Label("Edit collection", systemImage: "pencil") }
                 Button(role: .destructive) { onDeleteCollection(collection) } label: { Label("Delete collection", systemImage: "trash") }
             }
         }
-        .tag(ModernSidebar.Selection.collection(collection.persistentModelID))
         .dropDestination(for: String.self) { items, _ in onHandleDrop(items, collection) }
     }
 
@@ -464,18 +539,34 @@ private struct CollectionTreeRow: View {
         let isSelected = selectedSnippetID == snippet.persistentModelID && sidebarSelectionContext == .collection(collection.persistentModelID)
         let language = SupportedLanguage(rawValue: snippet.language) ?? .unknown
         let accent = Color(hex: language.accentHex) ?? Color.accentColor
-        let activeAccent = isSelected && shouldUseActiveSelectionIconColor ? Color.white : accent
 
-        return Label {
-            Text(snippet.title.isEmpty ? "Untitled" : snippet.title)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        } icon: {
-            Circle()
-                .fill(activeAccent)
-                .frame(width: 8, height: 8)
+        return Button {
+            selectedSnippetID = snippet.persistentModelID
+            selectedCollectionID = nil
+            sidebarSelectionContext = .collection(collection.persistentModelID)
+            selectedLanguages.removeAll()
+            selectedSearchCollections.removeAll()
+        } label: {
+            Label {
+                Text(snippet.title.isEmpty ? "untitled" : snippet.title.lowercased())
+                    .font(Mono.font(size: 11, weight: isSelected ? .semibold : .medium))
+                    .foregroundStyle(isSelected ? theme.text : theme.textMuted)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            } icon: {
+                Circle()
+                    .fill(accent)
+                    .frame(width: 8, height: 8)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .sidebarMatchedSelection(
+                accent: accent,
+                isSelected: isSelected,
+                colorScheme: colorScheme,
+                isActive: isSelectionActive
+            )
         }
-        .tag(ModernSidebar.Selection.snippet(snippet.persistentModelID, .collection(collection.persistentModelID)))
+        .buttonStyle(.plain)
         .draggable(String(snippet.persistentModelID.hashValue))
         .contextMenu {
             Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
@@ -500,22 +591,86 @@ private struct CollectionTreeRow: View {
     }
 
     private func countRow(title: String, icon: String, iconColor: Color, count: Int, isSelected: Bool) -> some View {
-        let activeIconColor = isSelected && shouldUseActiveSelectionIconColor ? Color.white : iconColor
-
         return HStack {
             Label {
-                Text(title)
+                Text(title.lowercased())
+                    .font(Mono.font(size: 12, weight: isSelected ? .semibold : .medium))
+                    .foregroundStyle(isSelected ? theme.text : theme.textMuted)
             } icon: {
                 Image(systemName: icon)
-                    .foregroundStyle(activeIconColor)
+                    .font(Mono.font(size: 11, weight: .semibold))
+                    .foregroundStyle(iconColor)
             }
             Spacer()
             if count > 0 {
                 Text("\(count)")
-                    .font(.caption)
-                    .foregroundStyle(isSelected ? .white.opacity(0.8) : .secondary)
+                    .font(Mono.font(size: 10, weight: .semibold))
+                    .foregroundStyle(isSelected ? theme.text.opacity(0.74) : theme.textFaint)
             }
         }
-        .contentShape(Rectangle())
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .sidebarMatchedSelection(
+            accent: iconColor,
+            isSelected: isSelected,
+            colorScheme: colorScheme,
+            isActive: isSelectionActive
+        )
+    }
+}
+
+private struct SidebarMatchedSelectionModifier: ViewModifier {
+    let accent: Color
+    let isSelected: Bool
+    let colorScheme: ColorScheme
+    let isActive: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.vertical, 4)
+            .padding(.horizontal, 8)
+            .contentShape(Rectangle())
+            .background {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(selectionFill)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(selectionStroke, lineWidth: isSelected ? 1 : 0)
+            }
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isSelected)
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isActive)
+    }
+
+    private var selectionFill: Color {
+        guard isSelected else { return .clear }
+        let opacity = if isActive {
+            colorScheme == .dark ? 0.32 : 0.20
+        } else {
+            colorScheme == .dark ? 0.18 : 0.12
+        }
+        return accent.opacity(opacity)
+    }
+
+    private var selectionStroke: Color {
+        guard isSelected else { return .clear }
+        return accent.opacity(isActive ? 0.42 : 0.24)
+    }
+}
+
+private extension View {
+    func sidebarMatchedSelection(
+        accent: Color,
+        isSelected: Bool,
+        colorScheme: ColorScheme,
+        isActive: Bool
+    ) -> some View {
+        modifier(
+            SidebarMatchedSelectionModifier(
+                accent: accent,
+                isSelected: isSelected,
+                colorScheme: colorScheme,
+                isActive: isActive
+            )
+        )
     }
 }
