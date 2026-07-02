@@ -7,23 +7,23 @@
         "key": "Close snippet",
         "location": {
           "startingColumn": 33,
-          "startingLine": 78
+          "startingLine": 79
         }
       },
       {
         "comment": "",
         "key": "//",
         "location": {
-          "startingColumn": 22,
-          "startingLine": 91
+          "startingColumn": 30,
+          "startingLine": 94
         }
       },
       {
         "comment": "",
         "key": "snippet",
         "location": {
-          "startingColumn": 22,
-          "startingLine": 94
+          "startingColumn": 30,
+          "startingLine": 97
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 22,
-          "startingLine": 220
+          "startingLine": 228
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "View larger",
         "location": {
           "startingColumn": 31,
-          "startingLine": 237
+          "startingLine": 245
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "View attachment",
         "location": {
           "startingColumn": 45,
-          "startingLine": 238
+          "startingLine": 246
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "%@:",
         "location": {
           "startingColumn": 18,
-          "startingLine": 270
+          "startingLine": 278
         }
       },
       {
@@ -63,7 +63,7 @@
         "key": "Attachment",
         "location": {
           "startingColumn": 30,
-          "startingLine": 376
+          "startingLine": 384
         }
       },
       {
@@ -71,7 +71,23 @@
         "key": "Done",
         "location": {
           "startingColumn": 28,
-          "startingLine": 379
+          "startingLine": 387
+        }
+      },
+      {
+        "comment": "",
+        "key": "Missing File",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 419
+        }
+      },
+      {
+        "comment": "",
+        "key": "Missing File",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 515
         }
       }
     ]

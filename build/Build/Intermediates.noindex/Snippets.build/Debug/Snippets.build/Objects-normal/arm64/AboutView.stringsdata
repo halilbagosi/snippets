@@ -4,18 +4,18 @@
     "Localizable": [
       {
         "comment": "",
-        "key": "Snippets",
+        "key": "Made by Developer Name",
         "location": {
-          "startingColumn": 26,
-          "startingLine": 41
+          "startingColumn": 18,
+          "startingLine": 50
         }
       },
       {
         "comment": "",
-        "key": "Made by Developer Name",
+        "key": "Snippets",
         "location": {
-          "startingColumn": 26,
-          "startingLine": 49
+          "startingColumn": 22,
+          "startingLine": 37
         }
       }
     ]

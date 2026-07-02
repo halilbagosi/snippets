@@ -51,8 +51,14 @@ struct SnippetGalleryView: View {
     @State private var fabHovered = false
     @State private var pressedSnippetID: PersistentIdentifier? = nil
     @State private var pressedResetTask: Task<Void, Never>? = nil
-    @State private var cardSizes: [PersistentIdentifier: CGSize] = [:]
-    @State private var cardFrames: [PersistentIdentifier: CGRect] = [:]
+    /// Card geometry is only read from event handlers (delete snapshots), never
+    /// from `body`, so it lives in a plain class: per-card GeometryReader writes
+    /// during layout must not invalidate the whole gallery.
+    private final class CardGeometryStore {
+        var sizes: [PersistentIdentifier: CGSize] = [:]
+        var frames: [PersistentIdentifier: CGRect] = [:]
+    }
+    @State private var cardGeometry = CardGeometryStore()
     #if canImport(AppKit)
     @State private var pendingDeleteSnapshots: [PersistentIdentifier: PendingDeleteSnapshot] = [:]
     @State private var deletingSnippetEffects: [PersistentIdentifier: DeletingSnippetEffect] = [:]
@@ -82,7 +88,7 @@ struct SnippetGalleryView: View {
 
     private let columns = [GridItem(.adaptive(minimum: 420, maximum: 640), spacing: 20)]
     private let subcollectionColumns = [GridItem(.adaptive(minimum: 440, maximum: 680), spacing: 16)]
-    private let deletionDisintegrationDuration: TimeInterval = 1.0
+    private let deletionDisintegrationDuration: TimeInterval = 1.15
     private var sectionCollapseAnimation: Animation {
         .interactiveSpring(response: 0.34, dampingFraction: 0.96, blendDuration: 0.08)
     }
@@ -108,12 +114,12 @@ struct SnippetGalleryView: View {
         )
     }
     private var collectionFilterQuery: String {
-        collectionFilterSearchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        collectionFilterSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     private var collectionFilterMatches: [SnippetCollection] {
         guard !collectionFilterQuery.isEmpty else { return availableCollections }
         return availableCollections.filter { collection in
-            collection.name.lowercased().contains(collectionFilterQuery)
+            collection.name.range(of: collectionFilterQuery, options: .caseInsensitive) != nil
         }
     }
     private var collectionFilterSectionCount: Int {
@@ -337,38 +343,34 @@ struct SnippetGalleryView: View {
         viewModel.selectedCollections(from: subcollections)
     }
 
-    private var moveTargetCollections: [SnippetCollection] {
-        let selectedSnippets = selectedSnippetsForMove
-        let selectedCollections = selectedCollectionsForMove
-
-        return availableCollections.filter { target in
-            if selectedCollections.contains(where: { $0.persistentModelID == target.persistentModelID }) {
-                return false
+    private func moveTargetCollections(
+        selectedSnippets: [Snippet],
+        selectedCollections: [SnippetCollection]
+    ) -> [SnippetCollection] {
+        // Excluded targets: the selected collections themselves, any collection
+        // already containing a selected snippet, and the current parent of any
+        // selected collection. Collected once so the filter below is O(1) per target.
+        var excludedIDs = Set(selectedCollections.map(\.persistentModelID))
+        for snippet in selectedSnippets {
+            for collection in snippet.collections {
+                excludedIDs.insert(collection.persistentModelID)
             }
-
-            let hasSnippetInTarget = selectedSnippets.contains(where: { snip in
-                snip.collections.contains(where: { $0.persistentModelID == target.persistentModelID })
-            })
-            if hasSnippetInTarget {
-                return false
-            }
-
-            let hasCollectionInTarget = selectedCollections.contains(where: { coll in
-                coll.parent?.persistentModelID == target.persistentModelID
-            })
-            if hasCollectionInTarget {
-                return false
-            }
-
-            return true
         }
+        for collection in selectedCollections {
+            if let parentID = collection.parent?.persistentModelID {
+                excludedIDs.insert(parentID)
+            }
+        }
+
+        return availableCollections.filter { !excludedIDs.contains($0.persistentModelID) }
     }
 
-    private var moveShowsLibraryOption: Bool {
-        let selectedSnippets = selectedSnippetsForMove
-        let selectedCollections = selectedCollectionsForMove
-        let allSnippetsInCollections = selectedSnippets.isEmpty ? true : selectedSnippets.allSatisfy { !$0.collections.isEmpty }
-        let allCollectionsAreSubcollections = selectedCollections.isEmpty ? true : selectedCollections.allSatisfy { $0.parent != nil }
+    private func moveShowsLibraryOption(
+        selectedSnippets: [Snippet],
+        selectedCollections: [SnippetCollection]
+    ) -> Bool {
+        let allSnippetsInCollections = selectedSnippets.allSatisfy { !$0.collections.isEmpty }
+        let allCollectionsAreSubcollections = selectedCollections.allSatisfy { $0.parent != nil }
         let hasAnySelection = !selectedSnippets.isEmpty || !selectedCollections.isEmpty
         return hasAnySelection && allSnippetsInCollections && allCollectionsAreSubcollections
     }
@@ -388,8 +390,14 @@ struct SnippetGalleryView: View {
             let selectedCollections = selectedCollectionsForMove
 
             MoveToCollectionCard(
-                collections: moveTargetCollections,
-                showLibraryOption: moveShowsLibraryOption,
+                collections: moveTargetCollections(
+                    selectedSnippets: selectedSnippets,
+                    selectedCollections: selectedCollections
+                ),
+                showLibraryOption: moveShowsLibraryOption(
+                    selectedSnippets: selectedSnippets,
+                    selectedCollections: selectedCollections
+                ),
                 itemCount: selectedSnippets.count + selectedCollections.count,
                 onMove: { collection in
                     if let target = collection {
@@ -431,47 +439,44 @@ struct SnippetGalleryView: View {
     }
 
     #if canImport(AppKit)
+    /// The Metal overlays clock themselves off the display link — SwiftUI only
+    /// places them once per effect, so per-frame progress never round-trips
+    /// through view updates (which stuttered during the deletion grid reflow).
     private var deletionDisintegrationLayer: some View {
         GeometryReader { _ in
-            TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
-                ZStack {
-                    ForEach(Array(deletingSnippetEffects.values).sorted { lhs, rhs in
-                        if lhs.frame.minY == rhs.frame.minY {
-                            return lhs.frame.minX < rhs.frame.minX
-                        }
-                        return lhs.frame.minY < rhs.frame.minY
-                    }, id: \.id) { effect in
-                        MetalDisintegrationOverlay(
-                            progress: disintegrationProgress(startDate: effect.startDate, now: timeline.date),
-                            accent: effect.accent,
-                            snapshot: effect.image
-                        )
-                        .frame(
-                            width: max(effect.frame.width, 1),
-                            height: max(effect.frame.height, 1)
-                        )
-                        .position(x: effect.frame.midX, y: effect.frame.midY)
-                        .compositingGroup()
+            ZStack {
+                ForEach(Array(deletingSnippetEffects.values).sorted { lhs, rhs in
+                    if lhs.frame.minY == rhs.frame.minY {
+                        return lhs.frame.minX < rhs.frame.minX
                     }
+                    return lhs.frame.minY < rhs.frame.minY
+                }, id: \.id) { effect in
+                    MetalDisintegrationOverlay(
+                        startDate: effect.startDate,
+                        duration: deletionDisintegrationDuration,
+                        accent: effect.accent,
+                        snapshot: effect.image
+                    )
+                    .frame(
+                        width: max(effect.frame.width, 1),
+                        height: max(effect.frame.height, 1)
+                    )
+                    .position(x: effect.frame.midX, y: effect.frame.midY)
+                    .compositingGroup()
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-    }
-
-    private func disintegrationProgress(startDate: Date, now: Date) -> CGFloat {
-        let linear = min(max(now.timeIntervalSince(startDate) / deletionDisintegrationDuration, 0), 1)
-        return linear * linear * (3 - 2 * linear)
     }
 
     private func cacheDeletionSnapshot(for snippet: Snippet) {
         guard MetalDisintegrationOverlay.isSupported else { return }
         let id = snippet.persistentModelID
-        let fallbackSize = cardFrames[id]?.size ?? .zero
-        let size = cardSizes[id] ?? fallbackSize
+        let fallbackSize = cardGeometry.frames[id]?.size ?? .zero
+        let size = cardGeometry.sizes[id] ?? fallbackSize
         guard size.width > 1, size.height > 1 else { return }
 
-        let frame = cardFrames[id] ?? CGRect(origin: .zero, size: size)
+        let frame = cardGeometry.frames[id] ?? CGRect(origin: .zero, size: size)
         let cardView = SnippetCard(
             snippet: snippet,
             inTrashView: isTrashMode,
@@ -528,8 +533,8 @@ struct SnippetGalleryView: View {
             try? await Task.sleep(nanoseconds: delay)
             guard !Task.isCancelled else { return }
             deletingSnippetEffects.removeValue(forKey: id)
-            cardFrames.removeValue(forKey: id)
-            cardSizes.removeValue(forKey: id)
+            cardGeometry.frames.removeValue(forKey: id)
+            cardGeometry.sizes.removeValue(forKey: id)
             deletionCleanupTasks.removeValue(forKey: id)
         }
         #endif
@@ -632,12 +637,12 @@ struct SnippetGalleryView: View {
                 .background(GeometryReader { proxy in
                     Color.clear
                         .onAppear {
-                            cardSizes[snippet.persistentModelID] = proxy.size
-                            cardFrames[snippet.persistentModelID] = proxy.frame(in: .named("gallerySpace"))
+                            cardGeometry.sizes[snippet.persistentModelID] = proxy.size
+                            cardGeometry.frames[snippet.persistentModelID] = proxy.frame(in: .named("gallerySpace"))
                         }
                         .onChange(of: proxy.size) { _, newSize in
-                            cardSizes[snippet.persistentModelID] = newSize
-                            cardFrames[snippet.persistentModelID] = proxy.frame(in: .named("gallerySpace"))
+                            cardGeometry.sizes[snippet.persistentModelID] = newSize
+                            cardGeometry.frames[snippet.persistentModelID] = proxy.frame(in: .named("gallerySpace"))
                         }
                 })
                     .scaleEffect(pressedSnippetID == snippet.persistentModelID ? 0.97 : 1.0)
@@ -1186,7 +1191,7 @@ struct SnippetGalleryView: View {
     private func collectionFilterRow(_ collection: SnippetCollection) -> some View {
         let isSelected = selectedSearchCollections.contains(collection.persistentModelID)
         let accent = collection.displayColor
-        let activeCount = collection.snippets.filter { $0.deletedAt == nil }.count
+        let activeCount = collection.snippets.count(where: { $0.deletedAt == nil })
 
         return Button {
             if isSelected {

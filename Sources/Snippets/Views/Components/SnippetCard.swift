@@ -189,10 +189,10 @@ struct SnippetCard: View {
 
             HStack(spacing: 8) {
                 LanguageBadge(language: language, compact: true)
-                if snippet.mediaItems.count > 0 {
+                if !mediaItems.isEmpty {
                     HStack(spacing: 4) {
                         Image(systemName: "paperclip")
-                        Text("\(snippet.mediaItems.count)")
+                        Text("\(mediaItems.count)")
                     }
                     .font(Mono.font(size: 10, weight: .semibold))
                     .foregroundStyle(theme.textMuted)

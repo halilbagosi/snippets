@@ -4,90 +4,34 @@
     "Localizable": [
       {
         "comment": "",
-        "key": "Color Scheme",
+        "key": "Color scheme: %@",
         "location": {
-          "startingColumn": 24,
-          "startingLine": 29
+          "startingColumn": 29,
+          "startingLine": 116
         }
       },
       {
         "comment": "",
-        "key": "System",
+        "key": "Theme color: %@",
         "location": {
-          "startingColumn": 26,
-          "startingLine": 30
+          "startingColumn": 29,
+          "startingLine": 273
         }
       },
       {
         "comment": "",
-        "key": "Light",
+        "key": "Custom color",
         "location": {
-          "startingColumn": 26,
-          "startingLine": 31
+          "startingColumn": 15,
+          "startingLine": 329
         }
       },
       {
         "comment": "",
-        "key": "Dark",
+        "key": "Custom theme color",
         "location": {
-          "startingColumn": 26,
-          "startingLine": 32
-        }
-      },
-      {
-        "comment": "",
-        "key": "Color Scheme",
-        "location": {
-          "startingColumn": 22,
-          "startingLine": 36
-        }
-      },
-      {
-        "comment": "",
-        "key": "Focused Mode",
-        "location": {
-          "startingColumn": 24,
-          "startingLine": 41
-        }
-      },
-      {
-        "comment": "",
-        "key": "Remove the animated color gradient from the background",
-        "location": {
-          "startingColumn": 27,
-          "startingLine": 42
-        }
-      },
-      {
-        "comment": "",
-        "key": "Disable Hover Effects",
-        "location": {
-          "startingColumn": 24,
-          "startingLine": 44
-        }
-      },
-      {
-        "comment": "",
-        "key": "Remove hover animations from snippet cards",
-        "location": {
-          "startingColumn": 27,
-          "startingLine": 45
-        }
-      },
-      {
-        "comment": "",
-        "key": "Behavior",
-        "location": {
-          "startingColumn": 22,
-          "startingLine": 47
-        }
-      },
-      {
-        "comment": "",
-        "key": "Theme Color",
-        "location": {
-          "startingColumn": 22,
-          "startingLine": 54
+          "startingColumn": 29,
+          "startingLine": 330
         }
       },
       {
@@ -95,23 +39,7 @@
         "key": "",
         "location": {
           "startingColumn": 25,
-          "startingLine": 93
-        }
-      },
-      {
-        "comment": "",
-        "key": "Custom color",
-        "location": {
-          "startingColumn": 19,
-          "startingLine": 100
-        }
-      },
-      {
-        "comment": "",
-        "key": "Theme color: %@",
-        "location": {
-          "startingColumn": 37,
-          "startingLine": 87
+          "startingLine": 292
         }
       }
     ]

@@ -24,15 +24,21 @@ struct TrashView: View {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Case-insensitive substring match without allocating a lowercased copy
+    /// of `haystack` (runs over every trashed snippet's full code per pass).
+    private func matches(_ haystack: String, _ needle: String) -> Bool {
+        haystack.range(of: needle, options: .caseInsensitive) != nil
+    }
+
     private var matchingTrashedSnippets: [Snippet] {
-        guard !trimmedSearchText.isEmpty else { return [] }
-        let needle = trimmedSearchText.lowercased()
+        let needle = trimmedSearchText
+        guard !needle.isEmpty else { return [] }
 
         return trashedSnippets.filter { snippet in
-            snippet.title.lowercased().contains(needle) ||
-            snippet.snippetDescription.lowercased().contains(needle) ||
-            snippet.code.lowercased().contains(needle) ||
-            snippet.language.lowercased().contains(needle)
+            matches(snippet.title, needle) ||
+            matches(snippet.snippetDescription, needle) ||
+            matches(snippet.code, needle) ||
+            matches(snippet.language, needle)
         }
     }
 

@@ -16,7 +16,6 @@ struct ModernSidebar: View {
     }
 
     let snippets: [Snippet]
-    let uncategorizedSnippets: [Snippet]
     let collections: [SnippetCollection]
     let frequentlyUsedSnippets: [Snippet]
     let favoriteSnippets: [Snippet]
@@ -500,6 +499,9 @@ private struct CollectionTreeRow: View {
     }
 
     var body: some View {
+        // Hoisted so the snippets relationship is faulted and filtered once per
+        // row evaluation (the label's count and the expanded content share it).
+        let activeSnippets = self.activeSnippets
         DisclosureGroup(isExpanded: isExpanded) {
             ForEach(collection.children) { child in
                 CollectionTreeRow(

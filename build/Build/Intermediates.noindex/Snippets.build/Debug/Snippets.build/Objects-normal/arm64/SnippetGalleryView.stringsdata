@@ -7,7 +7,7 @@
         "key": "Put back",
         "location": {
           "startingColumn": 39,
-          "startingLine": 555
+          "startingLine": 664
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Delete permanently",
         "location": {
           "startingColumn": 39,
-          "startingLine": 558
+          "startingLine": 667
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Edit snippet",
         "location": {
           "startingColumn": 39,
-          "startingLine": 562
+          "startingLine": 671
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "All snippets",
         "location": {
           "startingColumn": 47,
-          "startingLine": 567
+          "startingLine": 676
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Move to",
         "location": {
           "startingColumn": 39,
-          "startingLine": 579
+          "startingLine": 688
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "Delete snippet",
         "location": {
           "startingColumn": 39,
-          "startingLine": 583
+          "startingLine": 692
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "No collections",
         "location": {
           "startingColumn": 66,
-          "startingLine": 939
+          "startingLine": 1037
         }
       },
       {
@@ -63,23 +63,23 @@
         "key": "No matches",
         "location": {
           "startingColumn": 85,
-          "startingLine": 939
+          "startingLine": 1037
         }
       },
       {
         "comment": "",
         "key": "Clear Selection",
         "location": {
-          "startingColumn": 26,
-          "startingLine": 965
+          "startingColumn": 34,
+          "startingLine": 1066
         }
       },
       {
         "comment": "",
         "key": "%lld",
         "location": {
-          "startingColumn": 26,
-          "startingLine": 967
+          "startingColumn": 34,
+          "startingLine": 1068
         }
       },
       {
@@ -87,7 +87,23 @@
         "key": "Filter",
         "location": {
           "startingColumn": 23,
-          "startingLine": 995
+          "startingLine": 1098
+        }
+      },
+      {
+        "comment": "",
+        "key": "System",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1128
+        }
+      },
+      {
+        "comment": "",
+        "key": "No Collection",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1155
         }
       },
       {
@@ -95,7 +111,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 22,
-          "startingLine": 1071
+          "startingLine": 1226
         }
       },
       {
@@ -103,7 +119,7 @@
         "key": ">",
         "location": {
           "startingColumn": 18,
-          "startingLine": 1098
+          "startingLine": 1253
         }
       },
       {
@@ -111,7 +127,7 @@
         "key": "search title, description, or code…",
         "location": {
           "startingColumn": 30,
-          "startingLine": 1105
+          "startingLine": 1260
         }
       },
       {
@@ -119,7 +135,7 @@
         "key": "",
         "location": {
           "startingColumn": 17,
-          "startingLine": 1103
+          "startingLine": 1258
         }
       },
       {
@@ -127,7 +143,7 @@
         "key": "esc",
         "location": {
           "startingColumn": 34,
-          "startingLine": 1123
+          "startingLine": 1278
         }
       },
       {
@@ -135,7 +151,7 @@
         "key": "⌘F",
         "location": {
           "startingColumn": 42,
-          "startingLine": 1123
+          "startingLine": 1278
         }
       },
       {
@@ -143,7 +159,7 @@
         "key": "snippets",
         "location": {
           "startingColumn": 22,
-          "startingLine": 1093
+          "startingLine": 1248
         }
       },
       {
@@ -151,7 +167,7 @@
         "key": "// trash is empty",
         "location": {
           "startingColumn": 32,
-          "startingLine": 1197
+          "startingLine": 1352
         }
       },
       {
@@ -159,7 +175,7 @@
         "key": "// no snippets yet",
         "location": {
           "startingColumn": 54,
-          "startingLine": 1197
+          "startingLine": 1352
         }
       },
       {
@@ -167,7 +183,7 @@
         "key": "new snippet",
         "location": {
           "startingColumn": 26,
-          "startingLine": 1202
+          "startingLine": 1357
         }
       },
       {
@@ -175,23 +191,39 @@
         "key": "new snippet",
         "location": {
           "startingColumn": 26,
-          "startingLine": 1223
+          "startingLine": 1378
         }
       },
       {
         "comment": "",
-        "key": "Move to Collection",
+        "key": "Close",
         "location": {
-          "startingColumn": 30,
-          "startingLine": 1311
+          "startingColumn": 33,
+          "startingLine": 1505
         }
       },
       {
         "comment": "",
-        "key": "Cancel",
+        "key": "No matching collections",
         "location": {
-          "startingColumn": 28,
-          "startingLine": 1314
+          "startingColumn": 38,
+          "startingLine": 1453
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search collections",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 1514
+        }
+      },
+      {
+        "comment": "",
+        "key": "All Snippets",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1553
         }
       }
     ]

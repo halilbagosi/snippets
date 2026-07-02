@@ -7,7 +7,7 @@
         "key": "Could not save snippet",
         "location": {
           "startingColumn": 16,
-          "startingLine": 86
+          "startingLine": 88
         }
       },
       {
@@ -15,7 +15,15 @@
         "key": "OK",
         "location": {
           "startingColumn": 20,
-          "startingLine": 90
+          "startingLine": 92
+        }
+      },
+      {
+        "comment": "",
+        "key": "Title and code are required to save.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 116
         }
       },
       {
@@ -23,7 +31,7 @@
         "key": "Discard changes?",
         "location": {
           "startingColumn": 17,
-          "startingLine": 162
+          "startingLine": 173
         }
       },
       {
@@ -31,7 +39,7 @@
         "key": "●",
         "location": {
           "startingColumn": 22,
-          "startingLine": 120
+          "startingLine": 131
         }
       },
       {
@@ -39,7 +47,7 @@
         "key": "cancel",
         "location": {
           "startingColumn": 22,
-          "startingLine": 147
+          "startingLine": 158
         }
       },
       {
@@ -47,7 +55,7 @@
         "key": "Discard",
         "location": {
           "startingColumn": 24,
-          "startingLine": 166
+          "startingLine": 177
         }
       },
       {
@@ -55,7 +63,7 @@
         "key": "Keep editing",
         "location": {
           "startingColumn": 24,
-          "startingLine": 173
+          "startingLine": 184
         }
       },
       {
@@ -63,7 +71,7 @@
         "key": "Your snippet has unsaved content. Discard it?",
         "location": {
           "startingColumn": 22,
-          "startingLine": 175
+          "startingLine": 186
         }
       },
       {
@@ -71,7 +79,7 @@
         "key": "⏎ %@",
         "location": {
           "startingColumn": 26,
-          "startingLine": 184
+          "startingLine": 207
         }
       },
       {
@@ -79,7 +87,7 @@
         "key": "e.g. Procedural Noise Shader",
         "location": {
           "startingColumn": 23,
-          "startingLine": 218
+          "startingLine": 241
         }
       },
       {
@@ -87,7 +95,7 @@
         "key": "What does this snippet do?",
         "location": {
           "startingColumn": 23,
-          "startingLine": 234
+          "startingLine": 258
         }
       },
       {
@@ -95,7 +103,7 @@
         "key": "Auto-detect",
         "location": {
           "startingColumn": 28,
-          "startingLine": 253
+          "startingLine": 277
         }
       },
       {
@@ -103,7 +111,7 @@
         "key": "auto-detect",
         "location": {
           "startingColumn": 34,
-          "startingLine": 269
+          "startingLine": 293
         }
       },
       {
@@ -111,7 +119,7 @@
         "key": "reset to auto",
         "location": {
           "startingColumn": 30,
-          "startingLine": 288
+          "startingLine": 316
         }
       },
       {
@@ -119,7 +127,7 @@
         "key": "// paste or type your code here…",
         "location": {
           "startingColumn": 26,
-          "startingLine": 330
+          "startingLine": 358
         }
       },
       {
@@ -127,7 +135,7 @@
         "key": "No collections yet. Create one from the sidebar.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 359
+          "startingLine": 388
         }
       },
       {
@@ -135,7 +143,7 @@
         "key": "optional",
         "location": {
           "startingColumn": 22,
-          "startingLine": 408
+          "startingLine": 437
         }
       },
       {
@@ -143,7 +151,7 @@
         "key": "%lld attached",
         "location": {
           "startingColumn": 30,
-          "startingLine": 436
+          "startingLine": 465
         }
       },
       {
@@ -151,7 +159,15 @@
         "key": "attach image / video",
         "location": {
           "startingColumn": 34,
-          "startingLine": 421
+          "startingLine": 450
+        }
+      },
+      {
+        "comment": "",
+        "key": "Missing File",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 602
         }
       }
     ]

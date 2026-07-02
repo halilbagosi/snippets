@@ -2,36 +2,49 @@ import SwiftUI
 import MetalKit
 
 /// A SwiftUI overlay that renders a card snapshot through the disintegration shader.
+///
+/// The animation is clocked by the Metal view's own display link — SwiftUI only
+/// supplies the start date once; per-frame progress never round-trips through
+/// view updates, so frame pacing survives main-thread layout work (e.g. the
+/// grid reflow that runs while a card is being deleted).
 struct MetalDisintegrationOverlay: View {
-    var progress: CGFloat
+    var startDate: Date
+    var duration: TimeInterval
     var accent: Color
     #if os(macOS)
     var snapshot: NSImage?
     #endif
+    /// Renders a single static frame instead of animating (previews).
+    var fixedProgress: CGFloat? = nil
 
     static var isSupported: Bool {
         MTLCreateSystemDefaultDevice() != nil
     }
 
     var body: some View {
-        Group {
-            #if os(macOS)
-            MetalDisintegrationRepresentable(progress: progress, accent: accent, snapshot: snapshot)
-                .allowsHitTesting(false)
-            #else
-            Rectangle()
-                .fill(accent.opacity(Double(1 - progress) * 0.10))
-                .allowsHitTesting(false)
-            #endif
-        }
+        #if os(macOS)
+        MetalDisintegrationRepresentable(
+            startDate: startDate,
+            duration: duration,
+            accent: accent,
+            snapshot: snapshot,
+            fixedProgress: fixedProgress
+        )
+        .allowsHitTesting(false)
+        #else
+        Color.clear
+            .allowsHitTesting(false)
+        #endif
     }
 }
 
 #if os(macOS)
 private struct MetalDisintegrationRepresentable: NSViewRepresentable {
-    var progress: CGFloat
+    var startDate: Date
+    var duration: TimeInterval
     var accent: Color
     var snapshot: NSImage?
+    var fixedProgress: CGFloat?
 
     func makeNSView(context: Context) -> MTKView {
         let view = MTKView()
@@ -39,8 +52,6 @@ private struct MetalDisintegrationRepresentable: NSViewRepresentable {
         view.layer?.isOpaque = false
         view.layer?.backgroundColor = NSColor.clear.cgColor
         view.clearColor = MTLClearColorMake(0, 0, 0, 0)
-        view.enableSetNeedsDisplay = true
-        view.isPaused = true
 
         if context.coordinator.renderer == nil {
             context.coordinator.renderer = MetalDisintegrationRenderer(mtkView: view)
@@ -51,7 +62,6 @@ private struct MetalDisintegrationRepresentable: NSViewRepresentable {
 
     func updateNSView(_ nsView: MTKView, context: Context) {
         guard let renderer = context.coordinator.renderer else { return }
-        renderer.progress = Float(progress)
         if let nsAccent = NSColor(accent).usingColorSpace(.deviceRGB) {
             renderer.accentColor = SIMD4<Float>(
                 Float(nsAccent.redComponent),
@@ -61,7 +71,11 @@ private struct MetalDisintegrationRepresentable: NSViewRepresentable {
             )
         }
         renderer.updateTexture(from: snapshot)
-        nsView.setNeedsDisplay(nsView.bounds)
+        if let fixedProgress {
+            renderer.showFixedProgress(Float(fixedProgress))
+        } else {
+            renderer.beginAnimation(startDate: startDate, duration: duration)
+        }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -73,7 +87,7 @@ private struct MetalDisintegrationRepresentable: NSViewRepresentable {
 #endif
 
 #Preview("MetalDisintegrationOverlay") {
-    MetalDisintegrationOverlay(progress: 0.5, accent: .blue)
+    MetalDisintegrationOverlay(startDate: Date(), duration: 1.15, accent: .blue, fixedProgress: 0.5)
         .frame(width: 300, height: 400)
         .background(Color.black)
 }

@@ -11,8 +11,8 @@ struct ContentView: View {
 
     @Query(filter: #Predicate<Snippet> { $0.deletedAt == nil }, sort: [SortDescriptor(\Snippet.updatedAt, order: .reverse)])
     private var snippets: [Snippet]
-    @Query(sort: [SortDescriptor(\Snippet.updatedAt, order: .reverse)])
-    private var allSnippets: [Snippet]
+    @Query(filter: #Predicate<Snippet> { $0.deletedAt != nil }, sort: [SortDescriptor(\Snippet.updatedAt, order: .reverse)])
+    private var trashedSnippets: [Snippet]
     @Query(sort: [SortDescriptor(\SnippetCollection.updatedAt, order: .reverse)])
     private var collections: [SnippetCollection]
 
@@ -74,13 +74,6 @@ struct ContentView: View {
     @State private var undoToastMessage: String = ""
     @State private var toastHideTask: Task<Void, Never>? = nil
 
-    private var uncategorizedSnippets: [Snippet] {
-        snippets.filter { snippet in
-            !snippet.collections.contains(where: { !$0.isDeleted })
-        }
-    }
-
-
     private struct DeletedMediaSnapshot {
         let fileName: String
         let kind: MediaKind
@@ -110,12 +103,33 @@ struct ContentView: View {
         debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private var collectionLookup: [PersistentIdentifier: SnippetCollection] {
-        Dictionary(uniqueKeysWithValues: collections.map { ($0.persistentModelID, $0) })
+    /// Memoized collection indexes. Plain (non-observed) class on purpose:
+    /// refreshing it during body evaluation must not invalidate the view, and
+    /// the signature check keeps it consistent with the `collections` query.
+    private final class CollectionIndexCache {
+        var signature: Int? = nil
+        var lookup: [PersistentIdentifier: SnippetCollection] = [:]
+        var descendantIDs: [PersistentIdentifier: Set<PersistentIdentifier>] = [:]
+    }
+    @State private var collectionIndexCache = CollectionIndexCache()
+
+    /// Hash of the collection graph's structure (membership + parent links) —
+    /// the only inputs `collectionLookup`/`descendantIDsByCollectionID` depend on.
+    private var collectionStructureSignature: Int {
+        var hasher = Hasher()
+        hasher.combine(collections.count)
+        for collection in collections {
+            hasher.combine(collection.persistentModelID)
+            hasher.combine(collection.parent?.persistentModelID)
+        }
+        return hasher.finalize()
     }
 
-    private var descendantIDsByCollectionID: [PersistentIdentifier: Set<PersistentIdentifier>] {
-        let lookup = collectionLookup
+    private func refreshCollectionIndexCacheIfNeeded() {
+        let signature = collectionStructureSignature
+        guard collectionIndexCache.signature != signature else { return }
+
+        let lookup = Dictionary(uniqueKeysWithValues: collections.map { ($0.persistentModelID, $0) })
         var cache: [PersistentIdentifier: Set<PersistentIdentifier>] = [:]
 
         func descendants(for collection: SnippetCollection) -> Set<PersistentIdentifier> {
@@ -133,7 +147,20 @@ struct ContentView: View {
         for collection in lookup.values {
             _ = descendants(for: collection)
         }
-        return cache
+
+        collectionIndexCache.signature = signature
+        collectionIndexCache.lookup = lookup
+        collectionIndexCache.descendantIDs = cache
+    }
+
+    private var collectionLookup: [PersistentIdentifier: SnippetCollection] {
+        refreshCollectionIndexCacheIfNeeded()
+        return collectionIndexCache.lookup
+    }
+
+    private var descendantIDsByCollectionID: [PersistentIdentifier: Set<PersistentIdentifier>] {
+        refreshCollectionIndexCacheIfNeeded()
+        return collectionIndexCache.descendantIDs
     }
 
     private var baseFilteredSnippets: [Snippet] {
@@ -191,27 +218,33 @@ struct ContentView: View {
         }
     }
 
+    /// Case-insensitive substring match without allocating a lowercased copy
+    /// of `haystack` (search runs over every snippet's full code per pass).
+    private func matches(_ haystack: String, _ needle: String) -> Bool {
+        haystack.range(of: needle, options: .caseInsensitive) != nil
+    }
+
     private var searchResultCollections: [SnippetCollection] {
-        let needle = trimmedSearchText.lowercased()
+        let needle = trimmedSearchText
         guard !needle.isEmpty else { return [] }
 
         return collections.filter { collection in
-            !collection.isDeleted && 
+            !collection.isDeleted &&
             (!showFavoritesOnly || collection.isFavorite) &&
-            collection.name.lowercased().contains(needle)
+            matches(collection.name, needle)
         }
     }
 
     private var searchResultSnippets: [Snippet] {
-        let needle = trimmedSearchText.lowercased()
+        let needle = trimmedSearchText
         guard !needle.isEmpty else { return [] }
 
         return searchFilteredSnippets.filter { snippet in
-            snippet.title.lowercased().contains(needle) ||
-            snippet.snippetDescription.lowercased().contains(needle) ||
-            snippet.code.lowercased().contains(needle) ||
-            snippet.language.lowercased().contains(needle) ||
-            snippet.collections.contains { !$0.isDeleted && $0.name.lowercased().contains(needle) }
+            matches(snippet.title, needle) ||
+            matches(snippet.snippetDescription, needle) ||
+            matches(snippet.code, needle) ||
+            matches(snippet.language, needle) ||
+            snippet.collections.contains { !$0.isDeleted && matches($0.name, needle) }
         }
     }
 
@@ -282,7 +315,7 @@ struct ContentView: View {
     }
 
     private var trashedItemCount: Int {
-        allSnippets.filter { $0.deletedAt != nil }.count + collections.filter { $0.deletedAt != nil }.count
+        trashedSnippets.count + collections.count(where: { $0.deletedAt != nil })
     }
 
     private var selectedSnippet: Snippet? {
@@ -796,7 +829,6 @@ struct ContentView: View {
     private var modernSidebar: some View {
         ModernSidebar(
             snippets: snippets,
-            uncategorizedSnippets: uncategorizedSnippets,
             collections: collections,
             frequentlyUsedSnippets: frequentlyUsedSnippets,
             favoriteSnippets: favoriteSnippets,
@@ -864,7 +896,7 @@ struct ContentView: View {
 
         switch item {
         case .snippet(let id):
-            if let existing = allSnippets.first(where: { $0.persistentModelID == id }) {
+            if let existing = trashedSnippets.first(where: { $0.persistentModelID == id }) {
                 existing.deletedAt = nil
                 existing.updatedAt = .now
                 try? modelContext.save()
@@ -885,7 +917,7 @@ struct ContentView: View {
 
     private func performTrashCleanup() {
         let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date.now) ?? Date.distantPast
-        for snippet in allSnippets {
+        for snippet in trashedSnippets {
             if let deletedAt = snippet.deletedAt, deletedAt < cutoff {
                 for media in snippet.mediaItems {
                     MediaManager.deleteFile(for: media)

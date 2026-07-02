@@ -1,24 +1,5 @@
 {
   "source": "/Users/halilbagosi/snippets/Sources/Snippets/Views/Settings/SettingsView.swift",
-  "tables": {
-    "Localizable": [
-      {
-        "comment": "",
-        "key": "Appearance",
-        "location": {
-          "startingColumn": 27,
-          "startingLine": 12
-        }
-      },
-      {
-        "comment": "",
-        "key": "About",
-        "location": {
-          "startingColumn": 27,
-          "startingLine": 17
-        }
-      }
-    ]
-  },
+  "tables": {},
   "version": 1
 }

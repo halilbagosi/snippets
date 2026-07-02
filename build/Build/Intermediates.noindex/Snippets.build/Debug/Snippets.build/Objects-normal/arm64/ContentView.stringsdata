@@ -1,5 +1,104 @@
 {
   "source": "/Users/halilbagosi/snippets/Sources/Snippets/Views/ContentView.swift",
-  "tables": {},
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Delete this snippet?",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 687
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Collection?",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 709
+        }
+      },
+      {
+        "comment": "",
+        "key": "Undo",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 602
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Snippet",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 694
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 702
+        }
+      },
+      {
+        "comment": "",
+        "key": "This will move \"%@\" to the trash. You can restore it within 30 days.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 705
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Collection Only",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 716
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Collection & Contents",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 721
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 727
+        }
+      },
+      {
+        "comment": "",
+        "key": "What would you like to do with this collection and its contents?",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 729
+        }
+      },
+      {
+        "comment": "",
+        "key": "New Collection",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 818
+        }
+      },
+      {
+        "comment": "",
+        "key": "New Collection",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 816
+        }
+      }
+    ]
+  },
   "version": 1
 }

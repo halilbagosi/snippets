@@ -3,13 +3,14 @@ import SwiftUI
 import AppKit
 #endif
 
-/// About tab in the Settings window.
-/// Mirrors the macOS "About" pane style: app icon on the left,
-/// name / version / developer info stacked on the right.
+/// About pane in the Settings window: app icon over a soft accent glow,
+/// name / version / developer info in a glass card.
 struct AboutView: View {
+    @Environment(AppearanceSettings.self) private var appearanceSettings
     @Environment(\.colorScheme) private var colorScheme
 
     private var theme: Theme { Theme.current(colorScheme) }
+    private var accent: Color { appearanceSettings.themeColor }
 
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -18,44 +19,59 @@ struct AboutView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(accent.opacity(colorScheme == .dark ? 0.30 : 0.22))
+                    .frame(width: 110, height: 110)
+                    .blur(radius: 24)
 
-            HStack(spacing: 20) {
-                // App Icon
-                Group {
-                    #if canImport(AppKit)
-                    Image(nsImage: NSApplication.shared.applicationIconImage)
-                        .resizable()
-                    #else
-                    Image(systemName: "app.fill")
-                        .resizable()
-                    #endif
-                }
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 96, height: 96)
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Snippets")
-                        .font(.system(size: 24, weight: .bold, design: .default))
-                        .foregroundStyle(theme.text)
-
-                    Text(appVersion)
-                        .font(.system(size: 13, weight: .regular, design: .default))
-                        .foregroundStyle(theme.textMuted)
-
-                    Text("Made by Developer Name")
-                        .font(.system(size: 13, weight: .regular, design: .default))
-                        .foregroundStyle(theme.textMuted)
-                        .padding(.top, 2)
-                }
+                appIcon
+                    .frame(width: 88, height: 88)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .shadow(color: .black.opacity(0.16), radius: 10, y: 5)
             }
-            .padding(.horizontal, 32)
+            .padding(.top, 12)
 
-            Spacer()
+            VStack(spacing: 4) {
+                Text("Snippets")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(theme.text)
+
+                Text(appVersion)
+                    .font(.system(size: 13))
+                    .foregroundStyle(theme.textMuted)
+            }
+
+            Divider()
+                .frame(width: 160)
+                .opacity(0.5)
+
+            Text("Made by Developer Name")
+                .font(.system(size: 12))
+                .foregroundStyle(theme.textMuted)
+                .padding(.bottom, 12)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, DSToken.Spacing.lg)
+        .liquidGlassSurface(
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            shadowRadius: 12,
+            shadowY: 6
+        )
+        .frame(minHeight: 440)
+    }
+
+    private var appIcon: some View {
+        Group {
+            #if canImport(AppKit)
+            Image(nsImage: NSApplication.shared.applicationIconImage)
+                .resizable()
+            #else
+            Image(systemName: "app.fill")
+                .resizable()
+            #endif
+        }
+        .aspectRatio(contentMode: .fit)
     }
 }

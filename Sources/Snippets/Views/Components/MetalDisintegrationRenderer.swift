@@ -31,15 +31,17 @@ final class MetalDisintegrationRenderer: NSObject, MTKViewDelegate {
     private var samplerState: MTLSamplerState!
     private var uniformsBuffer: MTLBuffer
     private weak var mtkView: MTKView?
-    private var needsDisplay = true
 
-    var progress: Float = 0 {
-        didSet { needsDisplay = true }
-    }
+    /// Wall-clock anchor of the running animation; also used to dedupe the
+    /// repeated `beginAnimation` calls SwiftUI makes on unrelated updates.
+    private(set) var animationStartDate: Date?
+    private var startMediaTime: CFTimeInterval = 0
+    private var duration: CFTimeInterval = 1
 
-    var accentColor: SIMD4<Float> = SIMD4<Float>(1, 1, 1, 1) {
-        didSet { needsDisplay = true }
-    }
+    /// When set, the renderer draws this progress and never advances (previews).
+    private var fixedProgress: Float?
+
+    var accentColor: SIMD4<Float> = SIMD4<Float>(1, 1, 1, 1)
 
     private var inputImage: NSImage?
     private var inputTexture: MTLTexture?
@@ -60,6 +62,7 @@ final class MetalDisintegrationRenderer: NSObject, MTKViewDelegate {
         mtkView.device = device
         mtkView.delegate = self
         mtkView.colorPixelFormat = .bgra8Unorm
+        // Idle until beginAnimation()/showFixedProgress() picks a drive mode.
         mtkView.enableSetNeedsDisplay = true
         mtkView.isPaused = true
 
@@ -75,6 +78,82 @@ final class MetalDisintegrationRenderer: NSObject, MTKViewDelegate {
         samplerDescriptor.magFilter = .linear
         samplerDescriptor.mipFilter = .notMipmapped
         samplerState = device.makeSamplerState(descriptor: samplerDescriptor)
+    }
+
+    /// Starts (or, for the same `startDate`, keeps running) a display-link
+    /// driven animation. Progress is computed inside `draw(in:)` from
+    /// `CACurrentMediaTime()`, so frame pacing is v-synced and completely
+    /// decoupled from SwiftUI update cadence and main-thread layout work.
+    @MainActor
+    func beginAnimation(startDate: Date, duration: TimeInterval) {
+        guard animationStartDate != startDate else { return }
+        animationStartDate = startDate
+        self.duration = max(duration, 0.01)
+        let alreadyElapsed = max(Date().timeIntervalSince(startDate), 0)
+        startMediaTime = CACurrentMediaTime() - alreadyElapsed
+        fixedProgress = nil
+
+        guard let view = mtkView else { return }
+        view.preferredFramesPerSecond = 120
+        view.enableSetNeedsDisplay = false
+        view.isPaused = false
+    }
+
+    /// Renders a single static frame at the given progress (used by previews).
+    @MainActor
+    func showFixedProgress(_ progress: Float) {
+        guard fixedProgress != progress else { return }
+        fixedProgress = progress
+        animationStartDate = nil
+
+        guard let view = mtkView else { return }
+        view.isPaused = true
+        view.enableSetNeedsDisplay = true
+        view.setNeedsDisplay(view.bounds)
+    }
+
+    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
+
+    private func currentProgress() -> Float {
+        if let fixedProgress {
+            return min(max(fixedProgress, 0), 1)
+        }
+        guard animationStartDate != nil else { return 0 }
+        let elapsed = CACurrentMediaTime() - startMediaTime
+        let linear = Float(min(max(elapsed / duration, 0), 1))
+        // Global smoothstep ease: soft start, graceful settle.
+        return linear * linear * (3 - 2 * linear)
+    }
+
+    func draw(in view: MTKView) {
+        guard let texture = inputTexture,
+              let drawable = view.currentDrawable,
+              let descriptor = view.currentRenderPassDescriptor,
+              let commandBuffer = commandQueue.makeCommandBuffer(),
+              let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else { return }
+
+        let progress = currentProgress()
+        let size = view.drawableSize
+        var uniforms = Uniforms(
+            sizeAndProgress: SIMD4<Float>(Float(size.width), Float(size.height), progress, 0.0),
+            accentColor: accentColor
+        )
+        memcpy(uniformsBuffer.contents(), &uniforms, MemoryLayout<Uniforms>.size)
+
+        encoder.setRenderPipelineState(pipelineState)
+        encoder.setFragmentTexture(texture, index: 0)
+        encoder.setFragmentBuffer(uniformsBuffer, offset: 0, index: 0)
+        encoder.setFragmentSamplerState(samplerState, index: 0)
+        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+        encoder.endEncoding()
+        commandBuffer.present(drawable)
+        commandBuffer.commit()
+
+        // Finished: this frame rendered fully transparent output, stop the
+        // display link. SwiftUI removes the overlay shortly after.
+        if fixedProgress == nil, progress >= 1 {
+            view.isPaused = true
+        }
     }
 
     @MainActor
@@ -123,39 +202,6 @@ final class MetalDisintegrationRenderer: NSObject, MTKViewDelegate {
         return try device.makeLibrary(source: source, options: nil)
     }
 
-    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-        updateUniforms(size: size)
-    }
-
-    private func updateUniforms(size: CGSize) {
-        var uniforms = Uniforms(
-            sizeAndProgress: SIMD4<Float>(Float(size.width), Float(size.height), progress, 0.0),
-            accentColor: accentColor
-        )
-        memcpy(uniformsBuffer.contents(), &uniforms, MemoryLayout<Uniforms>.size)
-        needsDisplay = true
-    }
-
-    func draw(in view: MTKView) {
-        guard needsDisplay,
-              let texture = inputTexture,
-              let drawable = view.currentDrawable,
-              let descriptor = view.currentRenderPassDescriptor,
-              let commandBuffer = commandQueue.makeCommandBuffer(),
-              let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else { return }
-
-        updateUniforms(size: view.drawableSize)
-        encoder.setRenderPipelineState(pipelineState)
-        encoder.setFragmentTexture(texture, index: 0)
-        encoder.setFragmentBuffer(uniformsBuffer, offset: 0, index: 0)
-        encoder.setFragmentSamplerState(samplerState, index: 0)
-        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
-        encoder.endEncoding()
-        commandBuffer.present(drawable)
-        commandBuffer.commit()
-        needsDisplay = false
-    }
-
     func updateTexture(from nsImage: NSImage?) {
         if inputImage === nsImage {
             return
@@ -165,7 +211,6 @@ final class MetalDisintegrationRenderer: NSObject, MTKViewDelegate {
               let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             inputImage = nil
             inputTexture = nil
-            needsDisplay = true
             return
         }
 
@@ -178,6 +223,5 @@ final class MetalDisintegrationRenderer: NSObject, MTKViewDelegate {
             inputImage = nil
             inputTexture = nil
         }
-        needsDisplay = true
     }
 }
