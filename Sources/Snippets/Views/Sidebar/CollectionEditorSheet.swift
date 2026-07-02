@@ -282,47 +282,102 @@ struct CollectionEditorSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                ScrollView {
-                    DSGlassContainer(spacing: 20) {
+        VStack(spacing: 0) {
+            editorHeader
+
+            ScrollView {
+                DSGlassContainer(spacing: 20) {
                     VStack(alignment: .leading, spacing: 20) {
                         glassPreviewHeader
                         glassColorStrip
 
                         glassContrastWarning
-                        
+
                         glassSubcollectionToggleSection
                         glassSnippetMembershipSection
                         glassSymbolBrowser
                     }
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 24)
-                    .padding(.bottom, 32)
                 }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .padding(.bottom, 32)
             }
-            .background {
-                ZStack {
-                    Color.clear.ignoresSafeArea()
-                    DotGridBackground(gradientPalette: [activeColor], lightModeStrength: 0.5)
-                        .opacity(colorScheme == .dark ? 0.12 : 0.10)
-                        .ignoresSafeArea()
-                }
-            }
-            .navigationTitle(title)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save", action: onSave)
-                        .disabled(!canSave)
-                        .tint(activeColor)
-                }
+        }
+        .background {
+            ZStack {
+                Color.clear.ignoresSafeArea()
+                DotGridBackground(gradientPalette: [activeColor], lightModeStrength: 0.5)
+                    .opacity(colorScheme == .dark ? 0.12 : 0.10)
+                    .ignoresSafeArea()
             }
         }
         .frame(width: 480, height: 640)
+    }
+
+    // MARK: - Liquid Glass Header
+
+    private var editorHeader: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: previewIconName)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(activeColor)
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(theme.text)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .liquidGlassSurface(
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+                tint: activeColor.opacity(0.1),
+                shadowRadius: 4,
+                shadowY: 2
+            )
+
+            Spacer(minLength: 8)
+
+            Button(action: onCancel) {
+                Text("Cancel")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(theme.textMuted)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+            }
+            .buttonStyle(.plain)
+            .liquidGlassSurface(
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+                interactive: true,
+                shadowRadius: 4,
+                shadowY: 2
+            )
+            .keyboardShortcut(.cancelAction)
+
+            Button(action: onSave) {
+                Text("Save")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(canSave ? .white : theme.textFaint)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(canSave ? activeColor : Color.clear)
+                    }
+            }
+            .buttonStyle(.plain)
+            .disabled(!canSave)
+            .liquidGlassSurface(
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+                tint: canSave ? activeColor.opacity(0.2) : nil,
+                interactive: true,
+                shadowRadius: 4,
+                shadowY: 2
+            )
+            .keyboardShortcut(.defaultAction)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 18)
+        .padding(.bottom, 12)
     }
 
     // MARK: - Liquid Glass Preview Header
