@@ -263,6 +263,11 @@ struct SnippetGalleryView: View {
                 .allowsHitTesting(false)
                 .zIndex(8)
             #endif
+
+            if showMoveSheet {
+                moveToCollectionOverlay
+                    .zIndex(9)
+            }
         }
         .coordinateSpace(name: "gallerySpace")
         .onAppear {
@@ -317,41 +322,71 @@ struct SnippetGalleryView: View {
             #endif
             pressedResetTask?.cancel()
         }
-        .sheet(isPresented: $showMoveSheet) {
-            let selectedSnippets = viewModel.selectedSnippets(from: snippets)
-            let selectedCollections = viewModel.selectedCollections(from: subcollections)
-            
-            let filteredCollections = availableCollections.filter { target in
-                if selectedCollections.contains(where: { $0.persistentModelID == target.persistentModelID }) {
-                    return false
-                }
-                
-                let hasSnippetInTarget = selectedSnippets.contains(where: { snip in
-                    snip.collections.contains(where: { $0.persistentModelID == target.persistentModelID })
-                })
-                if hasSnippetInTarget {
-                    return false
-                }
-                
-                let hasCollectionInTarget = selectedCollections.contains(where: { coll in
-                    coll.parent?.persistentModelID == target.persistentModelID
-                })
-                if hasCollectionInTarget {
-                    return false
-                }
-                
-                return true
+        .animation(.spring(response: 0.34, dampingFraction: 0.9), value: showMoveSheet)
+    }
+
+    private var selectedSnippetsForMove: [Snippet] {
+        viewModel.selectedSnippets(from: snippets)
+    }
+
+    private var selectedCollectionsForMove: [SnippetCollection] {
+        viewModel.selectedCollections(from: subcollections)
+    }
+
+    private var moveTargetCollections: [SnippetCollection] {
+        let selectedSnippets = selectedSnippetsForMove
+        let selectedCollections = selectedCollectionsForMove
+
+        return availableCollections.filter { target in
+            if selectedCollections.contains(where: { $0.persistentModelID == target.persistentModelID }) {
+                return false
             }
 
-            let allSnippetsInCollections = selectedSnippets.isEmpty ? true : selectedSnippets.allSatisfy { !$0.collections.isEmpty }
-            let allCollectionsAreSubcollections = selectedCollections.isEmpty ? true : selectedCollections.allSatisfy { $0.parent != nil }
-            let hasAnySelection = !selectedSnippets.isEmpty || !selectedCollections.isEmpty
-            
-            let showLibraryOption = hasAnySelection && allSnippetsInCollections && allCollectionsAreSubcollections
+            let hasSnippetInTarget = selectedSnippets.contains(where: { snip in
+                snip.collections.contains(where: { $0.persistentModelID == target.persistentModelID })
+            })
+            if hasSnippetInTarget {
+                return false
+            }
 
-            MoveToCollectionSheet(
-                collections: filteredCollections,
-                showLibraryOption: showLibraryOption,
+            let hasCollectionInTarget = selectedCollections.contains(where: { coll in
+                coll.parent?.persistentModelID == target.persistentModelID
+            })
+            if hasCollectionInTarget {
+                return false
+            }
+
+            return true
+        }
+    }
+
+    private var moveShowsLibraryOption: Bool {
+        let selectedSnippets = selectedSnippetsForMove
+        let selectedCollections = selectedCollectionsForMove
+        let allSnippetsInCollections = selectedSnippets.isEmpty ? true : selectedSnippets.allSatisfy { !$0.collections.isEmpty }
+        let allCollectionsAreSubcollections = selectedCollections.isEmpty ? true : selectedCollections.allSatisfy { $0.parent != nil }
+        let hasAnySelection = !selectedSnippets.isEmpty || !selectedCollections.isEmpty
+        return hasAnySelection && allSnippetsInCollections && allCollectionsAreSubcollections
+    }
+
+    @ViewBuilder
+    private var moveToCollectionOverlay: some View {
+        Color.black
+            .opacity(colorScheme == .dark ? 0.34 : 0.22)
+            .ignoresSafeArea()
+            .onTapGesture { showMoveSheet = false }
+            .transition(.opacity)
+
+        GeometryReader { proxy in
+            let cardWidth = min(max(proxy.size.width * 0.5, 380), 460)
+            let cardHeight = min(max(proxy.size.height * 0.6, 420), 640)
+            let selectedSnippets = selectedSnippetsForMove
+            let selectedCollections = selectedCollectionsForMove
+
+            MoveToCollectionCard(
+                collections: moveTargetCollections,
+                showLibraryOption: moveShowsLibraryOption,
+                itemCount: selectedSnippets.count + selectedCollections.count,
                 onMove: { collection in
                     if let target = collection {
                         for snippet in selectedSnippets {
@@ -374,6 +409,14 @@ struct SnippetGalleryView: View {
                     showMoveSheet = false
                 },
                 onCancel: { showMoveSheet = false }
+            )
+            .frame(width: cardWidth, height: cardHeight)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .transition(
+                .asymmetric(
+                    insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)),
+                    removal: .opacity.combined(with: .scale(scale: 0.97, anchor: .center))
+                )
             )
         }
     }
@@ -1355,102 +1398,188 @@ struct SnippetGalleryView: View {
 
 }
 
-private struct MoveToCollectionSheet: View {
+private struct MoveToCollectionCard: View {
     @Environment(\.colorScheme) private var colorScheme
     let collections: [SnippetCollection]
     let showLibraryOption: Bool
+    let itemCount: Int
     let onMove: (SnippetCollection?) -> Void
     let onCancel: () -> Void
 
+    @State private var searchText: String = ""
+
     private var theme: Theme { Theme.current(colorScheme) }
 
+    private var rows: [CollectionMoveRow] {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? MoveCollectionTree.rows(from: collections)
+            : MoveCollectionTree.searchRows(from: collections, matching: searchText)
+    }
+
+    private var titleText: String {
+        itemCount == 1 ? "Move 1 Item" : "Move \(itemCount) Items"
+    }
+
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                DSGlassContainer(spacing: 0) {
-                    VStack(spacing: 0) {
-                        if showLibraryOption {
-                            Button(action: { onMove(nil) }) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "square.grid.2x2")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundStyle(theme.accent)
-                                        .frame(width: 24, height: 24)
+        ZStack(alignment: .topTrailing) {
+            DSGlassContainer(spacing: 16) {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(titleText)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(theme.text)
 
-                                    Text("All Snippets")
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundStyle(.primary)
+                    searchField
 
-                                    Spacer()
-
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 12, weight: .bold))
-                                        .foregroundStyle(.secondary.opacity(0.5))
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            if showLibraryOption {
+                                libraryRow
+                                if !rows.isEmpty {
+                                    divider
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
-                                .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
 
-                            if !collections.isEmpty {
-                                Rectangle()
-                                    .fill(.white.opacity(colorScheme == .dark ? 0.12 : 0.34))
-                                    .frame(height: 1)
+                            if rows.isEmpty {
+                                Text("No matching collections")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, minHeight: 60)
+                            } else {
+                                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                                    collectionRow(row)
+                                    if index < rows.count - 1 {
+                                        divider
+                                    }
+                                }
                             }
                         }
-
-                        ForEach(Array(collections.enumerated()), id: \.element.persistentModelID) { index, collection in
-                            Button(action: { onMove(collection) }) {
-                                HStack(spacing: 12) {
-                                    let color = Color(hex: collection.colorHex) ?? theme.accent
-                                    Image(systemName: SnippetCollection.isValidSFSymbolName(collection.iconName) ? collection.iconName : SnippetCollection.defaultIconName)
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundStyle(color)
-                                        .frame(width: 24, height: 24)
-
-                                    Text(collection.name)
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundStyle(.primary)
-
-                                    Spacer()
-
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 12, weight: .bold))
-                                        .foregroundStyle(.secondary.opacity(0.5))
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-
-                            if index < collections.count - 1 {
-                                Rectangle()
-                                    .fill(.white.opacity(colorScheme == .dark ? 0.12 : 0.34))
-                                    .frame(height: 1)
-                            }
-                        }
+                        .liquidGlassSurface(
+                            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                            shadowRadius: 8,
+                            shadowY: 4
+                        )
                     }
                 }
-                .padding(DSToken.Spacing.lg)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 20)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background {
-                ZStack {
-                    Color.clear.ignoresSafeArea()
-                    DotGridBackground(gradientPalette: [theme.accent], lightModeStrength: 0.5)
-                        .opacity(colorScheme == .dark ? 0.12 : 0.10)
-                        .ignoresSafeArea()
-                }
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(theme.surface)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(theme.borderStrong, lineWidth: 1)
+                    }
             }
-            .navigationTitle("Move to Collection")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
+
+            Button(action: onCancel) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(theme.text)
+                    .frame(width: 30, height: 30)
+                    .contentShape(Circle())
+                    .liquidGlassSurface(
+                        in: Circle(),
+                        shadowRadius: 12,
+                        shadowY: 6
+                    )
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 14)
+            .padding(.trailing, 14)
+            .accessibilityLabel("Close")
+        }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+                .font(.system(size: 13))
+            TextField("Search collections", text: $searchText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.tertiary)
                 }
+                .buttonStyle(.plain)
             }
         }
-        .frame(width: 380)
-        .frame(minHeight: 400)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(.white.opacity(colorScheme == .dark ? 0.08 : 0.2), lineWidth: 1)
+                }
+        }
+    }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(.white.opacity(colorScheme == .dark ? 0.12 : 0.34))
+            .frame(height: 1)
+    }
+
+    private var libraryRow: some View {
+        Button(action: { onMove(nil) }) {
+            HStack(spacing: 12) {
+                Image(systemName: "square.grid.2x2")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(theme.accent)
+                    .frame(width: 24, height: 24)
+
+                Text("All Snippets")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.secondary.opacity(0.5))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func collectionRow(_ row: CollectionMoveRow) -> some View {
+        let collection = row.collection
+        return Button(action: { onMove(collection) }) {
+            HStack(spacing: 12) {
+                Image(systemName: collection.displayIconName)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(collection.displayColor)
+                    .frame(width: 24, height: 24)
+
+                Text(collection.name)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.secondary.opacity(0.5))
+            }
+            .padding(.leading, 16 + CGFloat(row.depth) * 20)
+            .padding(.trailing, 16)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
