@@ -175,10 +175,18 @@ struct ModernSidebar: View {
                     selectedCollectionID = nil
                     sidebarSelectionContext = .allSnippets
                 } label: {
-                    countRow(title: "All Snippets", icon: "square.grid.2x2", iconColor: theme.accent, count: snippets.count, isSelected: selection.wrappedValue == .all)
+                    countRow(title: "All Snippets", icon: "square.grid.2x2", iconColor: theme.accent, count: snippets.count, isSelected: selection.wrappedValue == .all, includesChevron: true)
                 }
                 .buttonStyle(.plain)
+                .sidebarMatchedSelection(
+                    accent: theme.accent,
+                    isSelected: selection.wrappedValue == .all,
+                    colorScheme: colorScheme,
+                    isActive: isSelectionActive
+                )
             }
+            // Match the disclosure chevron to the row's accent color.
+            .tint(theme.accent)
             .dropDestination(for: String.self) { items, _ in return onHandleDrop(items, nil) }
 
 
@@ -236,14 +244,14 @@ struct ModernSidebar: View {
                             .foregroundStyle(accent)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .sidebarMatchedSelection(
-                        accent: accent,
-                        isSelected: isSelected,
-                        colorScheme: colorScheme,
-                        isActive: isSelectionActive
-                    )
                 }
                 .buttonStyle(.plain)
+                .sidebarMatchedSelection(
+                    accent: accent,
+                    isSelected: isSelected,
+                    colorScheme: colorScheme,
+                    isActive: isSelectionActive
+                )
                 .contextMenu {
                     Button { onEditCollection(collection) } label: { Label("Edit collection", systemImage: "pencil") }
                     Button(role: .destructive) { onDeleteCollection(collection) } label: { Label("Delete collection", systemImage: "trash") }
@@ -270,14 +278,14 @@ struct ModernSidebar: View {
                             .foregroundStyle(accent)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .sidebarMatchedSelection(
-                        accent: accent,
-                        isSelected: isSelected,
-                        colorScheme: colorScheme,
-                        isActive: isSelectionActive
-                    )
                 }
                 .buttonStyle(.plain)
+                .sidebarMatchedSelection(
+                    accent: accent,
+                    isSelected: isSelected,
+                    colorScheme: colorScheme,
+                    isActive: isSelectionActive
+                )
                 .contextMenu {
                     Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
                     Button(role: .destructive) { onDeleteSnippet(snippet) } label: { Label("Delete snippet", systemImage: "trash") }
@@ -318,6 +326,12 @@ struct ModernSidebar: View {
                     countRow(title: language.rawValue, icon: language.symbolName, iconColor: accent, count: count, isSelected: isSelected)
                 }
                 .buttonStyle(.plain)
+                .sidebarMatchedSelection(
+                    accent: accent,
+                    isSelected: isSelected,
+                    colorScheme: colorScheme,
+                    isActive: isSelectionActive
+                )
             }
 
             if sidebarFilteredLanguages.isEmpty && !sidebarSearch.isEmpty {
@@ -341,6 +355,12 @@ struct ModernSidebar: View {
                 countRow(title: "Recently Deleted", icon: "trash", iconColor: .red, count: trashedItemCount, isSelected: selection.wrappedValue == .trash)
             }
             .buttonStyle(.plain)
+            .sidebarMatchedSelection(
+                accent: .red,
+                isSelected: selection.wrappedValue == .trash,
+                colorScheme: colorScheme,
+                isActive: isSelectionActive
+            )
         }
     }
 
@@ -370,18 +390,18 @@ struct ModernSidebar: View {
                     .frame(width: 8, height: 8)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .sidebarMatchedSelection(
-                accent: accent,
-                isSelected: isSelected,
-                colorScheme: colorScheme,
-                isActive: isSelectionActive
-            )
         }
         .buttonStyle(.plain)
+        .sidebarMatchedSelection(
+            accent: accent,
+            isSelected: isSelected,
+            colorScheme: colorScheme,
+            isActive: isSelectionActive
+        )
     }
 
     @ViewBuilder
-    private func countRow(title: String, icon: String, iconColor: Color, count: Int, isSelected: Bool = false) -> some View {
+    private func countRow(title: String, icon: String, iconColor: Color, count: Int, isSelected: Bool = false, includesChevron: Bool = false) -> some View {
         HStack {
             Label {
                 Text(title.lowercased())
@@ -399,13 +419,10 @@ struct ModernSidebar: View {
                     .foregroundStyle(isSelected ? theme.text.opacity(0.74) : theme.textFaint)
             }
         }
+        // Pull the row content toward the disclosure chevron so the chevron
+        // sits close to the icon instead of leaving a gap.
+        .padding(.leading, includesChevron ? -12 : 0)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .sidebarMatchedSelection(
-            accent: iconColor,
-            isSelected: isSelected,
-            colorScheme: colorScheme,
-            isActive: isSelectionActive
-        )
     }
 
     // MARK: - Context Menu Helpers
@@ -527,11 +544,19 @@ private struct CollectionTreeRow: View {
                 )
             }
             .buttonStyle(.plain)
+            .sidebarMatchedSelection(
+                accent: collection.displayColor,
+                isSelected: selectionValue == .collection(collection.persistentModelID),
+                colorScheme: colorScheme,
+                isActive: isSelectionActive
+            )
             .contextMenu {
                 Button { onEditCollection(collection) } label: { Label("Edit collection", systemImage: "pencil") }
                 Button(role: .destructive) { onDeleteCollection(collection) } label: { Label("Delete collection", systemImage: "trash") }
             }
         }
+        // Match the disclosure chevron to the collection's color.
+        .tint(collection.displayColor)
         .dropDestination(for: String.self) { items, _ in onHandleDrop(items, collection) }
     }
 
@@ -559,14 +584,14 @@ private struct CollectionTreeRow: View {
                     .frame(width: 8, height: 8)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .sidebarMatchedSelection(
-                accent: accent,
-                isSelected: isSelected,
-                colorScheme: colorScheme,
-                isActive: isSelectionActive
-            )
         }
         .buttonStyle(.plain)
+        .sidebarMatchedSelection(
+            accent: accent,
+            isSelected: isSelected,
+            colorScheme: colorScheme,
+            isActive: isSelectionActive
+        )
         .draggable(String(snippet.persistentModelID.hashValue))
         .contextMenu {
             Button { onEditSnippet(snippet) } label: { Label("Edit snippet", systemImage: "pencil") }
@@ -608,52 +633,58 @@ private struct CollectionTreeRow: View {
                     .foregroundStyle(isSelected ? theme.text.opacity(0.74) : theme.textFaint)
             }
         }
+        // Pull the row content toward the disclosure chevron so the chevron
+        // sits close to the icon instead of leaving a gap.
+        .padding(.leading, -12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .sidebarMatchedSelection(
-            accent: iconColor,
-            isSelected: isSelected,
-            colorScheme: colorScheme,
-            isActive: isSelectionActive
-        )
     }
 }
 
+/// Sidebar selection frame, tinted with the row's accent colour.
+///
+/// Drawn via `listRowBackground`, so the List hands it the entire row
+/// rectangle — disclosure chevron included — and the frame keeps even,
+/// fixed margins to both sidebar edges instead of being derived from the
+/// label's position.
 private struct SidebarMatchedSelectionModifier: ViewModifier {
     let accent: Color
     let isSelected: Bool
     let colorScheme: ColorScheme
     let isActive: Bool
 
+    /// Distance between the selection frame and the row's edges.
+    private let horizontalInset: CGFloat = 4
+    private let verticalInset: CGFloat = 1
+
     func body(content: Content) -> some View {
         content
             .padding(.vertical, 4)
             .padding(.horizontal, 8)
             .contentShape(Rectangle())
-            .background {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(selectionFill)
-            }
+            .listRowBackground(rowBackground)
+    }
+
+    private var rowBackground: some View {
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .fill(accent.opacity(isSelected ? fillOpacity : 0))
             .overlay {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .stroke(selectionStroke, lineWidth: isSelected ? 1 : 0)
+                    .strokeBorder(accent.opacity(isSelected ? strokeOpacity : 0), lineWidth: 1)
             }
+            .padding(.horizontal, horizontalInset)
+            .padding(.vertical, verticalInset)
             .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isSelected)
             .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isActive)
     }
 
-    private var selectionFill: Color {
-        guard isSelected else { return .clear }
-        let opacity = if isActive {
-            colorScheme == .dark ? 0.32 : 0.20
-        } else {
-            colorScheme == .dark ? 0.18 : 0.12
-        }
-        return accent.opacity(opacity)
+    private var fillOpacity: Double {
+        isActive
+            ? (colorScheme == .dark ? 0.32 : 0.20)
+            : (colorScheme == .dark ? 0.18 : 0.12)
     }
 
-    private var selectionStroke: Color {
-        guard isSelected else { return .clear }
-        return accent.opacity(isActive ? 0.42 : 0.24)
+    private var strokeOpacity: Double {
+        isActive ? 0.42 : 0.24
     }
 }
 

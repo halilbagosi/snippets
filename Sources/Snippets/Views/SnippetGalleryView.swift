@@ -167,9 +167,8 @@ struct SnippetGalleryView: View {
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                    Section {
-                        VStack(alignment: .leading, spacing: 22) {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 22) {
                             if !hasAnyGalleryContent {
                                 emptyState
                                     .frame(maxWidth: .infinity)
@@ -244,13 +243,16 @@ struct SnippetGalleryView: View {
                         .padding(.top, 16)
                         .padding(.bottom, isTrashMode ? 24 : 112)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    } header: {
-                        topBar
-                    }
                 }
             }
             .scrollIndicators(.never)
-            .ignoresSafeArea(.container, edges: .top)
+            // The bar lives in the top safe-area inset: it is laid out below
+            // the window toolbar automatically (and at the window top in full
+            // screen), content scrolls beneath it, and its glass background
+            // extends up through the transparent toolbar via ignoresSafeArea.
+            .safeAreaInset(edge: .top, spacing: 0) {
+                topBar
+            }
 
             fab
                 .padding(.trailing, 32)
@@ -263,13 +265,6 @@ struct SnippetGalleryView: View {
             #endif
         }
         .coordinateSpace(name: "gallerySpace")
-        .simultaneousGesture(
-            TapGesture().onEnded {
-                if viewModel.isShowingCollectionFilter {
-                    viewModel.isShowingCollectionFilter = false
-                }
-            }
-        )
         .onAppear {
             hasAnimatedCards = false
             withAnimation(.spring(response: 0.5, dampingFraction: 0.84)) {
@@ -929,8 +924,9 @@ struct SnippetGalleryView: View {
                                     viewModel.isShowingCollectionFilter.toggle()
                                 }
                                 .popover(isPresented: $viewModel.isShowingCollectionFilter, arrowEdge: .bottom) {
+                                    // No presentationBackground override: the system
+                                    // popover already provides native Liquid Glass.
                                     collectionFilterPopover
-                                        .presentationBackground(.ultraThinMaterial)
                                 }
                                 .transition(.opacity)
 
@@ -959,24 +955,9 @@ struct SnippetGalleryView: View {
             }
         }
         .padding(.horizontal, 40)
-        .padding(.top, 52)
+        .padding(.top, 12)
         .padding(.bottom, 12)
-        .background {
-            Rectangle()
-                .fill(.clear)
-                .liquidGlassSurface(
-                    in: Rectangle(),
-                    borderOpacity: colorScheme == .dark ? 0.08 : 0.22,
-                    shadowRadius: 0,
-                    shadowY: 0
-                )
-                .ignoresSafeArea(edges: .top)
-                .overlay(alignment: .bottom) {
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundStyle(.white.opacity(colorScheme == .dark ? 0.15 : 0.40))
-                }
-        }
+        .liquidGlassBar(divider: .bottom)
     }
 
     private var collectionFilterPopover: some View {
@@ -1225,7 +1206,7 @@ struct SnippetGalleryView: View {
                 "",
                 text: $searchText,
                 prompt: Text("search title, description, or code…")
-                    .foregroundColor(searchFocused ? theme.textMuted.opacity(0.95) : theme.text.opacity(0.92))
+                    .foregroundColor(colorScheme == .dark ? theme.text.opacity(0.72) : theme.textMuted.opacity(0.95))
             )
                 .textFieldStyle(.plain)
                 .focused($searchFocused)

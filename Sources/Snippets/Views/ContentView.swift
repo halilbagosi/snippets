@@ -374,6 +374,9 @@ struct ContentView: View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 360)
+                .toolbar {
+                    sidebarToolbar
+                }
         } detail: {
             if sidebarSelectionContext == .trash {
                 TrashView()
@@ -600,10 +603,7 @@ struct ContentView: View {
                 }
             }
         }
-        .toolbar {
-            sidebarToolbar
-        }
-        .removingLegacySidebarToggle()
+        .background(WindowChromeConfigurator())
         .task {
             performTrashCleanup()
             debouncedSearchText = searchText
@@ -770,46 +770,20 @@ struct ContentView: View {
             .persistentModelID
     }
 
+    // The sidebar toggle is provided by the system (NavigationSplitView), so it
+    // automatically gets the native Liquid Glass toolbar treatment. Attaching
+    // this to the sidebar column groups the button with the system toggle,
+    // with the same native glass styling.
     @ToolbarContentBuilder
     private var sidebarToolbar: some ToolbarContent {
-        if #available(macOS 26.0, *) {
-            ToolbarSpacer(.fixed, placement: .navigation)
-            ToolbarItem(placement: .navigation) {
-                Button {
-                    beginCreateCollection()
-                } label: {
-                    Label("New Collection", systemImage: "plus")
-                }
-                .buttonStyle(.glassProminent)
-                .controlSize(.regular)
-                .keyboardShortcut("n", modifiers: [.command, .shift])
+        ToolbarItem(placement: .automatic) {
+            Button {
+                beginCreateCollection()
+            } label: {
+                Label("New Collection", systemImage: "folder.badge.plus")
             }
-        } else {
-            ToolbarItem(placement: .navigation) {
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        if columnVisibility == .all {
-                            columnVisibility = .detailOnly
-                        } else {
-                            columnVisibility = .all
-                        }
-                    }
-                } label: {
-                    Label("Toggle Sidebar", systemImage: "sidebar.left")
-                }
-                .buttonStyle(.borderless)
-            }
-
-            ToolbarItem(placement: .navigation) {
-                Button {
-                    beginCreateCollection()
-                } label: {
-                    Label("New Collection", systemImage: "plus")
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
-                .keyboardShortcut("n", modifiers: [.command, .shift])
-            }
+            .help("New Collection")
+            .keyboardShortcut("n", modifiers: [.command, .shift])
         }
     }
 
@@ -1145,13 +1119,3 @@ struct ContentView: View {
     }
 }
 
-private extension View {
-    @ViewBuilder
-    func removingLegacySidebarToggle() -> some View {
-        if #available(macOS 26.0, *) {
-            self
-        } else {
-            self.toolbar(removing: .sidebarToggle)
-        }
-    }
-}

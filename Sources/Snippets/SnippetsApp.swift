@@ -9,6 +9,61 @@ import AppKit
 #endif
 
 #if canImport(AppKit)
+/// Invisible helper view that configures the hosting `NSWindow`: hides the
+/// window title, and hides the traffic lights only while in full screen
+/// (they stay visible in normal windowed mode).
+struct WindowChromeConfigurator: NSViewRepresentable {
+    func makeNSView(context: Context) -> ChromeView { ChromeView() }
+    func updateNSView(_ nsView: ChromeView, context: Context) {}
+
+    @MainActor
+    final class ChromeView: NSView {
+        private weak var configuredWindow: NSWindow?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard let window, window !== configuredWindow else { return }
+            configuredWindow = window
+
+            applyChrome()
+
+            // SwiftUI reasserts some window properties during scene updates,
+            // so reapply the chrome on key/full-screen transitions.
+            let notifications: [NSNotification.Name] = [
+                NSWindow.didBecomeKeyNotification,
+                NSWindow.didEnterFullScreenNotification,
+                NSWindow.didExitFullScreenNotification,
+            ]
+            for name in notifications {
+                NotificationCenter.default.addObserver(
+                    self,
+                    selector: #selector(applyChrome),
+                    name: name,
+                    object: window
+                )
+            }
+        }
+
+        @objc private func applyChrome() {
+            guard let window = configuredWindow else { return }
+            window.titleVisibility = .hidden
+
+            // Make the green button offer real full screen (arrows) instead
+            // of plain zoom ("+"): the window must advertise that it can be
+            // a primary full-screen window.
+            window.collectionBehavior.insert(.fullScreenPrimary)
+
+            let isFullScreen = window.styleMask.contains(.fullScreen)
+            let buttons: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
+            for type in buttons {
+                window.standardWindowButton(type)?.alphaValue = isFullScreen ? 0 : 1
+            }
+        }
+    }
+}
+#endif
+
+#if canImport(AppKit)
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -60,23 +115,22 @@ struct SnippetsApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if #available(macOS 15.0, *) {
-                ContentView()
-                    .environment(environment)
-                    .environment(appearanceSettings)
-                    .preferredColorScheme(appearanceSettings.resolvedColorScheme)
-                    .frame(minWidth: 1100, minHeight: 720)
-                    .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-            } else {
-                ContentView()
-                    .environment(environment)
-                    .environment(appearanceSettings)
-                    .preferredColorScheme(appearanceSettings.resolvedColorScheme)
-                    .frame(minWidth: 1100, minHeight: 720)
-            }
-            
+            ContentView()
+                .environment(environment)
+                .environment(appearanceSettings)
+                .preferredColorScheme(appearanceSettings.resolvedColorScheme)
+                .frame(minWidth: 1100, minHeight: 720)
+                // Without this the window can be zoom-only (green button shows
+                // "+"); this makes it a real full-screen-capable window.
+                .windowFullScreenBehavior(.enabled)
+                // The gallery draws its own glass bar under the toolbar area;
+                // hide the system toolbar background so it doesn't stack a
+                // darker adaptive layer on top (visible on hover / when the
+                // sidebar is collapsed).
+                .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         }
         #if os(macOS)
+        // Hides the "Snippets" title in the toolbar via the supported API.
         .windowToolbarStyle(.unified(showsTitle: false))
         .windowResizability(.contentMinSize)
         .commands {

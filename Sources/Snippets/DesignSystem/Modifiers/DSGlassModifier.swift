@@ -69,7 +69,69 @@ public struct DSGlassModifier<S: Shape>: ViewModifier {
     }
 }
 
+/// Chrome-bar Liquid Glass for window-edge strips (search header, status bar).
+///
+/// Mirrors how Xcode and Finder render their bars: the same glass material as
+/// the rest of the chrome, but with a subtle darker tint so the strip reads as
+/// window chrome rather than content, separated by a hairline system divider.
+public struct DSGlassBarModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
+    public enum DividerEdge {
+        case top
+        case bottom
+    }
+
+    public let dividerEdge: DividerEdge?
+
+    public init(dividerEdge: DividerEdge? = nil) {
+        self.dividerEdge = dividerEdge
+    }
+
+    public func body(content: Content) -> some View {
+        content
+            .background {
+                barSurface
+                    .ignoresSafeArea()
+            }
+    }
+
+    @ViewBuilder
+    private var barSurface: some View {
+        Group {
+            if #available(macOS 26.0, *) {
+                Rectangle()
+                    .fill(.clear)
+                    .glassEffect(.regular.tint(barTint), in: Rectangle())
+            } else {
+                Rectangle()
+                    .fill(.bar)
+                    .overlay {
+                        Rectangle().fill(barTint)
+                    }
+            }
+        }
+        .overlay(alignment: dividerEdge == .top ? .top : .bottom) {
+            if dividerEdge != nil {
+                Rectangle()
+                    .fill(Color(nsColor: .separatorColor))
+                    .frame(height: 1)
+            }
+        }
+    }
+
+    /// Darker tint, similar to the bottom bar in Xcode or the path bar in Finder.
+    private var barTint: SwiftUI.Color {
+        .black.opacity(colorScheme == .dark ? 0.34 : 0.08)
+    }
+}
+
 public extension View {
+    /// Darker-tinted Liquid Glass chrome bar (Xcode/Finder-style strip).
+    func liquidGlassBar(divider edge: DSGlassBarModifier.DividerEdge? = nil) -> some View {
+        modifier(DSGlassBarModifier(dividerEdge: edge))
+    }
+
     func liquidGlassSurface<S: Shape>(
         in shape: S,
         tint: Color? = nil,

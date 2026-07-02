@@ -3,7 +3,10 @@ import PackageDescription
 
 let package = Package(
     name: "Snippets",
-    platforms: [.macOS(.v14)],
+    // macOS 26+ so the binary is stamped with the modern SDK — AppKit only
+    // enables the Liquid Glass design (glass toolbar items, full-size traffic
+    // lights) for executables linked against SDK 26 or newer.
+    platforms: [.macOS(.v26)],
     targets: [
         .executableTarget(
             name: "Snippets",

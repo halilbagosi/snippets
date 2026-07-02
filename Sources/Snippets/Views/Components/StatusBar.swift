@@ -38,19 +38,7 @@ struct StatusBar: View {
         }
         .scrollClipDisabled()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            Rectangle()
-                .fill(.clear)
-                .liquidGlassSurface(
-                    in: Rectangle(),
-                    borderOpacity: colorScheme == .dark ? 0.08 : 0.20,
-                    shadowRadius: 0,
-                    shadowY: 0
-                )
-                .overlay(alignment: .top) {
-                    Rectangle().fill(theme.border).frame(height: 1)
-                }
-        }
+        .liquidGlassBar(divider: .top)
     }
 }
 

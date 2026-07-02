@@ -1,65 +1,61 @@
 # Snippets
 
-Snippets is a macOS SwiftUI app for saving code snippets, grouping them into collections, attaching media, searching/filtering by language, and recovering soft-deleted snippets from Trash.
+Snippets is a native macOS app built with SwiftUI and SwiftData for organizing, searching, and browsing code snippets. It supports collections, media attachments, language-aware filtering, and soft-delete recovery from Trash.
 
-## Project Map
+## Features
 
-- `Sources/Snippets/SnippetsApp.swift` starts the app, configures SwiftData, and injects `AppEnvironment`.
-- `Sources/Snippets/Models` contains SwiftData models for snippets, collections, and media.
-- `Sources/Snippets/Views` contains the main screens and modal flows.
-- `Sources/Snippets/Views/Components` contains reusable UI, rendering helpers, and shared media playback.
-- `Sources/Snippets/Features` contains view models for editor and gallery behavior.
-- `Sources/Snippets/Services` contains app services such as clipboard, media storage, theme colors, language detection, and syntax highlighting.
-- `Tests/SnippetsTests` contains view model tests.
+- Create and edit snippets with title, description, language, code, and attachments
+- Organize snippets into nested collections
+- Search and filter by text, language, and collection
+- Attach images and videos to snippets
+- Browse snippets in a polished gallery interface with glass-style UI components
+- Recover deleted snippets from Trash before permanent cleanup
+- Persist data locally using SwiftData
 
-## Main Views
+## Project Structure
 
-Read [Docs/VIEWS.md](Docs/VIEWS.md) for what every view does, what state it owns, and where to customize behavior.
+- Sources/Snippets/SnippetsApp.swift: app entry point, SwiftData setup, and app environment configuration
+- Sources/Snippets/Models: SwiftData models for snippets, collections, and media
+- Sources/Snippets/Views: main app screens and modal flows
+- Sources/Snippets/Views/Components: reusable UI components and rendering helpers
+- Sources/Snippets/Features: view models for gallery and editor behavior
+- Sources/Snippets/Services: theme, language detection, media handling, and other shared services
+- Tests/SnippetsTests: unit tests for view models and app behavior
 
-The main flow is:
+## Documentation
 
-1. `ContentView` owns navigation, SwiftData queries, sidebar state, collection editing, snippet deletion, and detail presentation.
-2. `SnippetGalleryView` renders the searchable grid of snippets and collections.
-3. `SnippetDetailView` shows a selected snippet with code, metadata, and media attachments.
-4. `SnippetEditorView` creates and edits snippets.
-5. `TrashView` shows soft-deleted snippets and handles restore/permanent delete.
+- Docs/VIEWS.md: overview of each screen and its responsibilities
+- Docs/COMPONENTS.md: reference for the reusable UI components
 
-## Components
+## Requirements
 
-Read [Docs/COMPONENTS.md](Docs/COMPONENTS.md) for every shared component and major private helper component.
+- macOS 14+
+- Xcode with Swift 6.2 support
+- Swift Package Manager
 
-The main shared components are:
+## Build and Run
 
-- `SnippetCard` for snippet tiles.
-- `GallerySection` for collapsible gallery sections.
-- `LoopingVideoPlayerView` for muted looping attachment previews.
-- `LanguageBadge`, `SectionHeader`, `StatusBar`, and `CollectionIconView` for repeated UI vocabulary.
-- `GlassCard`, `DotGridBackground`, `MetalGenieOverlay`, and `GenieShaders.metal` for the visual system.
-
-## Customization Starting Points
-
-- App colors and fonts: `Sources/Snippets/Services/Theme.swift`.
-- Supported language names, symbols, and accent colors: `Sources/Snippets/Services/LanguageDetector.swift`.
-- Gallery card layout and hover effects: `Sources/Snippets/Views/Components/SnippetCard.swift`.
-- Gallery search/filter/sort controls: `Sources/Snippets/Views/SnippetGalleryView.swift`.
-- Collapsible gallery section styling: `Sources/Snippets/Views/Components/GallerySection.swift`.
-- Editor fields and save workflow: `Sources/Snippets/Views/SnippetEditorView.swift` and `Sources/Snippets/Features/Editor/SnippetEditorViewModel.swift`.
-- Trash timing: `Snippet.daysUntilPermanentDeletion` and `ContentView.performTrashCleanup()`.
-
-## Build And Test
+From the project root:
 
 ```sh
 swift build
+```
+
+To run the app from Xcode, open the project and launch the Snippets scheme.
+
+## Testing
+
+```sh
 swift test
 ```
 
-To keep generated build output outside the repository while experimenting:
+To keep build artifacts outside the repository during local development:
 
 ```sh
 swift build --build-path /tmp/snippets-build
 swift test --build-path /tmp/snippets-test-build
 ```
 
-## Cleanup Notes
+## Notes
 
-Generated build products, local SwiftPM/Xcode state, `.DS_Store`, and temporary patch/view scripts are intentionally not part of the source tree. The `.gitignore` keeps those files from coming back after local builds or editor sessions.
+Generated build products, local Xcode/SwiftPM state, and temporary editor files are intentionally excluded from source control. The repository ignores these files so local development stays clean.
