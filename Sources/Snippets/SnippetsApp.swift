@@ -48,6 +48,15 @@ struct WindowChromeConfigurator: NSViewRepresentable {
             guard let window = configuredWindow else { return }
             window.titleVisibility = .hidden
 
+            // Match windowed mode's translucent chrome in full screen too:
+            // without this, the full-screen auto-hide titlebar strip falls
+            // back to the OS's default opaque titlebar material, because it's
+            // a separate AppKit-drawn surface that SwiftUI's
+            // .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+            // (used in SnippetsApp's body) doesn't reach.
+            window.titlebarAppearsTransparent = true
+            window.styleMask.insert(.fullSizeContentView)
+
             // Make the green button offer real full screen (arrows) instead
             // of plain zoom ("+"): the window must advertise that it can be
             // a primary full-screen window.
