@@ -279,13 +279,17 @@ struct SnippetGalleryView: View {
             guard keyEventMonitor == nil else { return }
             keyEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
                 let chars = event.charactersIgnoringModifiers ?? ""
+                if event.keyCode == 53, showMoveSheet {
+                    showMoveSheet = false
+                    return nil
+                }
             if event.modifierFlags.contains(.command), chars.lowercased() == "z" {
                 if onUndoDelete?() != nil {
                     return nil
                 }
                 return event
             }
-                if event.modifierFlags.contains(.command), chars.lowercased() == "f" {
+                if event.modifierFlags.contains(.command), chars.lowercased() == "f", !showMoveSheet {
                     searchFocused = true
                     return nil
                 }
@@ -1390,6 +1394,7 @@ struct SnippetGalleryView: View {
             }
             .buttonStyle(.plain)
             .keyboardShortcut("n", modifiers: .command)
+            .disabled(showMoveSheet)
             .scaleEffect(fabHovered ? 1.05 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: fabHovered)
             .onHover { fabHovered = $0 }
@@ -1489,6 +1494,7 @@ private struct MoveToCollectionCard: View {
                     )
             }
             .buttonStyle(.plain)
+            .keyboardShortcut(.cancelAction)
             .padding(.top, 14)
             .padding(.trailing, 14)
             .accessibilityLabel("Close")
