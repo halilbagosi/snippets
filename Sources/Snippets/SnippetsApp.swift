@@ -108,20 +108,6 @@ struct SnippetsApp: App {
     @State private var environment = AppEnvironment()
     @State private var appearanceSettings = AppearanceSettings()
 
-    private var sharedModelContainer: ModelContainer = {
-        let schema = Schema([Snippet.self, MediaItem.self, SnippetCollection.self])
-        let appSupport = URL.applicationSupportDirectory
-        let storeURL = appSupport.appending(path: "Snippets.store")
-
-        do {
-            try FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
-            let configuration = ModelConfiguration(url: storeURL)
-            return try ModelContainer(for: schema, configurations: [configuration])
-        } catch {
-            fatalError("Unresolved error loading SwiftData container: \(error.localizedDescription)")
-        }
-    }()
-
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -139,6 +125,7 @@ struct SnippetsApp: App {
                 // darker adaptive layer on top (visible on hover / when the
                 // sidebar is collapsed).
                 .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+                .task { SnippetsApp.backfillUUIDs() }
         }
         #if os(macOS)
         // Hides the "Snippets" title in the toolbar via the supported API.
@@ -155,7 +142,7 @@ struct SnippetsApp: App {
             }
         }
         #endif
-        .modelContainer(sharedModelContainer)
+        .modelContainer(SnippetsData.sharedModelContainer)
 
         #if os(macOS)
         Settings {
@@ -163,5 +150,15 @@ struct SnippetsApp: App {
                 .environment(appearanceSettings)
         }
         #endif
+    }
+
+    @MainActor
+    static func backfillUUIDs() {
+        let context = SnippetsData.sharedModelContainer.mainContext
+        let snippets = (try? context.fetch(FetchDescriptor<Snippet>())) ?? []
+        let collections = (try? context.fetch(FetchDescriptor<SnippetCollection>())) ?? []
+        if UUIDBackfill.assign(snippets: snippets, collections: collections) > 0 {
+            try? context.save()
+        }
     }
 }
