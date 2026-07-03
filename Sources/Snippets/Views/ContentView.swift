@@ -8,6 +8,7 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
     @Environment(AppearanceSettings.self) private var appearanceSettings
+    @Environment(AppIntentNavigator.self) private var navigator
 
     @Query(filter: #Predicate<Snippet> { $0.deletedAt == nil }, sort: [SortDescriptor(\Snippet.updatedAt, order: .reverse)])
     private var snippets: [Snippet]
@@ -685,6 +686,18 @@ struct ContentView: View {
                 showUncategorizedOnly = false
             }
             selectedSearchCollections.removeAll()
+        }
+        .onChange(of: navigator.pendingOpenSnippetUUID) { _, newValue in
+            guard let uuid = newValue else { return }
+            if let match = snippets.first(where: { $0.uuid == uuid }) {
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                    searchText = ""
+                    selectedCollectionID = nil
+                    sidebarSelectionContext = .allSnippets
+                    selectedSnippetID = match.persistentModelID
+                }
+            }
+            navigator.pendingOpenSnippetUUID = nil
         }
         .sheet(item: $editingSnippet) { snippet in
             SnippetEditorView(mode: .edit(snippet), availableCollections: collections) { _ in

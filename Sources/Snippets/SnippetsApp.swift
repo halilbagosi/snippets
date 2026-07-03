@@ -113,6 +113,7 @@ struct SnippetsApp: App {
             ContentView()
                 .environment(environment)
                 .environment(appearanceSettings)
+                .environment(AppIntentNavigator.shared)
                 // Appearance preference is applied via NSApp.appearance in
                 // AppearanceSettings: preferredColorScheme would pin a per-window
                 // override that AppKit can't clear when following the system.
