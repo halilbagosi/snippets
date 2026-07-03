@@ -13,6 +13,7 @@ final class Snippet {
     var copyCount: Int = 0
     var isFavorite: Bool = false
     var deletedAt: Date?
+    var uuid: UUID?
 
     @Relationship(deleteRule: .cascade, inverse: \MediaItem.snippet)
     var mediaItems: [MediaItem]
@@ -31,6 +32,7 @@ final class Snippet {
     }
 
     init(
+        uuid: UUID? = UUID(),
         title: String = "",
         snippetDescription: String = "",
         language: String = "Unknown",
@@ -43,6 +45,7 @@ final class Snippet {
         mediaItems: [MediaItem] = [],
         collections: [SnippetCollection] = []
     ) {
+        self.uuid = uuid
         self.title = title
         self.snippetDescription = snippetDescription
         self.language = language

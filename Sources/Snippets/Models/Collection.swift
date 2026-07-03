@@ -15,6 +15,7 @@ final class SnippetCollection {
     var updatedAt: Date
     var deletedAt: Date?
     var isFavorite: Bool = false
+    var uuid: UUID?
 
     var snippets: [Snippet]
 
@@ -42,6 +43,7 @@ final class SnippetCollection {
     }
 
     init(
+        uuid: UUID? = UUID(),
         name: String,
         colorHex: String = SnippetCollection.defaultColorHex,
         colorHexDark: String? = nil,
@@ -54,6 +56,7 @@ final class SnippetCollection {
         parent: SnippetCollection? = nil,
         children: [SnippetCollection] = []
     ) {
+        self.uuid = uuid
         self.name = name
         self.colorHex = colorHex
         self.colorHexDark = colorHexDark
