@@ -103,6 +103,7 @@ struct GallerySectionHeader: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .frame(width: 180, alignment: .leading)
 
             Rectangle()
                 .fill(theme.border)
@@ -117,8 +118,12 @@ struct GallerySectionHeader: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+            } else {
+                Spacer()
+                    .frame(width: 20, height: 20)
             }
         }
+        .frame(height: 24)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))

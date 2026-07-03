@@ -65,7 +65,7 @@ struct SnippetCollectionCard: View {
         let theme = Theme.current(colorScheme)
         let accent = collection.displayColor
         let effectiveIsHovered = isSelectionMode ? false : isHovered
-        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
         let iconShape = RoundedRectangle(cornerRadius: 10, style: .continuous)
         let count = activeSnippetCount
         let snippetSummary = "\(count) Snippet\(count == 1 ? "" : "s")"
@@ -123,7 +123,8 @@ struct SnippetCollectionCard: View {
                                         ? Color(red: 1.0, green: 0.80, blue: 0.20)
                                         : theme.textFaint
                                 )
-                                .padding(DSToken.Spacing.xxs)
+                                .padding(.vertical, DSToken.Spacing.xxs)
+                                .padding(.trailing, DSToken.Spacing.xxs)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -175,12 +176,23 @@ struct SnippetCollectionCard: View {
                 .overlay {
                     shape
                         .fill(
+                            // Dark mode only adds a soft top-left highlight that
+                            // fades out — never re-darkens the center — so the
+                            // card reads as a uniform surface like the light one.
+                            // (The old middle stop was dark `surface`, which
+                            // stacked into a diagonal shadow band in dark mode.)
                             LinearGradient(
-                                colors: [
-                                    .white.opacity(colorScheme == .dark ? 0.08 : 0.24),
-                                    theme.surface.opacity(colorScheme == .dark ? 0.58 : 0.42),
-                                    accent.opacity(0.02)
-                                ],
+                                colors: colorScheme == .dark
+                                    ? [
+                                        .white.opacity(0.10),
+                                        .white.opacity(0.03),
+                                        accent.opacity(0.03)
+                                      ]
+                                    : [
+                                        .white.opacity(0.24),
+                                        theme.surface.opacity(0.42),
+                                        accent.opacity(0.02)
+                                      ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )

@@ -47,7 +47,7 @@ struct AboutView: View {
                 .frame(width: 160)
                 .opacity(0.5)
 
-            Text("Made by Developer Name")
+            Text("Made by Halil Bagosi")
                 .font(.system(size: 12))
                 .foregroundStyle(theme.textMuted)
                 .padding(.bottom, 12)
@@ -55,7 +55,7 @@ struct AboutView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, DSToken.Spacing.lg)
         .liquidGlassSurface(
-            in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            in: RoundedRectangle(cornerRadius: 10, style: .continuous),
             shadowRadius: 12,
             shadowY: 6
         )

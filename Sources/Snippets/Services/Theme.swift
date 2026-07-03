@@ -19,7 +19,7 @@ struct Theme {
             : Color(red: 0.945, green: 0.949, blue: 0.961)
     }
     var surface: Color {
-        scheme == .dark ? Color(red: 0.086, green: 0.098, blue: 0.118) : .white
+        scheme == .dark ? Color(red: 0.05, green: 0.05, blue: 0.05) : .white
     }
     var surfaceElevated: Color {
         scheme == .dark

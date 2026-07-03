@@ -60,7 +60,7 @@ struct AppearanceView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DSToken.Spacing.md)
         .liquidGlassSurface(
-            in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            in: RoundedRectangle(cornerRadius: 10, style: .continuous),
             shadowRadius: 12,
             shadowY: 6
         )
@@ -188,6 +188,60 @@ struct AppearanceView: View {
                 caption: "Turn off hover animations on snippet cards",
                 isOn: $settings.disableHoverEffects
             )
+
+            Divider().opacity(0.5)
+
+            behaviorRow(
+                icon: "exclamationmark.triangle",
+                title: "Confirm Snippet Deletion",
+                caption: "Show a confirmation dialogue when deleting a snippet",
+                isOn: $settings.confirmSnippetDeletion
+            )
+
+            Divider().opacity(0.5)
+
+            behaviorPickerRow(
+                icon: "folder.badge.minus",
+                title: "Collection Deletion Behavior",
+                caption: "What to delete when deleting a collection",
+                selection: $settings.collectionDeletionBehavior
+            )
+        }
+    }
+
+    private func behaviorPickerRow(icon: String, title: String, caption: String, selection: Binding<String>) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(theme.safeAccentText(accent))
+                .frame(width: 30, height: 30)
+                .liquidGlassSurface(
+                    in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+                    tint: accent.opacity(0.12),
+                    shadowRadius: 3,
+                    shadowY: 1
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(theme.text)
+                Text(caption)
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.textMuted)
+            }
+
+            Spacer(minLength: 12)
+
+            Picker("", selection: selection) {
+                Text("Ask every time").tag("ask")
+                Text("Delete Collection only").tag("collectionOnly")
+                Text("Delete Collection & contents").tag("collectionAndContents")
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .frame(width: 180)
+            .tint(accent)
         }
     }
 

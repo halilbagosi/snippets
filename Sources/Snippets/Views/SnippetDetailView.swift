@@ -13,7 +13,7 @@ struct SnippetDetailView: View {
     let onClose: () -> Void
 
     @State private var didCopy: Bool = false
-    @State private var lightboxMedia: MediaItem? = nil
+    @State private var lightboxIndex: Int? = nil
 
     private var theme: Theme { Theme.current(colorScheme) }
 
@@ -35,8 +35,8 @@ struct SnippetDetailView: View {
 
     private var showMediaLightbox: Binding<Bool> {
         Binding(
-            get: { lightboxMedia != nil },
-            set: { if !$0 { lightboxMedia = nil } }
+            get: { lightboxIndex != nil },
+            set: { if !$0 { lightboxIndex = nil } }
         )
     }
 
@@ -79,9 +79,9 @@ struct SnippetDetailView: View {
             .accessibilityLabel("Close snippet")
         }
 
-        .sheet(isPresented: showMediaLightbox, onDismiss: { lightboxMedia = nil }) {
-            if let item = lightboxMedia {
-                MediaAttachmentLightbox(item: item)
+        .sheet(isPresented: showMediaLightbox, onDismiss: { lightboxIndex = nil }) {
+            if let index = lightboxIndex {
+                MediaAttachmentLightbox(items: orderedMediaItems, initialIndex: index)
             }
         }
     }
@@ -233,9 +233,9 @@ struct SnippetDetailView: View {
             let layout = AttachmentStripLayout.self
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .center, spacing: layout.hSpacing) {
-                    ForEach(mediaItems) { item in
+                    ForEach(Array(mediaItems.enumerated()), id: \.element.id) { index, item in
                         Button {
-                            lightboxMedia = item
+                            lightboxIndex = index
                         } label: {
                             MediaPreview(item: item, contentSize: layout.contentSize, innerPadding: layout.innerPadding)
                         }
@@ -331,7 +331,10 @@ private struct MediaPreview: View {
                 case .image:
                     ImageMediaView(item: item)
                 case .video:
+                    // Hit-transparent so the click reaches the strip's button —
+                    // the AVPlayer's NSView would otherwise swallow it.
                     VideoMediaView(item: item)
+                        .allowsHitTesting(false)
                 }
             }
             .frame(width: innerSize.width, height: innerSize.height)
@@ -365,40 +368,254 @@ private struct MediaAttachmentLightbox: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
 
-    let item: MediaItem
+    let items: [MediaItem]
+    @State private var index: Int
+
+    @State private var zoomScale: CGFloat = 1
+    @State private var zoomOffset: CGSize = .zero
+    @State private var pinchBaseScale: CGFloat? = nil
+    @State private var dragBaseOffset: CGSize? = nil
+    /// Width / height of the current attachment once known, so the sheet
+    /// itself goes wide for landscape media and tall for portrait.
+    @State private var contentAspect: CGFloat? = nil
+
+    private let minZoom: CGFloat = 1
+    private let maxZoom: CGFloat = 6
+
+    init(items: [MediaItem], initialIndex: Int) {
+        self.items = items
+        _index = State(initialValue: min(max(initialIndex, 0), max(items.count - 1, 0)))
+    }
 
     private var theme: Theme { Theme.current(colorScheme) }
+    private var item: MediaItem { items[index] }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                theme.canvas.ignoresSafeArea()
+        ZStack {
+            theme.canvas
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                // Clicking the empty area around the media closes the viewer;
+                // clicks on the media itself are caught by it and don't fall through.
+                .onTapGesture { dismiss() }
+            Group {
                 switch item.kind {
                 case .image:
-                    LightboxImageView(fileName: item.fileName)
+                    LightboxImageView(
+                        fileName: item.fileName,
+                        zoomScale: zoomScale,
+                        zoomOffset: zoomOffset,
+                        onAspectResolved: { contentAspect = $0 }
+                    )
                 case .video:
-                    LightboxVideoView(fileName: item.fileName)
+                    LightboxVideoView(
+                        fileName: item.fileName,
+                        zoomScale: zoomScale,
+                        zoomOffset: zoomOffset,
+                        onAspectResolved: { contentAspect = $0 }
+                    )
                 }
             }
-            .frame(minWidth: 560, minHeight: 440)
-            .navigationTitle("Attachment")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+            // Reset the loaded content when paging to another attachment.
+            .id(item.fileName)
+            .gesture(
+                MagnificationGesture()
+                    .onChanged { value in
+                        let base = pinchBaseScale ?? zoomScale
+                        pinchBaseScale = base
+                        setZoom(base * value)
+                    }
+                    .onEnded { _ in pinchBaseScale = nil }
+            )
+            .simultaneousGesture(
+                DragGesture()
+                    .onChanged { value in
+                        guard zoomScale > 1 else { return }
+                        let base = dragBaseOffset ?? zoomOffset
+                        dragBaseOffset = base
+                        zoomOffset = CGSize(
+                            width: base.width + value.translation.width,
+                            height: base.height + value.translation.height
+                        )
+                    }
+                    .onEnded { _ in dragBaseOffset = nil }
+            )
+            .onTapGesture(count: 2) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                    setZoom(zoomScale > 1 ? 1 : 2.5)
                 }
+            }
+            .onChange(of: index) { _, _ in
+                zoomScale = 1
+                zoomOffset = .zero
+                contentAspect = nil
+            }
+            // Keep the media clear of the chevrons, close button, and counter:
+            // the AVPlayer's NSView paints above SwiftUI content, so any chrome
+            // overlapping a video would be hidden behind it.
+            .padding(.horizontal, 64)
+            .padding(.top, 52)
+            .padding(.bottom, 52)
+
+            if items.count > 1 {
+                HStack {
+                    pagingButton(systemName: "chevron.left", key: .leftArrow, isEnabled: index > 0) {
+                        index -= 1
+                    }
+                    Spacer()
+                    pagingButton(systemName: "chevron.right", key: .rightArrow, isEnabled: index < items.count - 1) {
+                        index += 1
+                    }
+                }
+                .padding(.horizontal, 16)
             }
         }
+        .overlay(alignment: .topTrailing) {
+            Button(action: { dismiss() }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(theme.text)
+                    .frame(width: 30, height: 30)
+                    .contentShape(Circle())
+                    .liquidGlassSurface(
+                        in: Circle(),
+                        shadowRadius: 12,
+                        shadowY: 6
+                    )
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(.cancelAction)
+            .padding(14)
+            .accessibilityLabel("Close attachment viewer")
+        }
+        .overlay(alignment: .bottom) {
+            HStack(spacing: 6) {
+                zoomButton(systemName: "minus", key: "-", isEnabled: zoomScale > minZoom) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                        setZoom(zoomScale / 1.4)
+                    }
+                }
+                Text(items.count > 1 ? "\(index + 1) / \(items.count)" : "\(Int((zoomScale * 100).rounded()))%")
+                    .font(Mono.font(size: 11, weight: .semibold))
+                    .foregroundStyle(theme.textMuted)
+                    .padding(.horizontal, 6)
+                zoomButton(systemName: "plus", key: "=", isEnabled: zoomScale < maxZoom) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                        setZoom(zoomScale * 1.4)
+                    }
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .liquidGlassSurface(in: Capsule())
+            .padding(.bottom, 14)
+        }
+        .frame(minWidth: 560, idealWidth: sheetSize.width, minHeight: 440, idealHeight: sheetSize.height)
+        // Fitted sizing tracks the ideal size as the media's aspect ratio
+        // resolves, while the flexible frame keeps the sheet user-resizable.
+        .presentationSizing(.fitted)
+        .animation(.spring(response: 0.35, dampingFraction: 0.9), value: contentAspect)
+    }
+
+    /// Sheet dimensions derived from the media's aspect ratio: the frame goes
+    /// wide for landscape content and tall for portrait, so the media itself
+    /// can render as large as possible inside the chrome gutters.
+    private var sheetSize: CGSize {
+        let aspect = contentAspect ?? 16.0 / 10.0
+        let gutterWidth: CGFloat = 64 * 2
+        let gutterHeight: CGFloat = 52 * 2
+        let maxMediaWidth: CGFloat = 1000
+        let maxMediaHeight: CGFloat = 560
+
+        var mediaWidth = maxMediaWidth
+        var mediaHeight = mediaWidth / aspect
+        if mediaHeight > maxMediaHeight {
+            mediaHeight = maxMediaHeight
+            mediaWidth = mediaHeight * aspect
+        }
+        return CGSize(
+            width: max(mediaWidth + gutterWidth, 560),
+            height: max(mediaHeight + gutterHeight, 440)
+        )
+    }
+
+    private func setZoom(_ scale: CGFloat) {
+        zoomScale = min(max(scale, minZoom), maxZoom)
+        if zoomScale <= 1.001 {
+            zoomScale = 1
+            zoomOffset = .zero
+        }
+    }
+
+    private func zoomButton(
+        systemName: String,
+        key: KeyEquivalent,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(theme.text)
+                .frame(width: 22, height: 22)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .keyboardShortcut(key, modifiers: [])
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.3)
+        .accessibilityLabel(systemName == "plus" ? "Zoom in" : "Zoom out")
+    }
+
+    private func pagingButton(
+        systemName: String,
+        key: KeyEquivalent,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(theme.text)
+                .frame(width: 38, height: 38)
+                .contentShape(Circle())
+                .liquidGlassSurface(
+                    in: Circle(),
+                    interactive: true,
+                    shadowRadius: 12,
+                    shadowY: 6
+                )
+        }
+        .buttonStyle(.plain)
+        .keyboardShortcut(key, modifiers: [])
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.3)
+        .accessibilityLabel(key == .leftArrow ? "Previous attachment" : "Next attachment")
     }
 }
 
 private struct LightboxImageView: View {
     @Environment(\.colorScheme) private var colorScheme
     let fileName: String
+    var zoomScale: CGFloat = 1
+    var zoomOffset: CGSize = .zero
+    var onAspectResolved: ((CGFloat) -> Void)? = nil
     #if canImport(AppKit)
     @State private var image: NSImage? = nil
     @State private var imageLoadTask: Task<Void, Never>? = nil
     @State private var loadFailed: Bool = false
     #endif
+
+    /// Width / height of the loaded image, so the card hugs the picture and
+    /// portrait or landscape shots show at full size; placeholder until loaded.
+    private var cardAspectRatio: CGFloat {
+        #if canImport(AppKit)
+        if let image, image.size.height > 0, image.size.width > 0 {
+            return image.size.width / image.size.height
+        }
+        #endif
+        return 16.0 / 10.0
+    }
 
     var body: some View {
         let theme = Theme.current(colorScheme)
@@ -411,6 +628,8 @@ private struct LightboxImageView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .scaleEffect(zoomScale)
+                        .offset(zoomOffset)
                 } else if loadFailed {
                     VStack {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -443,8 +662,10 @@ private struct LightboxImageView: View {
                 #endif
             }
         }
-        .frame(maxWidth: 900, maxHeight: 720)
+        .aspectRatio(cardAspectRatio, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(.spring(response: 0.35, dampingFraction: 0.9), value: cardAspectRatio)
         .onAppear(perform: loadImage)
         .onDisappear {
             #if canImport(AppKit)
@@ -464,6 +685,9 @@ private struct LightboxImageView: View {
             guard !Task.isCancelled else { return }
             if let data, let nsImage = NSImage(data: data) {
                 image = nsImage
+                if nsImage.size.width > 0, nsImage.size.height > 0 {
+                    onAspectResolved?(nsImage.size.width / nsImage.size.height)
+                }
             } else {
                 loadFailed = true
             }
@@ -476,15 +700,49 @@ private struct LightboxImageView: View {
 
 private struct LightboxVideoView: View {
     let fileName: String
+    var zoomScale: CGFloat = 1
+    var zoomOffset: CGSize = .zero
+    var onAspectResolved: ((CGFloat) -> Void)? = nil
+
+    /// Width / height of the video's display size; 16:9 placeholder until the
+    /// asset's track dimensions have loaded.
+    @State private var aspectRatio: CGFloat = 16.0 / 9.0
 
     var body: some View {
         ZStack {
             Color.black
-            LoopingVideoPlayerView(fileName: fileName, videoGravity: .resizeAspect)
+            // Hit-transparent: the player has no controls, and the AVPlayer's
+            // NSView would otherwise swallow clicks meant for the chevrons.
+            LoopingVideoPlayerView(
+                fileName: fileName,
+                videoGravity: .resizeAspect,
+                zoomScale: zoomScale,
+                zoomOffset: zoomOffset
+            )
+            .allowsHitTesting(false)
         }
-        .frame(width: 800, height: 450)
+        // Box matches the video's own aspect ratio, sized to the available
+        // space inside the lightbox gutters.
+        .aspectRatio(aspectRatio, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task(id: fileName) { await loadAspectRatio() }
+    }
+
+    private func loadAspectRatio() async {
+        let asset = AVURLAsset(url: MediaManager.resolvedURL(for: fileName))
+        guard let track = try? await asset.loadTracks(withMediaType: .video).first,
+              let (naturalSize, transform) = try? await track.load(.naturalSize, .preferredTransform) else {
+            return
+        }
+        let size = naturalSize.applying(transform)
+        let width = abs(size.width)
+        let height = abs(size.height)
+        guard width > 0, height > 0 else { return }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+            aspectRatio = width / height
+        }
+        onAspectResolved?(width / height)
     }
 }
 
@@ -605,6 +863,13 @@ private struct HighlightedCodeView: NSViewRepresentable {
         textView.isRichText = false
         textView.drawsBackground = false
         textView.backgroundColor = .clear
+        // Wrap to the visible width instead of scrolling horizontally. Leaving
+        // the text view horizontally resizable made it wider than the area left
+        // by the line-number ruler, so it opened scrolled right and hid the
+        // first characters. Mirrors the editable CodeEditor's configuration.
+        textView.isHorizontallyResizable = false
+        textView.isVerticallyResizable = true
+        textView.textContainer?.widthTracksTextView = true
         textView.textContainerInset = NSSize(width: 12, height: 12)
         textView.textContainer?.lineFragmentPadding = 0
         textView.usesFindBar = true
@@ -619,7 +884,7 @@ private struct HighlightedCodeView: NSViewRepresentable {
         scrollView.backgroundColor = .clear
         scrollView.borderType = .noBorder
         scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = true
+        scrollView.hasHorizontalScroller = false
         scrollView.autohidesScrollers = true
 
         let ruler = LineNumberRulerView(textView: textView, theme: theme)

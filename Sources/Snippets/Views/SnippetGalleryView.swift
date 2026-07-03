@@ -30,11 +30,16 @@ struct SnippetGalleryView: View {
     var onDeleteCollection: ((SnippetCollection) -> Void)? = nil
     var onEditSnippet: ((Snippet) -> Void)? = nil
     var onDelete: ((Snippet, @escaping () -> Void) -> Void)? = nil
-    var onUndoDelete: (() -> PersistentIdentifier?)? = nil
+    /// Bulk delete of the current selection: asks for confirmation once and
+    /// deletes everything, instead of prompting per item.
+    var onDeleteSelection: (([Snippet], [SnippetCollection], @escaping () -> Void) -> Void)? = nil
+    /// Restores the last deletion batch; returns whether anything came back.
+    var onUndoDelete: (() -> Bool)? = nil
     var onMoveSnippetToLibrary: ((Snippet) -> Void)? = nil
     var onMoveSnippetToCollection: ((Snippet, SnippetCollection) -> Void)? = nil
-    var onMoveCollectionToLibrary: ((SnippetCollection) -> Void)? = nil
-    var onMoveCollectionToCollection: ((SnippetCollection, SnippetCollection) -> Void)? = nil
+    /// Bulk move of the current selection to a target (nil = Library), handled
+    /// as one undoable batch with a single toast.
+    var onMoveSelection: (([Snippet], [SnippetCollection], SnippetCollection?) -> Void)? = nil
     var onCopySnippetToCollection: ((Snippet, SnippetCollection) -> Void)? = nil
     var isTrashMode: Bool = false
     var onRestore: ((Snippet) -> Void)? = nil
@@ -51,44 +56,19 @@ struct SnippetGalleryView: View {
     @State private var fabHovered = false
     @State private var pressedSnippetID: PersistentIdentifier? = nil
     @State private var pressedResetTask: Task<Void, Never>? = nil
-    /// Card geometry is only read from event handlers (delete snapshots), never
-    /// from `body`, so it lives in a plain class: per-card GeometryReader writes
-    /// during layout must not invalidate the whole gallery.
-    private final class CardGeometryStore {
-        var sizes: [PersistentIdentifier: CGSize] = [:]
-        var frames: [PersistentIdentifier: CGRect] = [:]
-    }
-    @State private var cardGeometry = CardGeometryStore()
-    #if canImport(AppKit)
-    @State private var pendingDeleteSnapshots: [PersistentIdentifier: PendingDeleteSnapshot] = [:]
-    @State private var deletingSnippetEffects: [PersistentIdentifier: DeletingSnippetEffect] = [:]
-    @State private var deletionCleanupTasks: [PersistentIdentifier: Task<Void, Never>] = [:]
-    #endif
     @State private var showMoveSheet: Bool = false
     @State private var collectionFilterSearchText = ""
 #if canImport(AppKit)
     @State private var keyEventMonitor: Any? = nil
 #endif
 
-    #if canImport(AppKit)
-    private struct PendingDeleteSnapshot {
-        let image: NSImage
-        let frame: CGRect
-        let accent: Color
-    }
-
-    private struct DeletingSnippetEffect: Identifiable {
-        let id: PersistentIdentifier
-        let image: NSImage
-        let frame: CGRect
-        let accent: Color
-        let startDate: Date
-    }
-    #endif
-
     private let columns = [GridItem(.adaptive(minimum: 420, maximum: 640), spacing: 20)]
     private let subcollectionColumns = [GridItem(.adaptive(minimum: 440, maximum: 680), spacing: 16)]
-    private let deletionDisintegrationDuration: TimeInterval = 1.15
+    /// Deleted cards fade out with the same opacity transition used when
+    /// collapsing gallery sections.
+    private var cardRemovalAnimation: Animation {
+        .interactiveSpring(response: 0.42, dampingFraction: 0.9, blendDuration: 0.12)
+    }
     private var sectionCollapseAnimation: Animation {
         .interactiveSpring(response: 0.34, dampingFraction: 0.96, blendDuration: 0.08)
     }
@@ -264,18 +244,11 @@ struct SnippetGalleryView: View {
                 .padding(.trailing, 32)
                 .padding(.bottom, 24)
 
-            #if canImport(AppKit)
-            deletionDisintegrationLayer
-                .allowsHitTesting(false)
-                .zIndex(8)
-            #endif
-
             if showMoveSheet {
                 moveToCollectionOverlay
                     .zIndex(9)
             }
         }
-        .coordinateSpace(name: "gallerySpace")
         .onAppear {
             hasAnimatedCards = false
             withAnimation(.spring(response: 0.5, dampingFraction: 0.84)) {
@@ -290,7 +263,7 @@ struct SnippetGalleryView: View {
                     return nil
                 }
             if event.modifierFlags.contains(.command), chars.lowercased() == "z" {
-                if onUndoDelete?() != nil {
+                if onUndoDelete?() == true {
                     return nil
                 }
                 return event
@@ -325,10 +298,6 @@ struct SnippetGalleryView: View {
                 NSEvent.removeMonitor(keyEventMonitor)
                 self.keyEventMonitor = nil
             }
-            for task in deletionCleanupTasks.values {
-                task.cancel()
-            }
-            deletionCleanupTasks.removeAll()
             #endif
             pressedResetTask?.cancel()
         }
@@ -400,21 +369,7 @@ struct SnippetGalleryView: View {
                 ),
                 itemCount: selectedSnippets.count + selectedCollections.count,
                 onMove: { collection in
-                    if let target = collection {
-                        for snippet in selectedSnippets {
-                            onMoveSnippetToCollection?(snippet, target)
-                        }
-                        for coll in selectedCollections {
-                            onMoveCollectionToCollection?(coll, target)
-                        }
-                    } else {
-                        for snippet in selectedSnippets {
-                            onMoveSnippetToLibrary?(snippet)
-                        }
-                        for coll in selectedCollections {
-                            onMoveCollectionToLibrary?(coll)
-                        }
-                    }
+                    onMoveSelection?(selectedSnippets, selectedCollections, collection)
                     withAnimation {
                         viewModel.clearSelectionAndExitSelectMode()
                     }
@@ -438,106 +393,15 @@ struct SnippetGalleryView: View {
         return Theme.current(colorScheme)
     }
 
-    #if canImport(AppKit)
-    /// The Metal overlays clock themselves off the display link — SwiftUI only
-    /// places them once per effect, so per-frame progress never round-trips
-    /// through view updates (which stuttered during the deletion grid reflow).
-    private var deletionDisintegrationLayer: some View {
-        GeometryReader { _ in
-            ZStack {
-                ForEach(Array(deletingSnippetEffects.values).sorted { lhs, rhs in
-                    if lhs.frame.minY == rhs.frame.minY {
-                        return lhs.frame.minX < rhs.frame.minX
-                    }
-                    return lhs.frame.minY < rhs.frame.minY
-                }, id: \.id) { effect in
-                    MetalDisintegrationOverlay(
-                        startDate: effect.startDate,
-                        duration: deletionDisintegrationDuration,
-                        accent: effect.accent,
-                        snapshot: effect.image
-                    )
-                    .frame(
-                        width: max(effect.frame.width, 1),
-                        height: max(effect.frame.height, 1)
-                    )
-                    .position(x: effect.frame.midX, y: effect.frame.midY)
-                    .compositingGroup()
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-
-    private func cacheDeletionSnapshot(for snippet: Snippet) {
-        guard MetalDisintegrationOverlay.isSupported else { return }
-        let id = snippet.persistentModelID
-        let fallbackSize = cardGeometry.frames[id]?.size ?? .zero
-        let size = cardGeometry.sizes[id] ?? fallbackSize
-        guard size.width > 1, size.height > 1 else { return }
-
-        let frame = cardGeometry.frames[id] ?? CGRect(origin: .zero, size: size)
-        let cardView = SnippetCard(
-            snippet: snippet,
-            inTrashView: isTrashMode,
-            isSelectionMode: viewModel.isSelectMode
-        )
-        .environment(\.colorScheme, colorScheme)
-        .environment(appearanceSettings)
-        .frame(width: size.width, height: size.height)
-
-        guard let image = ViewSnapshot.snapshot(of: cardView, size: size) else { return }
-        pendingDeleteSnapshots[id] = PendingDeleteSnapshot(
-            image: image,
-            frame: frame,
-            accent: theme.accentColor(for: snippet.language)
-        )
-    }
-    #else
-    private func cacheDeletionSnapshot(for snippet: Snippet) {}
-    #endif
-
+    /// Deletion just removes the card from the grid; the grid's identity-keyed
+    /// animation plays the card's `.transition(.opacity)`, matching the fade
+    /// used when a section is collapsed.
     private func requestDelete(_ snippet: Snippet) {
-        let id = snippet.persistentModelID
-        cacheDeletionSnapshot(for: snippet)
-        onDelete?(snippet) {
-            startDisintegrationEffect(for: id)
-        }
+        onDelete?(snippet) {}
     }
 
     private func requestPermanentDelete(_ snippet: Snippet) {
-        let id = snippet.persistentModelID
-        cacheDeletionSnapshot(for: snippet)
-        onPermanentDelete?(snippet) {
-            startDisintegrationEffect(for: id)
-        }
-    }
-
-    private func startDisintegrationEffect(for id: PersistentIdentifier) {
-        #if canImport(AppKit)
-        guard MetalDisintegrationOverlay.isSupported else { return }
-        guard let pending = pendingDeleteSnapshots.removeValue(forKey: id) else { return }
-        guard deletingSnippetEffects[id] == nil else { return }
-
-        deletingSnippetEffects[id] = DeletingSnippetEffect(
-            id: id,
-            image: pending.image,
-            frame: pending.frame,
-            accent: pending.accent,
-            startDate: Date()
-        )
-
-        deletionCleanupTasks[id]?.cancel()
-        deletionCleanupTasks[id] = Task { @MainActor in
-            let delay = UInt64((deletionDisintegrationDuration + 0.14) * 1_000_000_000)
-            try? await Task.sleep(nanoseconds: delay)
-            guard !Task.isCancelled else { return }
-            deletingSnippetEffects.removeValue(forKey: id)
-            cardGeometry.frames.removeValue(forKey: id)
-            cardGeometry.sizes.removeValue(forKey: id)
-            deletionCleanupTasks.removeValue(forKey: id)
-        }
-        #endif
+        onPermanentDelete?(snippet) {}
     }
 
     private func subcollectionGrid(_ source: [SnippetCollection]) -> some View {
@@ -576,7 +440,7 @@ struct SnippetGalleryView: View {
 
                         if viewModel.isSelectMode {
                             let isSelected = viewModel.selectedForAction.contains(collection.persistentModelID)
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
                                 .stroke(isSelected ? theme.accent : Color.clear, lineWidth: 3)
                                 .overlay(alignment: .topTrailing) {
                                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
@@ -592,6 +456,7 @@ struct SnippetGalleryView: View {
                     .frame(maxWidth: .infinity)
                     .opacity(hasAnimatedCards ? 1 : 0)
                     .offset(y: hasAnimatedCards ? 0 : 6)
+                    .transition(.opacity)
                     .animation(
                         .spring(response: 0.32, dampingFraction: 0.94)
                             .delay(min(Double(index) * 0.02, 0.12)),
@@ -599,7 +464,7 @@ struct SnippetGalleryView: View {
                     )
                 }
             }
-            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: collectionIdentityKey(for: ordered))
+            .animation(cardRemovalAnimation, value: collectionIdentityKey(for: ordered))
             .padding(.horizontal, 18)
             .padding(.top, 18)
             .padding(.bottom, 16)
@@ -634,22 +499,11 @@ struct SnippetGalleryView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .background(GeometryReader { proxy in
-                    Color.clear
-                        .onAppear {
-                            cardGeometry.sizes[snippet.persistentModelID] = proxy.size
-                            cardGeometry.frames[snippet.persistentModelID] = proxy.frame(in: .named("gallerySpace"))
-                        }
-                        .onChange(of: proxy.size) { _, newSize in
-                            cardGeometry.sizes[snippet.persistentModelID] = newSize
-                            cardGeometry.frames[snippet.persistentModelID] = proxy.frame(in: .named("gallerySpace"))
-                        }
-                })
                     .scaleEffect(pressedSnippetID == snippet.persistentModelID ? 0.97 : 1.0)
                     .opacity(pressedSnippetID == snippet.persistentModelID ? 0.92 : 1.0)
-                    .opacity(deletingSnippetEffects[snippet.persistentModelID] != nil ? 0 : 1)
                     .opacity(hasAnimatedCards ? 1 : 0)
                     .offset(y: hasAnimatedCards ? 0 : 8)
+                    .transition(.opacity)
                     .zIndex(pressedSnippetID == snippet.persistentModelID ? 2 : 0)
                     .animation(
                         .spring(response: 0.34, dampingFraction: 0.92)
@@ -717,7 +571,7 @@ struct SnippetGalleryView: View {
                     }
             }
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: snippetIdentityKey(for: source))
+        .animation(cardRemovalAnimation, value: snippetIdentityKey(for: source))
         .padding(.horizontal, 18)
         .padding(.top, 18)
         .padding(.bottom, 18)
@@ -830,7 +684,7 @@ struct SnippetGalleryView: View {
 
     private var topBar: some View {
         DSGlassContainer(spacing: 10) {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 10) {
                     if let onBack {
                         Button(action: onBack) {
@@ -846,7 +700,11 @@ struct SnippetGalleryView: View {
                                     shadowY: 2
                                 )
                                 .compositingGroup()
-                                .padding(DSToken.Spacing.xs)
+                                // Horizontal padding only: vertical padding would
+                                // make the back button taller than the search bar,
+                                // growing the row and shifting the filter tags down
+                                // when a collection is open.
+                                .padding(.horizontal, DSToken.Spacing.xs)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -938,6 +796,8 @@ struct SnippetGalleryView: View {
                                         requestPermanentDelete(snip)
                                     }
                                     for coll in toDeleteCollections { onPermanentDeleteCollection?(coll) }
+                                } else if let onDeleteSelection {
+                                    onDeleteSelection(toDeleteSnippets, toDeleteCollections) {}
                                 } else {
                                     for snip in toDeleteSnippets {
                                         requestDelete(snip)
@@ -997,7 +857,6 @@ struct SnippetGalleryView: View {
                         }
                     }
                 }
-                .frame(height: 36)
                 .animation(.spring(response: 0.45, dampingFraction: 0.85), value: onBack != nil)
                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isSelectMode)
                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isOldestToNewest)
@@ -1258,6 +1117,7 @@ struct SnippetGalleryView: View {
                 "",
                 text: $searchText,
                 prompt: Text("search title, description, or code…")
+                    .font(Mono.font(size: 8))
                     .foregroundColor(colorScheme == .dark ? theme.text.opacity(0.72) : theme.textMuted.opacity(0.95))
             )
                 .textFieldStyle(.plain)
@@ -1280,9 +1140,9 @@ struct SnippetGalleryView: View {
                 .foregroundStyle(searchFocused ? theme.textMuted : theme.text.opacity(0.78))
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 11)
+        .frame(height: 32)
         .liquidGlassSurface(
-            in: RoundedRectangle(cornerRadius: 10, style: .continuous),
+            in: RoundedRectangle(cornerRadius: 7, style: .continuous),
             tint: searchFocused ? theme.accent : nil,
             interactive: true,
             borderOpacity: searchFocused ? 0.48 : (colorScheme == .dark ? 0.16 : 0.36),
@@ -1290,7 +1150,7 @@ struct SnippetGalleryView: View {
             shadowY: 3
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
                 .stroke(searchFocused ? theme.accent.opacity(0.42) : .clear, lineWidth: 1)
         }
         .contentShape(Rectangle())
@@ -1339,12 +1199,12 @@ struct SnippetGalleryView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.vertical, 6)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
         }
         .scrollClipDisabled()
-        .frame(height: 68)
+        .frame(height: 48)
     }
 
     private var emptyState: some View {
@@ -1382,7 +1242,7 @@ struct SnippetGalleryView: View {
                 .padding(.vertical, 11)
                 .foregroundStyle(colorScheme == .dark ? .white : theme.text)
                 .liquidGlassSurface(
-                    in: Capsule(style: .continuous),
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous),
                     tint: theme.accent,
                     interactive: true,
                     borderOpacity: colorScheme == .dark ? 0.26 : 0.46,
@@ -1391,7 +1251,7 @@ struct SnippetGalleryView: View {
                 )
                 .overlay {
                     if colorScheme == .light {
-                        Capsule(style: .continuous)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(theme.accent.opacity(0.12))
                             .allowsHitTesting(false)
                     }
@@ -1417,6 +1277,8 @@ private struct MoveToCollectionCard: View {
     let onCancel: () -> Void
 
     @State private var searchText: String = ""
+    @State private var hoveredRowID: PersistentIdentifier? = nil
+    @State private var isLibraryRowHovered: Bool = false
 
     private var theme: Theme { Theme.current(colorScheme) }
 
@@ -1427,18 +1289,18 @@ private struct MoveToCollectionCard: View {
     }
 
     private var titleText: String {
-        itemCount == 1 ? "Move 1 Item" : "Move \(itemCount) Items"
+        itemCount == 1 ? "move 1 item" : "move \(itemCount) items"
     }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
             DSGlassContainer(spacing: 16) {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(titleText)
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundStyle(theme.text)
+                VStack(alignment: .leading, spacing: 14) {
+                    SectionHeader(titleText)
+                        .padding(.trailing, 34)
 
                     searchField
+                        .padding(.top, 8)
 
                     ScrollView {
                         VStack(spacing: 0) {
@@ -1450,9 +1312,9 @@ private struct MoveToCollectionCard: View {
                             }
 
                             if rows.isEmpty {
-                                Text("No matching collections")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(.secondary)
+                                Text("no matching collections")
+                                    .font(Mono.font(size: 11, weight: .semibold))
+                                    .foregroundStyle(theme.textMuted)
                                     .frame(maxWidth: .infinity, minHeight: 60)
                             } else {
                                 ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
@@ -1468,6 +1330,7 @@ private struct MoveToCollectionCard: View {
                             shadowRadius: 8,
                             shadowY: 4
                         )
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                 }
                 .padding(.horizontal, 20)
@@ -1509,88 +1372,125 @@ private struct MoveToCollectionCard: View {
     private var searchField: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-                .font(.system(size: 13))
-            TextField("Search collections", text: $searchText)
-                .textFieldStyle(.plain)
-                .font(.system(size: 13))
+                .font(Mono.font(size: 10, weight: .semibold))
+                .foregroundStyle(theme.textMuted)
+            TextField(
+                "",
+                text: $searchText,
+                prompt: Text("filter collections…")
+                    .font(Mono.font(size: 11))
+                    .foregroundColor(theme.textMuted.opacity(0.85))
+            )
+            .textFieldStyle(.plain)
+            .font(Mono.font(size: 12))
+            .foregroundStyle(theme.text)
+            .tint(theme.accent)
             if !searchText.isEmpty {
                 Button {
                     searchText = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.tertiary)
+                        .font(Mono.font(size: 11))
+                        .foregroundStyle(theme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .background {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(.white.opacity(colorScheme == .dark ? 0.08 : 0.2), lineWidth: 1)
-                }
-        }
+        .frame(height: 32)
+        .liquidGlassSurface(
+            in: RoundedRectangle(cornerRadius: 7, style: .continuous),
+            interactive: true,
+            shadowRadius: 6,
+            shadowY: 3
+        )
     }
 
     private var divider: some View {
         Rectangle()
-            .fill(.white.opacity(colorScheme == .dark ? 0.12 : 0.34))
+            .fill(theme.border)
             .frame(height: 1)
     }
 
     private var libraryRow: some View {
         Button(action: { onMove(nil) }) {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Image(systemName: "square.grid.2x2")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(theme.accent)
-                    .frame(width: 24, height: 24)
+                    .frame(width: 22, height: 22)
 
                 Text("All Snippets")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(theme.text)
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.secondary.opacity(0.5))
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(theme.textFaint)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
             .contentShape(Rectangle())
+            .background(isLibraryRowHovered ? theme.accent.opacity(colorScheme == .dark ? 0.12 : 0.08) : .clear)
         }
         .buttonStyle(.plain)
+        .onHover { isLibraryRowHovered = $0 }
     }
 
     private func collectionRow(_ row: CollectionMoveRow) -> some View {
         let collection = row.collection
+        let snippetCount = collection.snippets.count { $0.deletedAt == nil }
+        let isHovered = hoveredRowID == row.id
         return Button(action: { onMove(collection) }) {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
+                // Tree guides: a vertical rule per ancestor level, then an
+                // elbow marking this row as a child of the row above it.
+                if row.depth > 0 {
+                    HStack(spacing: 0) {
+                        ForEach(0..<row.depth, id: \.self) { level in
+                            Group {
+                                if level == row.depth - 1 {
+                                    Image(systemName: "arrow.turn.down.right")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundStyle(theme.textFaint)
+                                } else {
+                                    Rectangle()
+                                        .fill(theme.border)
+                                        .frame(width: 1, height: 18)
+                                }
+                            }
+                            .frame(width: 18)
+                        }
+                    }
+                }
+
                 Image(systemName: collection.displayIconName)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: row.depth == 0 ? 14 : 12, weight: .semibold))
                     .foregroundStyle(collection.displayColor)
-                    .frame(width: 24, height: 24)
+                    .frame(width: 22, height: 22)
 
                 Text(collection.name)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: row.depth == 0 ? 13 : 12.5, weight: .medium))
+                    .foregroundStyle(theme.text)
 
                 Spacer()
 
+                Text("\(snippetCount)")
+                    .font(Mono.font(size: 10, weight: .semibold))
+                    .foregroundStyle(theme.textFaint)
+
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.secondary.opacity(0.5))
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(theme.textFaint)
             }
-            .padding(.leading, 16 + CGFloat(row.depth) * 20)
-            .padding(.trailing, 16)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
             .contentShape(Rectangle())
+            .background(isHovered ? collection.displayColor.opacity(colorScheme == .dark ? 0.12 : 0.08) : .clear)
         }
         .buttonStyle(.plain)
+        .onHover { hoveredRowID = $0 ? row.id : nil }
     }
 }

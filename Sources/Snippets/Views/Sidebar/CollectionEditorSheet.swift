@@ -674,34 +674,17 @@ struct CollectionEditorSheet: View {
                     Text("Collection")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.secondary)
-                    Spacer()
-                    Menu {
-                        Button("Select collection…") { parentCollectionID = nil }
+                    Spacer(minLength: 12)
+                    Picker("", selection: $parentCollectionID) {
+                        Text("Select collection…").tag(Optional<PersistentIdentifier>.none)
                         ForEach(availableParentCollections) { collection in
-                            Button(collection.name) { parentCollectionID = collection.persistentModelID }
+                            Text(collection.name).tag(Optional(collection.persistentModelID))
                         }
-                    } label: {
-                        HStack {
-                            Text(parentCollectionID == nil ? "Select collection…" : availableParentCollections.first(where: { $0.persistentModelID == parentCollectionID })?.name ?? "Select collection…")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                            Spacer()
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .liquidGlassSurface(
-                            in: RoundedRectangle(cornerRadius: 8, style: .continuous),
-                            interactive: true,
-                            borderOpacity: colorScheme == .dark ? 0.16 : 0.36
-                        )
                     }
-                    .menuStyle(.borderlessButton)
-                    .frame(maxWidth: 200)
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(maxWidth: 200, alignment: .trailing)
+                    .tint(activeColor)
                 }
                 .padding(.top, 4)
                 .transition(.opacity)

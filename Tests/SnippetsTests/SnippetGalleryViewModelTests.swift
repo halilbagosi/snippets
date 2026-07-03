@@ -35,4 +35,72 @@ final class SnippetGalleryViewModelTests: XCTestCase {
         XCTAssertFalse(sut.isSelectMode)
         XCTAssertTrue(sut.selectedForAction.isEmpty)
     }
+
+    // MARK: - BulkDeleteConfirmation.decide
+
+    func test_decide_collectionsWithAskBehavior_asksForCollectionBehaviorOnce() {
+        let result = BulkDeleteConfirmation.decide(
+            snippetCount: 3,
+            collectionCount: 2,
+            confirmSnippetDeletion: true,
+            collectionDeletionBehavior: "ask"
+        )
+
+        XCTAssertEqual(result, .askCollectionBehavior)
+    }
+
+    func test_decide_collectionsWithAskBehavior_asksEvenWhenSnippetConfirmationIsOff() {
+        let result = BulkDeleteConfirmation.decide(
+            snippetCount: 0,
+            collectionCount: 2,
+            confirmSnippetDeletion: false,
+            collectionDeletionBehavior: "ask"
+        )
+
+        XCTAssertEqual(result, .askCollectionBehavior)
+    }
+
+    func test_decide_snippetsOnlyWithConfirmationOn_confirmsOnce() {
+        let result = BulkDeleteConfirmation.decide(
+            snippetCount: 5,
+            collectionCount: 0,
+            confirmSnippetDeletion: true,
+            collectionDeletionBehavior: "ask"
+        )
+
+        XCTAssertEqual(result, .confirmOnce(deleteCollectionContents: false))
+    }
+
+    func test_decide_snippetsAndCollectionsWithFixedBehavior_confirmsOnceUsingThatBehavior() {
+        let result = BulkDeleteConfirmation.decide(
+            snippetCount: 2,
+            collectionCount: 1,
+            confirmSnippetDeletion: true,
+            collectionDeletionBehavior: "collectionAndContents"
+        )
+
+        XCTAssertEqual(result, .confirmOnce(deleteCollectionContents: true))
+    }
+
+    func test_decide_snippetsOnlyWithConfirmationOff_deletesImmediately() {
+        let result = BulkDeleteConfirmation.decide(
+            snippetCount: 4,
+            collectionCount: 0,
+            confirmSnippetDeletion: false,
+            collectionDeletionBehavior: "ask"
+        )
+
+        XCTAssertEqual(result, .deleteImmediately(deleteCollectionContents: false))
+    }
+
+    func test_decide_collectionsOnlyWithFixedBehaviorAndConfirmationOff_deletesImmediately() {
+        let result = BulkDeleteConfirmation.decide(
+            snippetCount: 0,
+            collectionCount: 3,
+            confirmSnippetDeletion: false,
+            collectionDeletionBehavior: "collectionOnly"
+        )
+
+        XCTAssertEqual(result, .deleteImmediately(deleteCollectionContents: false))
+    }
 }

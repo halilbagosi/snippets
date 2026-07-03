@@ -8,15 +8,19 @@ import AppKit
 struct LoopingVideoPlayerView: NSViewRepresentable {
     let fileName: String
     var videoGravity: AVLayerVideoGravity = .resizeAspectFill
+    var zoomScale: CGFloat = 1
+    var zoomOffset: CGSize = .zero
 
     func makeNSView(context: Context) -> LoopingVideoContainerView {
         let view = LoopingVideoContainerView()
         view.configure(with: MediaManager.resolvedURL(for: fileName), videoGravity: videoGravity)
+        view.setZoom(scale: zoomScale, offset: zoomOffset)
         return view
     }
 
     func updateNSView(_ nsView: LoopingVideoContainerView, context: Context) {
         nsView.configure(with: MediaManager.resolvedURL(for: fileName), videoGravity: videoGravity)
+        nsView.setZoom(scale: zoomScale, offset: zoomOffset)
     }
 
     static func dismantleNSView(_ nsView: LoopingVideoContainerView, coordinator: ()) {
@@ -30,17 +34,21 @@ final class LoopingVideoContainerView: NSView {
     private var loopObserver: NSObjectProtocol?
     private var currentURL: URL?
     private var currentGravity: AVLayerVideoGravity = .resizeAspectFill
+    private var zoomScale: CGFloat = 1
+    private var zoomOffset: CGSize = .zero
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
         layer?.backgroundColor = NSColor.black.cgColor
+        layer?.masksToBounds = true
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         wantsLayer = true
         layer?.backgroundColor = NSColor.black.cgColor
+        layer?.masksToBounds = true
     }
 
     func configure(with url: URL, videoGravity: AVLayerVideoGravity = .resizeAspectFill) {
@@ -55,7 +63,10 @@ final class LoopingVideoContainerView: NSView {
 
         let newLayer = AVPlayerLayer(player: newPlayer)
         newLayer.videoGravity = videoGravity
-        newLayer.frame = bounds
+        // Bounds + position instead of frame: frame is undefined once the
+        // layer carries a zoom transform.
+        newLayer.bounds = bounds
+        newLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
         layer?.addSublayer(newLayer)
 
         loopObserver = NotificationCenter.default.addObserver(
@@ -71,6 +82,26 @@ final class LoopingVideoContainerView: NSView {
 
         player = newPlayer
         playerLayer = newLayer
+        applyZoom()
+    }
+
+    func setZoom(scale: CGFloat, offset: CGSize) {
+        guard scale != zoomScale || offset != zoomOffset else { return }
+        zoomScale = scale
+        zoomOffset = offset
+        applyZoom()
+    }
+
+    private func applyZoom() {
+        guard let playerLayer else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        // The backing layer is y-up (view is not flipped); SwiftUI offsets are y-down.
+        playerLayer.setAffineTransform(
+            CGAffineTransform(translationX: zoomOffset.width, y: -zoomOffset.height)
+                .scaledBy(x: zoomScale, y: zoomScale)
+        )
+        CATransaction.commit()
     }
 
     func teardown() {
@@ -88,13 +119,20 @@ final class LoopingVideoContainerView: NSView {
 
     override func layout() {
         super.layout()
-        playerLayer?.frame = bounds
+        guard let playerLayer else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        playerLayer.bounds = bounds
+        playerLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        CATransaction.commit()
     }
 }
 #else
 struct LoopingVideoPlayerView: View {
     let fileName: String
     var videoGravity: AVLayerVideoGravity = .resizeAspectFill
+    var zoomScale: CGFloat = 1
+    var zoomOffset: CGSize = .zero
 
     var body: some View {
         Image(systemName: "play.rectangle.fill")

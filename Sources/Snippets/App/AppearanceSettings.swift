@@ -16,13 +16,18 @@ final class AppearanceSettings {
         static let focusedMode       = "settings.focusedMode"
         static let disableHover      = "settings.disableHoverEffects"
         static let themeColorHex     = "settings.themeColorHex"
+        static let confirmSnippetDeletion = "settings.confirmSnippetDeletion"
+        static let collectionDeletionBehavior = "settings.collectionDeletionBehavior"
     }
 
     // MARK: - Published State
 
     /// "system", "light", or "dark".
     var preferredColorScheme: String {
-        didSet { UserDefaults.standard.set(preferredColorScheme, forKey: Key.colorScheme) }
+        didSet {
+            UserDefaults.standard.set(preferredColorScheme, forKey: Key.colorScheme)
+            applyAppAppearance()
+        }
     }
 
     /// When true, the animated gradient background is hidden.
@@ -43,18 +48,42 @@ final class AppearanceSettings {
         }
     }
 
-    // MARK: - Computed Helpers
-
-    var resolvedColorScheme: ColorScheme? {
-        switch preferredColorScheme {
-        case "light": return .light
-        case "dark":  return .dark
-        default:      return nil   // follow system
-        }
+    /// Whether to ask for confirmation when deleting a snippet.
+    var confirmSnippetDeletion: Bool {
+        didSet { UserDefaults.standard.set(confirmSnippetDeletion, forKey: Key.confirmSnippetDeletion) }
     }
+
+    /// Behavior for deleting collections: "ask", "collectionOnly", "collectionAndContents".
+    var collectionDeletionBehavior: String {
+        didSet { UserDefaults.standard.set(collectionDeletionBehavior, forKey: Key.collectionDeletionBehavior) }
+    }
+
+    // MARK: - Computed Helpers
 
     var themeColor: Color {
         Color(hex: themeColorHex) ?? Color(red: 0.318, green: 0.761, blue: 0.420)
+    }
+
+    #if canImport(AppKit)
+    /// AppKit appearance override for a stored preference; nil follows the system.
+    nonisolated static func appearanceName(for preference: String) -> NSAppearance.Name? {
+        switch preference {
+        case "light": return .aqua
+        case "dark":  return .darkAqua
+        default:      return nil
+        }
+    }
+    #endif
+
+    /// Applies the preference at the AppKit level. SwiftUI's
+    /// `preferredColorScheme(nil)` alone doesn't re-read the system appearance
+    /// until the window is next activated, so switching to "system" would lag
+    /// behind by one click; `NSApp.appearance = nil` takes effect immediately.
+    private func applyAppAppearance() {
+        #if canImport(AppKit)
+        NSApp.appearance = Self.appearanceName(for: preferredColorScheme)
+            .flatMap { NSAppearance(named: $0) }
+        #endif
     }
 
     // MARK: - Init
@@ -66,7 +95,15 @@ final class AppearanceSettings {
         self.disableHoverEffects  = defaults.bool(forKey: Key.disableHover)
         self.themeColorHex        = defaults.string(forKey: Key.themeColorHex) ?? "#51C278"
 
-        // Apply stored accent on launch.
+        if defaults.object(forKey: Key.confirmSnippetDeletion) == nil {
+            self.confirmSnippetDeletion = true
+        } else {
+            self.confirmSnippetDeletion = defaults.bool(forKey: Key.confirmSnippetDeletion)
+        }
+        self.collectionDeletionBehavior = defaults.string(forKey: Key.collectionDeletionBehavior) ?? "ask"
+
+        // Apply stored accent and appearance on launch.
         Theme.userAccent = Color(hex: self.themeColorHex)
+        applyAppAppearance()
     }
 }

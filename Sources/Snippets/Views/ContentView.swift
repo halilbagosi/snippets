@@ -61,17 +61,42 @@ struct ContentView: View {
         case snippet(PersistentIdentifier)
         case collection(PersistentIdentifier)
     }
-    @State private var lastDeletedItem: DeletedItem? = nil
+    /// Everything soft-deleted by the most recent delete action, so Undo can
+    /// bring back the entire batch (snippets and collections alike).
+    @State private var lastDeletion: [DeletedItem] = []
+
+    /// Captures where an item lived before the most recent move, so Undo can
+    /// put the whole batch back.
+    enum MoveRecord {
+        case snippet(id: PersistentIdentifier, previousCollectionIDs: [PersistentIdentifier])
+        case collection(id: PersistentIdentifier, previousParentID: PersistentIdentifier?)
+    }
+    @State private var lastMove: [MoveRecord] = []
+
+    /// Which kind of action the toast's Undo button (and ⌘Z) should reverse.
+    private enum UndoKind { case deletion, move }
+    @State private var lastUndoKind: UndoKind? = nil
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
-    @AppStorage("suppressCollectionDeleteWarning") private var suppressCollectionDeleteWarning = false
-    @AppStorage("suppressSnippetDeleteWarning") private var suppressSnippetDeleteWarning = false
 
     @State private var snippetToDelete: Snippet?
     @State private var pendingSnippetDeleteConfirm: (() -> Void)?
     @State private var collectionToDelete: SnippetCollection?
     @State private var collectionToDeletePermanent: Bool = false
-    @State private var showUndoToast: Bool = false
-    @State private var undoToastMessage: String = ""
+
+    private struct PendingBulkDelete {
+        let snippets: [Snippet]
+        let collections: [SnippetCollection]
+        let askCollectionBehavior: Bool
+        let deleteCollectionContents: Bool
+        let onConfirmed: () -> Void
+    }
+    @State private var pendingBulkDelete: PendingBulkDelete?
+
+    private struct Toast {
+        let message: String
+        let showsUndo: Bool
+    }
+    @State private var activeToast: Toast?
     @State private var toastHideTask: Task<Void, Never>? = nil
 
     private struct DeletedMediaSnapshot {
@@ -259,20 +284,21 @@ struct ContentView: View {
             let selectedCollection,
             sidebarSelectionContext == .collection(selectedCollection.persistentModelID)
         {
-            let children = selectedCollection.children.sorted(by: collectionSort)
+            // Exclude soft-deleted children: they keep their parent link while in
+            // the trash, so without this they'd stay visible after deletion.
+            let children = selectedCollection.children.filter { !$0.isDeleted }.sorted(by: collectionSort)
             return showFavoritesOnly ? children.filter(\.isFavorite) : children
         }
         if
             let selectedCollection,
             sidebarSelectionContext == .favoriteCollection(selectedCollection.persistentModelID)
         {
-            let children = selectedCollection.children.sorted(by: collectionSort)
+            let children = selectedCollection.children.filter { !$0.isDeleted }.sorted(by: collectionSort)
             return showFavoritesOnly ? children.filter(\.isFavorite) : children
         }
 
         if sidebarSelectionContext == .allSnippets {
-            let allValidCollections = collections.filter { !$0.isDeleted }.sorted(by: collectionSort)
-            return showFavoritesOnly ? allValidCollections.filter(\.isFavorite) : allValidCollections
+            return showFavoritesOnly ? topLevelCollections.filter(\.isFavorite) : topLevelCollections
         }
 
         let showsTopLevelCollections = sidebarSelectionContext == .frequentlyUsed
@@ -481,11 +507,15 @@ struct ContentView: View {
                             onDeleteCollection: { collection in delete(collection) },
                             onEditSnippet: { snippet in editingSnippet = snippet },
                             onDelete: { snippet, onConfirmed in delete(snippet, onConfirmed: onConfirmed) },
-                            onUndoDelete: { undoLastDeletion() },
+                            onDeleteSelection: { snippets, collections, onConfirmed in
+                                deleteSelection(snippets: snippets, collections: collections, onConfirmed: onConfirmed)
+                            },
+                            onUndoDelete: { undoLast() },
                             onMoveSnippetToLibrary: { snippet in moveSnippetToLibrary(snippet) },
                             onMoveSnippetToCollection: { snippet, collection in moveSnippet(snippet, to: collection) },
-                            onMoveCollectionToLibrary: { collection in moveCollectionToLibrary(collection) },
-                            onMoveCollectionToCollection: { collection, target in moveCollection(collection, to: target) },
+                            onMoveSelection: { snippets, collections, target in
+                                moveSelection(snippets: snippets, collections: collections, to: target)
+                            },
                             onCopySnippetToCollection: { snippet, collection in copySnippet(snippet, to: collection) }
                         )
                         .blur(radius: selectedSnippet == nil ? 0 : 2)
@@ -551,7 +581,7 @@ struct ContentView: View {
                             .zIndex(3)
 
                         GeometryReader { proxy in
-                            let w = min(max(proxy.size.width * 0.90, 820), 1200)
+                            let w: CGFloat = 640
                             let h = min(max(proxy.size.height * 0.92, 660), 960)
                             SnippetEditorView(
                                 mode: .create(preselectedCollectionID: newSnippetPreselectedCollectionID),
@@ -593,33 +623,27 @@ struct ContentView: View {
                         .zIndex(4)
                     }
 
-                    if showUndoToast {
+                    if let toast = activeToast {
                         VStack {
                             Spacer()
                             HStack(spacing: 12) {
-                                Text(undoToastMessage)
+                                Text(toast.message)
                                     .foregroundStyle(theme.text)
-                                Button("Undo") {
-                                    withAnimation {
-                                        _ = undoLastDeletion()
-                                        showUndoToast = false
+                                if toast.showsUndo {
+                                    Button("Undo") {
+                                        withAnimation {
+                                            _ = undoLast()
+                                            activeToast = nil
+                                        }
                                     }
+                                    .bold()
+                                    .foregroundStyle(theme.accent)
+                                    .buttonStyle(.plain)
                                 }
-                                .bold()
-                                .foregroundStyle(theme.accent)
-                                .buttonStyle(.plain)
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
-                            .background {
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(theme.surfaceElevated)
-                                    .shadow(radius: 10, y: 5)
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .strokeBorder(theme.borderStrong, lineWidth: 1)
-                                    }
-                            }
+                            .liquidGlassSurface(in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                             .padding(.bottom, 60)
                         }
                         .zIndex(100)
@@ -695,6 +719,7 @@ struct ContentView: View {
                 if let snippet = snippetToDelete {
                     pendingSnippetDeleteConfirm?()
                     DispatchQueue.main.async {
+                        self.lastDeletion.removeAll()
                         self.performDeleteSnippet(snippet)
                     }
                 }
@@ -715,11 +740,13 @@ struct ContentView: View {
         ) {
             Button("Delete Collection Only", role: .destructive) {
                 if let collection = collectionToDelete {
+                    lastDeletion.removeAll()
                     performDelete(collection, permanent: collectionToDeletePermanent)
                 }
             }
             Button("Delete Collection & Contents", role: .destructive) {
                 if let collection = collectionToDelete {
+                    lastDeletion.removeAll()
                     deleteCollectionContentsRecursively(collection, permanent: collectionToDeletePermanent)
                     performDelete(collection, permanent: collectionToDeletePermanent)
                 }
@@ -728,6 +755,66 @@ struct ContentView: View {
         } message: {
             Text("What would you like to do with this collection and its contents?")
         }
+        .confirmationDialog(
+            bulkDeleteTitle,
+            isPresented: Binding(
+                get: { pendingBulkDelete != nil },
+                set: { if !$0 { pendingBulkDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let pending = pendingBulkDelete {
+                if pending.askCollectionBehavior {
+                    Button("Delete, Keep Collection Contents", role: .destructive) {
+                        performBulkDelete(
+                            snippets: pending.snippets,
+                            collections: pending.collections,
+                            deleteContents: false,
+                            onConfirmed: pending.onConfirmed
+                        )
+                    }
+                    Button("Delete Collections & Contents", role: .destructive) {
+                        performBulkDelete(
+                            snippets: pending.snippets,
+                            collections: pending.collections,
+                            deleteContents: true,
+                            onConfirmed: pending.onConfirmed
+                        )
+                    }
+                } else {
+                    Button("Delete", role: .destructive) {
+                        performBulkDelete(
+                            snippets: pending.snippets,
+                            collections: pending.collections,
+                            deleteContents: pending.deleteCollectionContents,
+                            onConfirmed: pending.onConfirmed
+                        )
+                    }
+                }
+                Button("Cancel", role: .cancel) { }
+            }
+        } message: {
+            if let pending = pendingBulkDelete {
+                if pending.askCollectionBehavior {
+                    Text("The selected items will be moved to the trash. Should the contents of the selected collections go to the trash as well?")
+                } else {
+                    Text("This will move the selected items to the trash. You can restore them within 30 days.")
+                }
+            }
+        }
+    }
+
+    private var bulkDeleteTitle: String {
+        guard let pending = pendingBulkDelete else { return "" }
+        let snippetCount = pending.snippets.count
+        let collectionCount = pending.collections.count
+        if snippetCount > 0 && collectionCount > 0 {
+            return "Delete \(snippetCount + collectionCount) selected items?"
+        }
+        if collectionCount > 0 {
+            return collectionCount == 1 ? "Delete this collection?" : "Delete \(collectionCount) collections?"
+        }
+        return snippetCount == 1 ? "Delete this snippet?" : "Delete \(snippetCount) snippets?"
     }
 
     private var theme: Theme { Theme.current(colorScheme) }
@@ -863,9 +950,10 @@ struct ContentView: View {
 
 
     private func delete(_ snippet: Snippet, onConfirmed: (() -> Void)? = nil) {
-        if suppressSnippetDeleteWarning {
+        if !appearanceSettings.confirmSnippetDeletion {
             onConfirmed?()
             DispatchQueue.main.async {
+                self.lastDeletion.removeAll()
                 self.performDeleteSnippet(snippet)
             }
             return
@@ -875,8 +963,73 @@ struct ContentView: View {
         pendingSnippetDeleteConfirm = onConfirmed
     }
 
+    private func deleteSelection(
+        snippets: [Snippet],
+        collections: [SnippetCollection],
+        onConfirmed: @escaping () -> Void
+    ) {
+        switch BulkDeleteConfirmation.decide(
+            snippetCount: snippets.count,
+            collectionCount: collections.count,
+            confirmSnippetDeletion: appearanceSettings.confirmSnippetDeletion,
+            collectionDeletionBehavior: appearanceSettings.collectionDeletionBehavior
+        ) {
+        case .deleteImmediately(let deleteContents):
+            performBulkDelete(snippets: snippets, collections: collections, deleteContents: deleteContents, onConfirmed: onConfirmed)
+        case .confirmOnce(let deleteContents):
+            pendingBulkDelete = PendingBulkDelete(
+                snippets: snippets,
+                collections: collections,
+                askCollectionBehavior: false,
+                deleteCollectionContents: deleteContents,
+                onConfirmed: onConfirmed
+            )
+        case .askCollectionBehavior:
+            pendingBulkDelete = PendingBulkDelete(
+                snippets: snippets,
+                collections: collections,
+                askCollectionBehavior: true,
+                deleteCollectionContents: false,
+                onConfirmed: onConfirmed
+            )
+        }
+    }
+
+    private func performBulkDelete(
+        snippets: [Snippet],
+        collections: [SnippetCollection],
+        deleteContents: Bool,
+        onConfirmed: (() -> Void)?
+    ) {
+        // Fire the gallery's disintegration animation before the model changes,
+        // matching the single-item delete flow.
+        onConfirmed?()
+        DispatchQueue.main.async {
+            self.lastDeletion.removeAll()
+            for snippet in snippets {
+                self.performDeleteSnippet(snippet)
+            }
+            for collection in collections {
+                if deleteContents {
+                    self.deleteCollectionContentsRecursively(collection, permanent: false)
+                }
+                self.performDelete(collection, permanent: false)
+            }
+            let count = snippets.count + collections.count
+            if count > 1 {
+                self.showToast("\(count) items moved to Recently Deleted", showsUndo: true)
+            }
+        }
+    }
+
+    private func showToast(_ message: String, showsUndo: Bool = false) {
+        withAnimation { activeToast = Toast(message: message, showsUndo: showsUndo) }
+        hideToastAfterDelay()
+    }
+
     private func performDeleteSnippet(_ snippet: Snippet) {
-        lastDeletedItem = .snippet(snippet.persistentModelID)
+        lastDeletion.append(.snippet(snippet.persistentModelID))
+        lastUndoKind = .deletion
 
         if selectedSnippetID == snippet.persistentModelID {
             selectedSnippetID = nil
@@ -885,34 +1038,79 @@ struct ContentView: View {
         snippet.deletedAt = Date.now
         snippet.updatedAt = .now
         try? modelContext.save()
-        
-        undoToastMessage = "Snippet moved to Trash."
-        withAnimation { showUndoToast = true }
-        hideToastAfterDelay()
+
+        showToast("Snippet moved to Recently Deleted", showsUndo: true)
     }
 
-    private func undoLastDeletion() -> PersistentIdentifier? {
-        guard let item = lastDeletedItem else { return nil }
+    /// Restores everything from the most recent delete action. Returns whether
+    /// anything was actually brought back.
+    @discardableResult
+    private func undoLastDeletion() -> Bool {
+        guard !lastDeletion.isEmpty else { return false }
 
-        switch item {
-        case .snippet(let id):
-            if let existing = trashedSnippets.first(where: { $0.persistentModelID == id }) {
-                existing.deletedAt = nil
-                existing.updatedAt = .now
-                try? modelContext.save()
-                lastDeletedItem = nil
-                return existing.persistentModelID
-            }
-        case .collection(let id):
-            if let existing = collections.first(where: { $0.persistentModelID == id }) {
-                existing.deletedAt = nil
-                existing.updatedAt = .now
-                try? modelContext.save()
-                lastDeletedItem = nil
-                return nil
+        var restoredAny = false
+        for item in lastDeletion {
+            switch item {
+            case .snippet(let id):
+                if let existing = trashedSnippets.first(where: { $0.persistentModelID == id }) {
+                    existing.deletedAt = nil
+                    existing.updatedAt = .now
+                    restoredAny = true
+                }
+            case .collection(let id):
+                if let existing = collections.first(where: { $0.persistentModelID == id }) {
+                    existing.deletedAt = nil
+                    existing.updatedAt = .now
+                    restoredAny = true
+                }
             }
         }
-        return nil
+        if restoredAny {
+            try? modelContext.save()
+        }
+        lastDeletion.removeAll()
+        lastUndoKind = nil
+        return restoredAny
+    }
+
+    /// Reverses the most recent undoable action, whether it was a delete or a move.
+    @discardableResult
+    private func undoLast() -> Bool {
+        switch lastUndoKind {
+        case .deletion: return undoLastDeletion()
+        case .move:     return undoLastMove()
+        case nil:       return false
+        }
+    }
+
+    /// Puts everything from the most recent move batch back where it was.
+    @discardableResult
+    private func undoLastMove() -> Bool {
+        guard !lastMove.isEmpty else { return false }
+
+        var undidAny = false
+        for record in lastMove {
+            switch record {
+            case .snippet(let id, let previousCollectionIDs):
+                guard let snippet = snippets.first(where: { $0.persistentModelID == id }) else { continue }
+                let previous = collections.filter { previousCollectionIDs.contains($0.persistentModelID) }
+                setSnippetCollections(snippet, to: previous)
+                undidAny = true
+            case .collection(let id, let previousParentID):
+                guard let collection = collections.first(where: { $0.persistentModelID == id }) else { continue }
+                let previousParent = previousParentID.flatMap { pid in
+                    collections.first { $0.persistentModelID == pid }
+                }
+                setCollectionParent(collection, to: previousParent)
+                undidAny = true
+            }
+        }
+        if undidAny {
+            try? modelContext.save()
+        }
+        lastMove.removeAll()
+        lastUndoKind = nil
+        return undidAny
     }
 
     private func performTrashCleanup() {
@@ -1026,6 +1224,7 @@ struct ContentView: View {
             collection.updatedAt = .now
             snippet.updatedAt = .now
             try? modelContext.save()
+            showToast("Copied to \u{201C}\(collection.name)\u{201D}.")
         }
     }
 
@@ -1042,12 +1241,25 @@ struct ContentView: View {
     }
 
     private func delete(_ collection: SnippetCollection, permanent: Bool = false) {
-        if !permanent && !suppressCollectionDeleteWarning {
+        if permanent {
+            // Permanent deletion might still want confirmation, but we'll follow behavior or ask
             collectionToDelete = collection
             collectionToDeletePermanent = permanent
             return
         }
-        performDelete(collection, permanent: permanent)
+
+        switch appearanceSettings.collectionDeletionBehavior {
+        case "collectionOnly":
+            lastDeletion.removeAll()
+            performDelete(collection, permanent: permanent)
+        case "collectionAndContents":
+            lastDeletion.removeAll()
+            deleteCollectionContentsRecursively(collection, permanent: permanent)
+            performDelete(collection, permanent: permanent)
+        default:
+            collectionToDelete = collection
+            collectionToDeletePermanent = permanent
+        }
     }
 
     private func deleteCollectionContentsRecursively(_ collection: SnippetCollection, permanent: Bool) {
@@ -1076,7 +1288,7 @@ struct ContentView: View {
         } else {
             collection.deletedAt = .now
             collection.updatedAt = .now
-            lastDeletedItem = .collection(collection.persistentModelID)
+            lastDeletion.append(.collection(collection.persistentModelID))
             if selectedCollectionID == collection.persistentModelID {
                 selectedCollectionID = nil
             }
@@ -1086,11 +1298,9 @@ struct ContentView: View {
             }
         }
         try? modelContext.save()
-        
+
         if !permanent {
-            undoToastMessage = "Collection moved to Trash."
-            withAnimation { showUndoToast = true }
-            hideToastAfterDelay()
+            showToast("Collection moved to Recently Deleted", showsUndo: true)
         }
     }
 
@@ -1099,7 +1309,7 @@ struct ContentView: View {
         toastHideTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 4_000_000_000)
             guard !Task.isCancelled else { return }
-            withAnimation { showUndoToast = false }
+            withAnimation { activeToast = nil }
         }
     }
 
@@ -1109,44 +1319,89 @@ struct ContentView: View {
         try? modelContext.save()
     }
 
-    private func moveSnippetToLibrary(_ snippet: Snippet) {
-        let currentCollections = snippet.collections
-        for collection in currentCollections {
-            collection.snippets.removeAll(where: { $0.persistentModelID == snippet.persistentModelID })
-            collection.updatedAt = .now
+    // MARK: - Move primitives (mutation only; no toast, save, or undo bookkeeping)
+
+    /// Sets a snippet's membership to exactly `targets`, keeping the inverse
+    /// links in sync, and returns an undo record of its prior membership.
+    @discardableResult
+    private func setSnippetCollections(_ snippet: Snippet, to targets: [SnippetCollection]) -> MoveRecord {
+        let previousIDs = snippet.collections.map(\.persistentModelID)
+        let targetIDs = Set(targets.map(\.persistentModelID))
+        for current in snippet.collections where !targetIDs.contains(current.persistentModelID) {
+            current.snippets.removeAll { $0.persistentModelID == snippet.persistentModelID }
+            current.updatedAt = .now
         }
-        snippet.collections.removeAll()
+        snippet.collections = targets
+        for target in targets where !target.snippets.contains(where: { $0.persistentModelID == snippet.persistentModelID }) {
+            target.snippets.append(snippet)
+            target.updatedAt = .now
+        }
         snippet.updatedAt = .now
+        return .snippet(id: snippet.persistentModelID, previousCollectionIDs: previousIDs)
+    }
+
+    /// Reparents a collection and returns an undo record of its prior parent.
+    @discardableResult
+    private func setCollectionParent(_ collection: SnippetCollection, to parent: SnippetCollection?) -> MoveRecord {
+        let previousParentID = collection.parent?.persistentModelID
+        collection.parent = parent
+        collection.updatedAt = .now
+        parent?.updatedAt = .now
+        return .collection(id: collection.persistentModelID, previousParentID: previousParentID)
+    }
+
+    /// True when `collection` can legally become a child of `target` (no cycle).
+    private func canMoveCollection(_ collection: SnippetCollection, to target: SnippetCollection) -> Bool {
+        collection.persistentModelID != target.persistentModelID
+            && !collection.allDescendantIDs.contains(target.persistentModelID)
+    }
+
+    // MARK: - Move actions (single item)
+
+    private func moveSnippetToLibrary(_ snippet: Snippet) {
+        lastMove = [setSnippetCollections(snippet, to: [])]
+        lastUndoKind = .move
         try? modelContext.save()
+        showToast("Moved to Library", showsUndo: true)
     }
 
     private func moveSnippet(_ snippet: Snippet, to collection: SnippetCollection) {
-        let currentCollections = snippet.collections
-        for other in currentCollections where other.persistentModelID != collection.persistentModelID {
-            other.snippets.removeAll(where: { $0.persistentModelID == snippet.persistentModelID })
-            other.updatedAt = .now
-        }
-        snippet.collections = [collection]
-        if !collection.snippets.contains(where: { $0.persistentModelID == snippet.persistentModelID }) {
-            collection.snippets.append(snippet)
-        }
-        collection.updatedAt = .now
-        snippet.updatedAt = .now
+        lastMove = [setSnippetCollections(snippet, to: [collection])]
+        lastUndoKind = .move
         try? modelContext.save()
+        showToast("Moved to \u{201C}\(collection.name)\u{201D}", showsUndo: true)
     }
 
-    private func moveCollectionToLibrary(_ collection: SnippetCollection) {
-        collection.parent = nil
-        collection.updatedAt = .now
-        try? modelContext.save()
-    }
+    // MARK: - Move action (bulk selection)
 
-    private func moveCollection(_ collection: SnippetCollection, to target: SnippetCollection) {
-        if collection.persistentModelID != target.persistentModelID && !collection.allDescendantIDs.contains(target.persistentModelID) {
-            collection.parent = target
-            collection.updatedAt = .now
-            target.updatedAt = .now
-            try? modelContext.save()
+    /// Moves a whole selection to `target` (nil = Library) as one undoable batch,
+    /// showing a single toast covering all of them.
+    private func moveSelection(
+        snippets movedSnippets: [Snippet],
+        collections movedCollections: [SnippetCollection],
+        to target: SnippetCollection?
+    ) {
+        var records: [MoveRecord] = []
+        for snippet in movedSnippets {
+            records.append(setSnippetCollections(snippet, to: target.map { [$0] } ?? []))
+        }
+        for collection in movedCollections {
+            if let target {
+                guard canMoveCollection(collection, to: target) else { continue }
+            }
+            records.append(setCollectionParent(collection, to: target))
+        }
+        guard !records.isEmpty else { return }
+
+        lastMove = records
+        lastUndoKind = .move
+        try? modelContext.save()
+
+        let destination = target.map { "\u{201C}\($0.name)\u{201D}" } ?? "Library"
+        if records.count == 1 {
+            showToast("Moved to \(destination)", showsUndo: true)
+        } else {
+            showToast("\(records.count) items moved to \(destination)", showsUndo: true)
         }
     }
 }

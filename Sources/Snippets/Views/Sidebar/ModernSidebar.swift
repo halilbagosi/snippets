@@ -4,6 +4,7 @@ import SwiftData
 struct ModernSidebar: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.controlActiveState) private var controlActiveState
+    @Environment(AppearanceSettings.self) private var appearanceSettings
     @FocusState private var isListFocused: Bool
 
     enum Selection: Hashable {
@@ -57,7 +58,10 @@ struct ModernSidebar: View {
         }
     }
 
-    private var theme: Theme { Theme.current(colorScheme) }
+    private var theme: Theme {
+        let _ = appearanceSettings.themeColorHex
+        return Theme.current(colorScheme)
+    }
     private var isSelectionActive: Bool {
         controlActiveState != .inactive
     }
@@ -460,6 +464,7 @@ struct ModernSidebar: View {
 
 private struct CollectionTreeRow: View {
     @Environment(\.colorScheme) var colorScheme
+    @Environment(AppearanceSettings.self) private var appearanceSettings
     let collection: SnippetCollection
     let collections: [SnippetCollection]
     @Binding var expandedCollections: Set<PersistentIdentifier>
@@ -479,7 +484,10 @@ private struct CollectionTreeRow: View {
     let onCopySnippetToCollection: (Snippet, SnippetCollection) -> Void
     let onHandleDrop: ([String], SnippetCollection?) -> Bool
 
-    private var theme: Theme { Theme.current(colorScheme) }
+    private var theme: Theme {
+        let _ = appearanceSettings.themeColorHex
+        return Theme.current(colorScheme)
+    }
 
     private var isExpanded: Binding<Bool> {
         Binding(
@@ -503,7 +511,9 @@ private struct CollectionTreeRow: View {
         // row evaluation (the label's count and the expanded content share it).
         let activeSnippets = self.activeSnippets
         DisclosureGroup(isExpanded: isExpanded) {
-            ForEach(collection.children) { child in
+            // Skip soft-deleted children: they keep their parent link while in
+            // the trash, so without this filter they'd linger in the tree.
+            ForEach(collection.children.filter { !$0.isDeleted }) { child in
                 CollectionTreeRow(
                     collection: child,
                     collections: collections,

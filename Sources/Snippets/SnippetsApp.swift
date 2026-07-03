@@ -127,7 +127,9 @@ struct SnippetsApp: App {
             ContentView()
                 .environment(environment)
                 .environment(appearanceSettings)
-                .preferredColorScheme(appearanceSettings.resolvedColorScheme)
+                // Appearance preference is applied via NSApp.appearance in
+                // AppearanceSettings: preferredColorScheme would pin a per-window
+                // override that AppKit can't clear when following the system.
                 .frame(minWidth: 1100, minHeight: 720)
                 // Without this the window can be zoom-only (green button shows
                 // "+"); this makes it a real full-screen-capable window.

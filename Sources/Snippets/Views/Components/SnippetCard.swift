@@ -243,12 +243,23 @@ struct SnippetCard: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(
+                            // Dark mode only adds a soft top-left highlight that
+                            // fades out — never re-darkens the center — so the
+                            // card reads as a uniform surface like the light one.
+                            // (The old middle stop was dark `surface`, which
+                            // stacked into a diagonal shadow band in dark mode.)
                             LinearGradient(
-                                colors: [
-                                    .white.opacity(colorScheme == .dark ? 0.08 : 0.24),
-                                    theme.surface.opacity(colorScheme == .dark ? 0.58 : 0.42),
-                                    languageAccent.opacity(0.02)
-                                ],
+                                colors: colorScheme == .dark
+                                    ? [
+                                        .white.opacity(0.10),
+                                        .white.opacity(0.03),
+                                        languageAccent.opacity(0.03)
+                                      ]
+                                    : [
+                                        .white.opacity(0.24),
+                                        theme.surface.opacity(0.42),
+                                        languageAccent.opacity(0.02)
+                                      ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )

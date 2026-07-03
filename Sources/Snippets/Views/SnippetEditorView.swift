@@ -343,6 +343,9 @@ struct SnippetEditorView: View {
                 .foregroundStyle(Color(hex: effectiveLanguage.accentHex) ?? theme.accent)
             }
             ZStack(alignment: .topLeading) {
+                // No padding here: an inset would hold the line-number gutter's
+                // square corners away from the rounded clip below, so they
+                // wouldn't follow the container's radius. Flush = clip rounds them.
                 CodeEditor(
                     text: $viewModel.code,
                     isFocused: $codeFocused,
@@ -351,7 +354,6 @@ struct SnippetEditorView: View {
                     fontSize: 13,
                     minHeight: 160
                 )
-                .padding(DSToken.Spacing.xxs)
                 .frame(minHeight: 180)
 
                 if viewModel.code.isEmpty && !codeFocused {
@@ -359,7 +361,7 @@ struct SnippetEditorView: View {
                         .font(Mono.font(size: 13))
                         .foregroundStyle(theme.comment)
                         .padding(.leading, 56)
-                        .padding(.top, 14)
+                        .padding(.top, 12)
                         .allowsHitTesting(false)
                 }
             }

@@ -46,7 +46,7 @@ struct FilterTag: View {
                     .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .frame(height: 24)
             .foregroundStyle(resolvedForeground)
             .background {
                 RoundedRectangle(cornerRadius: 7, style: .continuous)

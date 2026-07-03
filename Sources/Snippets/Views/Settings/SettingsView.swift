@@ -13,14 +13,14 @@ struct SettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     private enum SettingsTab: String, CaseIterable, Identifiable {
-        case appearance = "Appearance"
+        case appearance = "Preferences"
         case about = "About"
 
         var id: String { rawValue }
 
         var icon: String {
             switch self {
-            case .appearance: return "paintbrush.fill"
+            case .appearance: return "gear"
             case .about: return "info.circle.fill"
             }
         }
@@ -36,20 +36,25 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             settingsHeader
 
-            ScrollView {
-                DSGlassContainer(spacing: 20) {
-                    Group {
-                        switch selectedTab {
-                        case .appearance:
-                            AppearanceView()
-                        case .about:
+            Group {
+                if selectedTab == .appearance {
+                    DSGlassContainer(spacing: 20) {
+                        AppearanceView()
+                            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .center)))
+                            .padding(.horizontal, 24)
+                            .padding(.top, 8)
+                            .padding(.bottom, 28)
+                    }
+                } else if selectedTab == .about {
+                    ScrollView {
+                        DSGlassContainer(spacing: 20) {
                             AboutView()
+                                .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .center)))
+                                .padding(.horizontal, 24)
+                                .padding(.top, 8)
+                                .padding(.bottom, 28)
                         }
                     }
-                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .center)))
-                    .padding(.horizontal, 24)
-                    .padding(.top, 8)
-                    .padding(.bottom, 28)
                 }
             }
         }
@@ -61,8 +66,7 @@ struct SettingsView: View {
                     .ignoresSafeArea()
             }
         }
-        .preferredColorScheme(appearanceSettings.resolvedColorScheme)
-        .frame(width: 520, height: 600)
+        .frame(width: 520, height: 680)
         #if canImport(AppKit)
         .background(SettingsWindowConfigurator())
         #endif
