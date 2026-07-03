@@ -1,0 +1,29 @@
+---
+source_file: "Sources/Snippets/Resources/WebPreview/babel.min.js"
+type: "code"
+community: "Vendored Babel (minified) C"
+location: "L3"
+tags:
+  - graphify/code
+  - graphify/EXTRACTED
+  - community/Vendored_Babel_minified_C
+---
+
+# RK()
+
+## Connections
+- [[Dx()]] - `calls` [EXTRACTED]
+- [[Nx()]] - `calls` [EXTRACTED]
+- [[babel.min.js]] - `contains` [EXTRACTED]
+- [[c()]] - `calls` [EXTRACTED]
+- [[d()]] - `indirect_call` [INFERRED]
+- [[hw()]] - `calls` [EXTRACTED]
+- [[i()]] - `calls` [EXTRACTED]
+- [[n()]] - `indirect_call` [INFERRED]
+- [[o()]] - `indirect_call` [INFERRED]
+- [[s()]] - `indirect_call` [INFERRED]
+- [[skipKey()]] - `calls` [EXTRACTED]
+- [[traverse()]] - `calls` [EXTRACTED]
+- [[u()]] - `indirect_call` [INFERRED]
+
+#graphify/code #graphify/EXTRACTED #community/Vendored_Babel_minified_C

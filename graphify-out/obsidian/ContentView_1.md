@@ -1,0 +1,81 @@
+---
+source_file: "Sources/Snippets/Views/ContentView.swift"
+type: "code"
+community: "ContentView Root Coordination"
+tags:
+  - graphify/code
+  - graphify/EXTRACTED
+  - community/ContentView_Root_Coordination
+---
+
+# ContentView
+
+## Connections
+- [[.beginCreateCollection()_1]] - `method` [EXTRACTED]
+- [[.beginEditCollection()_1]] - `method` [EXTRACTED]
+- [[.buildAvailableLanguages()]] - `method` [EXTRACTED]
+- [[.buildBackgroundPalette()]] - `method` [EXTRACTED]
+- [[.canMoveCollection()]] - `method` [EXTRACTED]
+- [[.collectionSort()]] - `method` [EXTRACTED]
+- [[.commitCollectionEditor()_1]] - `method` [EXTRACTED]
+- [[.copySnippet()_1]] - `method` [EXTRACTED]
+- [[.debounceSearch()]] - `method` [EXTRACTED]
+- [[.delete()_1]] - `method` [EXTRACTED]
+- [[.deleteCollectionContentsRecursively()]] - `method` [EXTRACTED]
+- [[.deleteSelection()]] - `method` [EXTRACTED]
+- [[.detailStatusSegments()_1]] - `method` [EXTRACTED]
+- [[.frequentlyUsedPrecedes()]] - `method` [EXTRACTED]
+- [[.handleDrop()_1]] - `method` [EXTRACTED]
+- [[.hideToastAfterDelay()]] - `method` [EXTRACTED]
+- [[.insertFrequentlyUsed()]] - `method` [EXTRACTED]
+- [[.matches()_1]] - `method` [EXTRACTED]
+- [[.moveSelection()]] - `method` [EXTRACTED]
+- [[.moveSnippet()_1]] - `method` [EXTRACTED]
+- [[.moveSnippetToLibrary()_1]] - `method` [EXTRACTED]
+- [[.navigateBackFromCollection()]] - `method` [EXTRACTED]
+- [[.parentCollectionID()]] - `method` [EXTRACTED]
+- [[.performBulkDelete()]] - `method` [EXTRACTED]
+- [[.performDelete()]] - `method` [EXTRACTED]
+- [[.performDeleteSnippet()]] - `method` [EXTRACTED]
+- [[.performTrashCleanup()_1]] - `method` [EXTRACTED]
+- [[.rebuildDerivedCaches()]] - `method` [EXTRACTED]
+- [[.refreshCollectionIndexCacheIfNeeded()]] - `method` [EXTRACTED]
+- [[.resetCollectionDraft()_1]] - `method` [EXTRACTED]
+- [[.restore()]] - `method` [EXTRACTED]
+- [[.setCollectionParent()]] - `method` [EXTRACTED]
+- [[.setSnippetCollections()]] - `method` [EXTRACTED]
+- [[.showToast()]] - `method` [EXTRACTED]
+- [[.undoLast()]] - `method` [EXTRACTED]
+- [[.undoLastDeletion()]] - `method` [EXTRACTED]
+- [[.undoLastMove()]] - `method` [EXTRACTED]
+- [[Bool_24]] - `references` [EXTRACTED]
+- [[CollectionIndexCache]] - `calls` [EXTRACTED]
+- [[Color_18]] - `references` [EXTRACTED]
+- [[Color HexBlend Extension]] - `calls` [EXTRACTED]
+- [[ContentView.swift]] - `contains` [EXTRACTED]
+- [[DeletedItem]] - `references` [EXTRACTED]
+- [[DotGridBackground]] - `calls` [EXTRACTED]
+- [[Int_15]] - `references` [EXTRACTED]
+- [[MoveRecord]] - `references` [EXTRACTED]
+- [[NavigationSplitViewVisibility]] - `references` [EXTRACTED]
+- [[Never_1]] - `references` [EXTRACTED]
+- [[PendingBulkDelete]] - `references` [EXTRACTED]
+- [[PersistentIdentifier_6]] - `references` [EXTRACTED]
+- [[Set_8]] - `references` [EXTRACTED]
+- [[SidebarSelectionContext_1]] - `references` [EXTRACTED]
+- [[Snippet_1]] - `references` [EXTRACTED]
+- [[SnippetCollection_12]] - `references` [EXTRACTED]
+- [[SnippetsApp (App Entry)]] - `calls` [EXTRACTED]
+- [[StatusBar]] - `references` [EXTRACTED]
+- [[String_35]] - `references` [EXTRACTED]
+- [[SupportedLanguage]] - `references` [EXTRACTED]
+- [[Task_1]] - `references` [EXTRACTED]
+- [[Theme]] - `shares_data_with` [EXTRACTED]
+- [[Toast]] - `references` [EXTRACTED]
+- [[ToolbarContent]] - `references` [EXTRACTED]
+- [[UndoKind]] - `references` [EXTRACTED]
+- [[View]] - `references` [EXTRACTED]
+- [[Void_10]] - `references` [EXTRACTED]
+- [[WindowChromeConfigurator]] - `calls` [EXTRACTED]
+
+#graphify/code #graphify/EXTRACTED #community/ContentView_Root_Coordination
