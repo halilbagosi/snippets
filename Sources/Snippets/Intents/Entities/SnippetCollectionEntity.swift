@@ -36,17 +36,17 @@ struct SnippetCollectionEntityQuery: EntityQuery {
     @MainActor
     func suggestedEntities() async throws -> [SnippetCollectionEntity] {
         let context = SnippetsData.sharedModelContainer.mainContext
-        return try fetchLive(context).map(SnippetCollectionEntity.init)
+        return try fetchLive(context, limit: 100).map(SnippetCollectionEntity.init)
     }
 
     /// Fetches non-deleted collections and guarantees each has a stable `uuid`.
     @MainActor
-    private func fetchLive(_ context: ModelContext) throws -> [SnippetCollection] {
+    private func fetchLive(_ context: ModelContext, limit: Int? = nil) throws -> [SnippetCollection] {
         var descriptor = FetchDescriptor<SnippetCollection>(
             predicate: #Predicate { $0.deletedAt == nil },
             sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
-        descriptor.fetchLimit = 100
+        if let limit { descriptor.fetchLimit = limit }
         let collections = try context.fetch(descriptor)
         if UUIDBackfill.assign(snippets: [], collections: collections) > 0 {
             try? context.save()

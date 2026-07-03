@@ -44,7 +44,7 @@ struct CreateSnippetIntent: AppIntent {
             snippet.collections.append(target)
             target.updatedAt = .now
         }
-        try? context.save()
+        try context.save()
 
         let name = title.isEmpty ? "Untitled" : title
         return .result(value: SnippetEntity(snippet), dialog: "Created \(name).")

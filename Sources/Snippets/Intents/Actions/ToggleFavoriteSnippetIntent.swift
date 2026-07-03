@@ -20,7 +20,7 @@ struct ToggleFavoriteSnippetIntent: AppIntent {
         }
         model.isFavorite.toggle()
         model.updatedAt = .now
-        try? context.save()
+        try context.save()
 
         let name = model.title.isEmpty ? "Untitled" : model.title
         let dialog: IntentDialog = model.isFavorite
