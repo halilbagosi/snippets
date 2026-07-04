@@ -9,13 +9,18 @@ struct SnippetsAppShortcuts: AppShortcutsProvider {
         // can't supply free-form code, so CreateSnippetIntent (required title +
         // code) can't be fulfilled by phrase. CreateSnippetIntent stays available
         // as a Shortcuts building block for automations that provide those values.
+        // Lead with the app name and avoid the bare verb "create a snippet",
+        // which Apple Intelligence Siri reinterprets as note creation instead
+        // of matching this App Shortcut. App-name-first phrases route reliably.
         AppShortcut(
             intent: NewSnippetIntent(),
             phrases: [
-                "Create a snippet in \(.applicationName)",
-                "Add a snippet to \(.applicationName)"
+                "\(.applicationName) new snippet",
+                "New \(.applicationName) snippet",
+                "New snippet in \(.applicationName)",
+                "Open a new snippet in \(.applicationName)"
             ],
-            shortTitle: "Create Snippet",
+            shortTitle: "New Snippet",
             systemImageName: "plus.square"
         )
         AppShortcut(
