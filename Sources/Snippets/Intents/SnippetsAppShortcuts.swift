@@ -5,8 +5,12 @@ import AppIntents
 /// that Xcode generates at build time (not produced by a plain `swift build`).
 struct SnippetsAppShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
+        // Voice/Spotlight "create" opens the editor via NewSnippetIntent — Siri
+        // can't supply free-form code, so CreateSnippetIntent (required title +
+        // code) can't be fulfilled by phrase. CreateSnippetIntent stays available
+        // as a Shortcuts building block for automations that provide those values.
         AppShortcut(
-            intent: CreateSnippetIntent(),
+            intent: NewSnippetIntent(),
             phrases: [
                 "Create a snippet in \(.applicationName)",
                 "Add a snippet to \(.applicationName)"

@@ -666,6 +666,9 @@ struct ContentView: View {
             performTrashCleanup()
             debouncedSearchText = searchText
             rebuildDerivedCaches()
+            // Cold launch: an intent that launched the app may have set the flag
+            // before this view began observing, so onChange never fires for it.
+            if navigator.pendingNewSnippet { presentNewSnippetFromIntent() }
         }
         .onChange(of: searchText) { _, newValue in
             debounceSearch(newValue)
@@ -698,6 +701,10 @@ struct ContentView: View {
                 }
             }
             navigator.pendingOpenSnippetUUID = nil
+        }
+        .onChange(of: navigator.pendingNewSnippet) { _, isPending in
+            guard isPending else { return }
+            presentNewSnippetFromIntent()
         }
         .sheet(item: $editingSnippet) { snippet in
             SnippetEditorView(mode: .edit(snippet), availableCollections: collections) { _ in
@@ -867,6 +874,17 @@ struct ContentView: View {
             }
         }
         return segs
+    }
+
+    /// Presents the blank new-snippet editor in response to `NewSnippetIntent`,
+    /// clearing any open detail and the pending flag.
+    private func presentNewSnippetFromIntent() {
+        newSnippetPreselectedCollectionID = nil
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+            selectedSnippetID = nil
+            isPresentingNew = true
+        }
+        navigator.pendingNewSnippet = false
     }
 
     private func navigateBackFromCollection() {
