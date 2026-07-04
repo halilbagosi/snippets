@@ -13,6 +13,20 @@
     "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppearanceSettings.o",
     "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppearanceSettings.swiftdeps"
   },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Intents/AppIntentNavigator.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppIntentNavigator.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppIntentNavigator.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppIntentNavigator.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppIntentNavigator.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/AppIntentNavigator.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/Models/Collection.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Collection.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Collection.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Collection.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Collection.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Collection.swiftdeps"
+  },
   "/Users/halilbagosi/snippets/Sources/Snippets/Services/Clipboard.swift" : {
     "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Clipboard.swiftconstvalues",
     "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/Clipboard.d",

@@ -1,0 +1,267 @@
+[
+  {
+    "typeName": "Snippets.ToggleFavoriteSnippetIntent",
+    "mangledTypeName": "8Snippets27ToggleFavoriteSnippetIntentV",
+    "kind": "struct",
+    "file": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/Actions/ToggleFavoriteSnippetIntent.swift",
+    "line": 3,
+    "conformances": [
+      "AppIntents.AppIntent",
+      "AppIntents.PersistentlyIdentifiable",
+      "AppIntents._SupportsAppDependencies",
+      "Swift.Sendable",
+      "Swift.SendableMetatype"
+    ],
+    "allConformances": [
+      {
+        "protocolName": "AppIntents.AppIntent",
+        "conformanceDefiningModule": "Snippets"
+      },
+      {
+        "protocolName": "AppIntents.PersistentlyIdentifiable",
+        "conformanceDefiningModule": "Snippets"
+      },
+      {
+        "protocolName": "AppIntents._SupportsAppDependencies",
+        "conformanceDefiningModule": "Snippets"
+      },
+      {
+        "protocolName": "Swift.Sendable",
+        "conformanceDefiningModule": "Snippets"
+      },
+      {
+        "protocolName": "Swift.SendableMetatype",
+        "conformanceDefiningModule": "Snippets"
+      }
+    ],
+    "associatedTypeAliases": [
+      {
+        "typeAliasName": "PerformResult",
+        "substitutedTypeName": "some AppIntents.ProvidesDialog & AppIntents.ReturnsValue<Swift.Bool>",
+        "substitutedMangledTypeName": "8Snippets27ToggleFavoriteSnippetIntentV7performQryYaKFQOy_Qo_",
+        "opaqueTypeProtocolRequirements": [
+          "AppIntents.ProvidesDialog",
+          "AppIntents.ReturnsValue"
+        ],
+        "opaqueTypeSameTypeRequirements": [
+          {
+            "typeAliasName": "AppIntents.IntentResult.Value",
+            "substitutedTypeName": "Swift.Bool",
+            "substitutedMangledTypeName": "Sb"
+          }
+        ]
+      },
+      {
+        "typeAliasName": "SummaryContent",
+        "substitutedTypeName": "some AppIntents.ParameterSummary",
+        "substitutedMangledTypeName": "8Snippets27ToggleFavoriteSnippetIntentV16parameterSummaryQrvpZQOy_Qo_",
+        "opaqueTypeProtocolRequirements": [
+          "AppIntents.ParameterSummary"
+        ],
+        "opaqueTypeSameTypeRequirements": []
+      }
+    ],
+    "properties": [
+      {
+        "label": "_snippet",
+        "type": "AppIntents.IntentParameter<Snippets.SnippetEntity>",
+        "mangledTypeName": "n/a - deprecated",
+        "isStatic": "false",
+        "isComputed": "false",
+        "file": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/Actions/ToggleFavoriteSnippetIntent.swift",
+        "line": 9,
+        "valueKind": "InitCall",
+        "value": {
+          "type": "AppIntents.IntentParameter<Snippets.SnippetEntity>",
+          "arguments": [
+            {
+              "label": "title",
+              "type": "Foundation.LocalizedStringResource",
+              "valueKind": "RawLiteral",
+              "value": "Snippet"
+            },
+            {
+              "label": "description",
+              "type": "Swift.Optional<Foundation.LocalizedStringResource>",
+              "valueKind": "NilLiteral"
+            },
+            {
+              "label": "default",
+              "type": "Swift.Optional<Snippets.SnippetEntity>",
+              "valueKind": "NilLiteral"
+            },
+            {
+              "label": "requestValueDialog",
+              "type": "Swift.Optional<AppIntents.IntentDialog>",
+              "valueKind": "NilLiteral"
+            },
+            {
+              "label": "requestDisambiguationDialog",
+              "type": "Swift.Optional<AppIntents.IntentDialog>",
+              "valueKind": "NilLiteral"
+            },
+            {
+              "label": "inputConnectionBehavior",
+              "type": "AppIntents.InputConnectionBehavior",
+              "valueKind": "Runtime"
+            }
+          ]
+        }
+      },
+      {
+        "label": "title",
+        "type": "Foundation.LocalizedStringResource",
+        "mangledTypeName": "n/a - deprecated",
+        "isStatic": "true",
+        "isComputed": "false",
+        "file": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/Actions/ToggleFavoriteSnippetIntent.swift",
+        "line": 4,
+        "valueKind": "RawLiteral",
+        "value": "Toggle Snippet Favorite"
+      },
+      {
+        "label": "description",
+        "type": "AppIntents.IntentDescription",
+        "mangledTypeName": "n/a - deprecated",
+        "isStatic": "true",
+        "isComputed": "false",
+        "file": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/Actions/ToggleFavoriteSnippetIntent.swift",
+        "line": 5,
+        "valueKind": "RawLiteral",
+        "value": "Adds or removes a snippet from favorites."
+      },
+      {
+        "label": "openAppWhenRun",
+        "type": "Swift.Bool",
+        "mangledTypeName": "n/a - deprecated",
+        "isStatic": "true",
+        "isComputed": "false",
+        "file": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/Actions/ToggleFavoriteSnippetIntent.swift",
+        "line": 6,
+        "valueKind": "RawLiteral",
+        "value": "false"
+      },
+      {
+        "label": "snippet",
+        "type": "Snippets.SnippetEntity",
+        "mangledTypeName": "n/a - deprecated",
+        "isStatic": "false",
+        "isComputed": "true",
+        "file": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/Actions/ToggleFavoriteSnippetIntent.swift",
+        "line": 9,
+        "valueKind": "InitCall",
+        "value": {
+          "type": "AppIntents.IntentParameter<Snippets.SnippetEntity>",
+          "arguments": [
+            {
+              "label": "title",
+              "type": "Foundation.LocalizedStringResource",
+              "valueKind": "RawLiteral",
+              "value": "Snippet"
+            },
+            {
+              "label": "description",
+              "type": "Swift.Optional<Foundation.LocalizedStringResource>",
+              "valueKind": "NilLiteral"
+            },
+            {
+              "label": "default",
+              "type": "Swift.Optional<Snippets.SnippetEntity>",
+              "valueKind": "NilLiteral"
+            },
+            {
+              "label": "requestValueDialog",
+              "type": "Swift.Optional<AppIntents.IntentDialog>",
+              "valueKind": "NilLiteral"
+            },
+            {
+              "label": "requestDisambiguationDialog",
+              "type": "Swift.Optional<AppIntents.IntentDialog>",
+              "valueKind": "NilLiteral"
+            },
+            {
+              "label": "inputConnectionBehavior",
+              "type": "AppIntents.InputConnectionBehavior",
+              "valueKind": "Runtime"
+            }
+          ]
+        },
+        "propertyWrappers": [
+          {
+            "type": "AppIntents.IntentParameter",
+            "file": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/Actions/ToggleFavoriteSnippetIntent.swift",
+            "line": 8,
+            "arguments": [
+              {
+                "label": "title",
+                "type": "Foundation.LocalizedStringResource",
+                "valueKind": "RawLiteral",
+                "value": "Snippet"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "$snippet",
+        "type": "AppIntents.IntentParameter<Snippets.SnippetEntity>",
+        "mangledTypeName": "n/a - deprecated",
+        "isStatic": "false",
+        "isComputed": "true",
+        "file": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/Actions/ToggleFavoriteSnippetIntent.swift",
+        "line": 9,
+        "valueKind": "Runtime"
+      },
+      {
+        "label": "parameterSummary",
+        "type": "some AppIntents.ParameterSummary",
+        "mangledTypeName": "n/a - deprecated",
+        "isStatic": "true",
+        "isComputed": "true",
+        "file": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/Actions/ToggleFavoriteSnippetIntent.swift",
+        "line": 11,
+        "valueKind": "InitCall",
+        "value": {
+          "type": "AppIntents.IntentParameterSummary<Snippets.ToggleFavoriteSnippetIntent>",
+          "arguments": [
+            {
+              "label": "",
+              "type": "AppIntents.ParameterSummaryString<Snippets.ToggleFavoriteSnippetIntent>",
+              "valueKind": "InterpolatedStringLiteral",
+              "value": {
+                "segments": [
+                  {
+                    "valueKind": "RawLiteral",
+                    "value": "Toggle favorite for "
+                  },
+                  {
+                    "valueKind": "KeyPath",
+                    "value": {
+                      "path": "$snippet",
+                      "rootType": "Snippets.ToggleFavoriteSnippetIntent",
+                      "components": [
+                        {
+                          "label": "$snippet",
+                          "type": "AppIntents.IntentParameter<Snippets.SnippetEntity>"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "valueKind": "RawLiteral",
+                    "value": ""
+                  }
+                ]
+              }
+            },
+            {
+              "label": "table",
+              "type": "Swift.Optional<Swift.String>",
+              "valueKind": "NilLiteral"
+            }
+          ]
+        }
+      }
+    ]
+  }
+]

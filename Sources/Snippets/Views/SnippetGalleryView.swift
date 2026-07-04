@@ -1113,18 +1113,22 @@ struct SnippetGalleryView: View {
                 .font(Mono.font(size: 12, weight: .bold))
                 .foregroundStyle(searchFocused ? theme.text : theme.safeAccentText(theme.accent))
 
-            TextField(
-                "",
-                text: $searchText,
-                prompt: Text("search title, description, or code…")
-                    .font(Mono.font(size: 8))
-                    .foregroundColor(colorScheme == .dark ? theme.text.opacity(0.72) : theme.textMuted.opacity(0.95))
-            )
+            TextField("", text: $searchText)
                 .textFieldStyle(.plain)
                 .focused($searchFocused)
                 .font(Mono.font(size: 13))
                 .foregroundStyle(theme.text)
                 .tint(searchFocused ? theme.safeAccentText(theme.accent) : theme.accent)
+                .overlay(alignment: .leading) {
+                    if searchText.isEmpty {
+                        Text("search title, description, or code…")
+                            .font(Mono.font(size: 13))
+                            .foregroundStyle(colorScheme == .dark ? theme.text.opacity(0.72) : theme.textMuted.opacity(0.95))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .allowsHitTesting(false)
+                    }
+                }
 
             if !searchText.isEmpty {
                 Button { searchText = "" } label: {

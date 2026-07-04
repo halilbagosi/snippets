@@ -6,7 +6,7 @@
 	<integer>13</integer>
 	<key>logs</key>
 	<dict>
-		<key>08F67B2D-4696-4FCA-A935-6AE852B96DDD</key>
+		<key>209A97BB-33B6-4E64-8338-91A1F84AC3E3</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -15,7 +15,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>08F67B2D-4696-4FCA-A935-6AE852B96DDD.xcactivitylog</string>
+			<string>209A97BB-33B6-4E64-8338-91A1F84AC3E3.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -38,17 +38,17 @@
 			<key>schemeIdentifier-sharedScheme</key>
 			<integer>1</integer>
 			<key>signature</key>
-			<string>Building project Snippets with scheme Snippets and configuration Debug</string>
+			<string>Cleaning project Snippets with scheme Snippets and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>804711912.96850395</real>
+			<real>804878036.32125294</real>
 			<key>timeStoppedRecording</key>
-			<real>804711923.36800098</real>
+			<real>804878036.73924005</real>
 			<key>title</key>
-			<string>Building project Snippets with scheme Snippets and configuration Debug</string>
+			<string>Cleaning project Snippets with scheme Snippets and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>08F67B2D-4696-4FCA-A935-6AE852B96DDD</string>
+			<string>209A97BB-33B6-4E64-8338-91A1F84AC3E3</string>
 		</dict>
-		<key>0FAC605D-A445-437A-BCE1-38CF34083AFC</key>
+		<key>DAB3831E-1451-440F-A9B3-1D5551897AEE</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -57,7 +57,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>0FAC605D-A445-437A-BCE1-38CF34083AFC.xcactivitylog</string>
+			<string>DAB3831E-1451-440F-A9B3-1D5551897AEE.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -82,13 +82,55 @@
 			<key>signature</key>
 			<string>Building project Snippets with scheme Snippets and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>804711235.38387299</real>
+			<real>804878036.742149</real>
 			<key>timeStoppedRecording</key>
-			<real>804711252.54563105</real>
+			<real>804878054.93433797</real>
 			<key>title</key>
 			<string>Building project Snippets with scheme Snippets and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>0FAC605D-A445-437A-BCE1-38CF34083AFC</string>
+			<string>DAB3831E-1451-440F-A9B3-1D5551897AEE</string>
+		</dict>
+		<key>E4288ADD-E787-4D00-9222-95AD378E827D</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>E4288ADD-E787-4D00-9222-95AD378E827D.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Snippets project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>Snippets</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project Snippets with scheme Snippets and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>804878297.18786395</real>
+			<key>timeStoppedRecording</key>
+			<real>804878307.43177998</real>
+			<key>title</key>
+			<string>Building project Snippets with scheme Snippets and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>E4288ADD-E787-4D00-9222-95AD378E827D</string>
 		</dict>
 	</dict>
 </dict>

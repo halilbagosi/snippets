@@ -12,6 +12,14 @@
 		<data>
 		74WcqSSvtxI7Sd6hRc178waS6ds=
 		</data>
+		<key>Resources/Metadata.appintents/extract.actionsdata</key>
+		<data>
+		BBi72BfWby24cQd2Zl57mJ8yJwU=
+		</data>
+		<key>Resources/Metadata.appintents/version.json</key>
+		<data>
+		QrN2ngj62mzzIuLZtW/p6RKN/FQ=
+		</data>
 		<key>Resources/babel.min.js</key>
 		<data>
 		X2HoObmQmRWRt5N1l357/uzBZ6s=
@@ -27,24 +35,6 @@
 	</dict>
 	<key>files2</key>
 	<dict>
-		<key>MacOS/Snippets.debug.dylib</key>
-		<dict>
-			<key>cdhash</key>
-			<data>
-			sH2YfJHeQTU2911NM8pmwepIF5E=
-			</data>
-			<key>requirement</key>
-			<string>cdhash H"b07d987c91de413536f75d4d33ca66c1ea481791"</string>
-		</dict>
-		<key>MacOS/__preview.dylib</key>
-		<dict>
-			<key>cdhash</key>
-			<data>
-			b4FQjTSXFPFhZPL3rNg32ABTyI4=
-			</data>
-			<key>requirement</key>
-			<string>cdhash H"6f81508d349714f16164f2f7acd837d80053c88e"</string>
-		</dict>
 		<key>Resources/Assets.car</key>
 		<dict>
 			<key>hash2</key>
@@ -57,6 +47,20 @@
 			<key>hash2</key>
 			<data>
 			k7Zmyb3v3/661q8l1gx0qRfwXu+lI8UpBpN8ab2pOGI=
+			</data>
+		</dict>
+		<key>Resources/Metadata.appintents/extract.actionsdata</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			i1gyA0qyMatjwzliJ8vST6PMOAhlALAmKdvFJXVJ8XI=
+			</data>
+		</dict>
+		<key>Resources/Metadata.appintents/version.json</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			DRBVO8G4Hp8NMv7NEP9wdgb/r9zEF7Sr23OnBG6Hm4Y=
 			</data>
 		</dict>
 		<key>Resources/babel.min.js</key>

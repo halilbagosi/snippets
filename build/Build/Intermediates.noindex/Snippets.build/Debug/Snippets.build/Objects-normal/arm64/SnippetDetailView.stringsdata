@@ -60,18 +60,58 @@
       },
       {
         "comment": "",
-        "key": "Attachment",
+        "key": "Previous attachment",
         "location": {
-          "startingColumn": 30,
-          "startingLine": 384
+          "startingColumn": 49,
+          "startingLine": 593
         }
       },
       {
         "comment": "",
-        "key": "Done",
+        "key": "Next attachment",
         "location": {
-          "startingColumn": 28,
-          "startingLine": 387
+          "startingColumn": 73,
+          "startingLine": 593
+        }
+      },
+      {
+        "comment": "",
+        "key": "Close attachment viewer",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 489
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld / %lld",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 498
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 74,
+          "startingLine": 498
+        }
+      },
+      {
+        "comment": "",
+        "key": "Zoom in",
+        "location": {
+          "startingColumn": 52,
+          "startingLine": 567
+        }
+      },
+      {
+        "comment": "",
+        "key": "Zoom out",
+        "location": {
+          "startingColumn": 64,
+          "startingLine": 567
         }
       },
       {
@@ -79,7 +119,7 @@
         "key": "Missing File",
         "location": {
           "startingColumn": 30,
-          "startingLine": 419
+          "startingLine": 638
         }
       },
       {
@@ -87,7 +127,7 @@
         "key": "Missing File",
         "location": {
           "startingColumn": 26,
-          "startingLine": 515
+          "startingLine": 773
         }
       }
     ]

@@ -1,0 +1,48 @@
+{
+  "source": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/Actions/FindSnippetsIntent.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Find Snippets",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 5
+        }
+      },
+      {
+        "comment": "",
+        "key": "Finds snippets by text, collection, or favorites.",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 6
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search Text",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 9
+        }
+      },
+      {
+        "comment": "",
+        "key": "Collection",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 12
+        }
+      },
+      {
+        "comment": "",
+        "key": "Favorites Only",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 15
+        }
+      }
+    ]
+  },
+  "version": 1
+}

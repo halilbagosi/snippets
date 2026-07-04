@@ -7,7 +7,7 @@
         "key": "Put back",
         "location": {
           "startingColumn": 39,
-          "startingLine": 664
+          "startingLine": 518
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Delete permanently",
         "location": {
           "startingColumn": 39,
-          "startingLine": 667
+          "startingLine": 521
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Edit snippet",
         "location": {
           "startingColumn": 39,
-          "startingLine": 671
+          "startingLine": 525
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "All snippets",
         "location": {
           "startingColumn": 47,
-          "startingLine": 676
+          "startingLine": 530
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Move to",
         "location": {
           "startingColumn": 39,
-          "startingLine": 688
+          "startingLine": 542
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "Delete snippet",
         "location": {
           "startingColumn": 39,
-          "startingLine": 692
+          "startingLine": 546
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "No collections",
         "location": {
           "startingColumn": 66,
-          "startingLine": 1037
+          "startingLine": 896
         }
       },
       {
@@ -63,7 +63,7 @@
         "key": "No matches",
         "location": {
           "startingColumn": 85,
-          "startingLine": 1037
+          "startingLine": 896
         }
       },
       {
@@ -71,7 +71,7 @@
         "key": "Clear Selection",
         "location": {
           "startingColumn": 34,
-          "startingLine": 1066
+          "startingLine": 925
         }
       },
       {
@@ -79,7 +79,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 34,
-          "startingLine": 1068
+          "startingLine": 927
         }
       },
       {
@@ -87,7 +87,7 @@
         "key": "Filter",
         "location": {
           "startingColumn": 23,
-          "startingLine": 1098
+          "startingLine": 957
         }
       },
       {
@@ -95,7 +95,7 @@
         "key": "System",
         "location": {
           "startingColumn": 18,
-          "startingLine": 1128
+          "startingLine": 987
         }
       },
       {
@@ -103,7 +103,7 @@
         "key": "No Collection",
         "location": {
           "startingColumn": 26,
-          "startingLine": 1155
+          "startingLine": 1014
         }
       },
       {
@@ -111,7 +111,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 22,
-          "startingLine": 1226
+          "startingLine": 1085
         }
       },
       {
@@ -119,23 +119,15 @@
         "key": ">",
         "location": {
           "startingColumn": 18,
-          "startingLine": 1253
-        }
-      },
-      {
-        "comment": "",
-        "key": "search title, description, or code…",
-        "location": {
-          "startingColumn": 30,
-          "startingLine": 1260
+          "startingLine": 1112
         }
       },
       {
         "comment": "",
         "key": "",
         "location": {
-          "startingColumn": 17,
-          "startingLine": 1258
+          "startingColumn": 23,
+          "startingLine": 1116
         }
       },
       {
@@ -143,7 +135,7 @@
         "key": "esc",
         "location": {
           "startingColumn": 34,
-          "startingLine": 1278
+          "startingLine": 1142
         }
       },
       {
@@ -151,7 +143,7 @@
         "key": "⌘F",
         "location": {
           "startingColumn": 42,
-          "startingLine": 1278
+          "startingLine": 1142
         }
       },
       {
@@ -159,7 +151,15 @@
         "key": "snippets",
         "location": {
           "startingColumn": 22,
-          "startingLine": 1248
+          "startingLine": 1107
+        }
+      },
+      {
+        "comment": "",
+        "key": "search title, description, or code…",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1124
         }
       },
       {
@@ -167,7 +167,7 @@
         "key": "// trash is empty",
         "location": {
           "startingColumn": 32,
-          "startingLine": 1352
+          "startingLine": 1216
         }
       },
       {
@@ -175,7 +175,7 @@
         "key": "// no snippets yet",
         "location": {
           "startingColumn": 54,
-          "startingLine": 1352
+          "startingLine": 1216
         }
       },
       {
@@ -183,7 +183,7 @@
         "key": "new snippet",
         "location": {
           "startingColumn": 26,
-          "startingLine": 1357
+          "startingLine": 1221
         }
       },
       {
@@ -191,7 +191,7 @@
         "key": "new snippet",
         "location": {
           "startingColumn": 26,
-          "startingLine": 1378
+          "startingLine": 1242
         }
       },
       {
@@ -199,23 +199,31 @@
         "key": "Close",
         "location": {
           "startingColumn": 33,
-          "startingLine": 1505
+          "startingLine": 1372
         }
       },
       {
         "comment": "",
-        "key": "No matching collections",
+        "key": "no matching collections",
         "location": {
           "startingColumn": 38,
-          "startingLine": 1453
+          "startingLine": 1319
         }
       },
       {
         "comment": "",
-        "key": "Search collections",
+        "key": "filter collections…",
         "location": {
-          "startingColumn": 23,
-          "startingLine": 1514
+          "startingColumn": 30,
+          "startingLine": 1384
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 1382
         }
       },
       {
@@ -223,7 +231,15 @@
         "key": "All Snippets",
         "location": {
           "startingColumn": 22,
-          "startingLine": 1553
+          "startingLine": 1427
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1484
         }
       }
     ]

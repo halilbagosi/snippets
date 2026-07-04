@@ -1,0 +1,64 @@
+{
+  "source": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/Entities/SnippetEntity.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Snippet",
+        "location": {
+          "startingColumn": 71,
+          "startingLine": 5
+        }
+      },
+      {
+        "comment": "",
+        "key": "Title",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 9
+        }
+      },
+      {
+        "comment": "",
+        "key": "Language",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 10
+        }
+      },
+      {
+        "comment": "",
+        "key": "Code",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 11
+        }
+      },
+      {
+        "comment": "",
+        "key": "Favorite",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 12
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 35
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 36
+        }
+      }
+    ]
+  },
+  "version": 1
+}

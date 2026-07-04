@@ -1,0 +1,48 @@
+{
+  "source": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/Actions/ToggleFavoriteSnippetIntent.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Toggle Snippet Favorite",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 4
+        }
+      },
+      {
+        "comment": "",
+        "key": "Adds or removes a snippet from favorites.",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 5
+        }
+      },
+      {
+        "comment": "",
+        "key": "Snippet",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 8
+        }
+      },
+      {
+        "comment": "",
+        "key": "Added %@ to favorites.",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 27
+        }
+      },
+      {
+        "comment": "",
+        "key": "Removed %@ from favorites.",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 28
+        }
+      }
+    ]
+  },
+  "version": 1
+}

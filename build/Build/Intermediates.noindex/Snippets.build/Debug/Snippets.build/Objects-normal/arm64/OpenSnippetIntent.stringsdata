@@ -1,0 +1,32 @@
+{
+  "source": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/Actions/OpenSnippetIntent.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Open Snippet",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 4
+        }
+      },
+      {
+        "comment": "",
+        "key": "Opens a snippet in Snippets.",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 5
+        }
+      },
+      {
+        "comment": "",
+        "key": "Snippet",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 8
+        }
+      }
+    ]
+  },
+  "version": 1
+}

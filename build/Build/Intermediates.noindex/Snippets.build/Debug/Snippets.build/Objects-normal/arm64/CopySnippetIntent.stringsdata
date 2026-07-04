@@ -1,0 +1,40 @@
+{
+  "source": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/Actions/CopySnippetIntent.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Copy Snippet Code",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 4
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copies a snippet's code to the clipboard.",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 5
+        }
+      },
+      {
+        "comment": "",
+        "key": "Snippet",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 8
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copied %@.",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 28
+        }
+      }
+    ]
+  },
+  "version": 1
+}

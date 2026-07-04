@@ -12,10 +12,42 @@
       },
       {
         "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 236
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ask every time",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 237
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Collection only",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 238
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Collection & contents",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 239
+        }
+      },
+      {
+        "comment": "",
         "key": "Theme color: %@",
         "location": {
           "startingColumn": 29,
-          "startingLine": 273
+          "startingLine": 327
         }
       },
       {
@@ -23,7 +55,7 @@
         "key": "Custom color",
         "location": {
           "startingColumn": 15,
-          "startingLine": 329
+          "startingLine": 383
         }
       },
       {
@@ -31,7 +63,7 @@
         "key": "Custom theme color",
         "location": {
           "startingColumn": 29,
-          "startingLine": 330
+          "startingLine": 384
         }
       },
       {
@@ -39,7 +71,7 @@
         "key": "",
         "location": {
           "startingColumn": 25,
-          "startingLine": 292
+          "startingLine": 346
         }
       }
     ]

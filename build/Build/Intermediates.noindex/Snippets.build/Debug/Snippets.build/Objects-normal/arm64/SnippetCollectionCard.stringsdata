@@ -7,7 +7,7 @@
         "key": "%@, %@",
         "location": {
           "startingColumn": 29,
-          "startingLine": 268
+          "startingLine": 280
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "%@",
         "location": {
           "startingColumn": 30,
-          "startingLine": 132
+          "startingLine": 133
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "Remove from favorites",
         "location": {
           "startingColumn": 55,
-          "startingLine": 130
+          "startingLine": 131
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Add to favorites",
         "location": {
           "startingColumn": 81,
-          "startingLine": 130
+          "startingLine": 131
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "Put back",
         "location": {
           "startingColumn": 59,
-          "startingLine": 276
+          "startingLine": 288
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "Delete permanently",
         "location": {
           "startingColumn": 87,
-          "startingLine": 279
+          "startingLine": 291
         }
       },
       {
@@ -63,7 +63,7 @@
         "key": "Edit collection",
         "location": {
           "startingColumn": 56,
-          "startingLine": 283
+          "startingLine": 295
         }
       },
       {
@@ -71,7 +71,7 @@
         "key": "Delete collection",
         "location": {
           "startingColumn": 78,
-          "startingLine": 286
+          "startingLine": 298
         }
       },
       {
@@ -79,7 +79,7 @@
         "key": "Failed to create preview container",
         "location": {
           "startingColumn": 1,
-          "startingLine": 293
+          "startingLine": 305
         }
       }
     ]

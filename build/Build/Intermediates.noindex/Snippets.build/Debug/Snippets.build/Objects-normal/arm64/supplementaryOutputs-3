@@ -1,11 +1,4 @@
 {
-  "/Users/halilbagosi/snippets/Sources/Snippets/DesignSystem/Components/DSButton.swift" : {
-    "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSButton.swiftconstvalues",
-    "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSButton.d",
-    "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSButton.dia",
-    "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSButton.o",
-    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSButton.swiftdeps"
-  },
   "/Users/halilbagosi/snippets/Sources/Snippets/DesignSystem/Components/DSGlassCard.swift" : {
     "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSGlassCard.swiftconstvalues",
     "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSGlassCard.d",
@@ -27,6 +20,13 @@
     "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSIconButton.o",
     "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSIconButton.swiftdeps"
   },
+  "/Users/halilbagosi/snippets/Sources/Snippets/DesignSystem/Components/DSTag.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSTag.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSTag.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSTag.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSTag.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSTag.swiftdeps"
+  },
   "/Users/halilbagosi/snippets/Sources/Snippets/DesignSystem/Modifiers/DSGlassModifier.swift" : {
     "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSGlassModifier.swiftconstvalues",
     "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSGlassModifier.d",
@@ -47,5 +47,19 @@
     "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSRadius.dia",
     "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSRadius.o",
     "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSRadius.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/DesignSystem/Tokens/DSShadow.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSShadow.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSShadow.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSShadow.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSShadow.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSShadow.swiftdeps"
+  },
+  "/Users/halilbagosi/snippets/Sources/Snippets/DesignSystem/Tokens/DSSpacing.swift" : {
+    "const-values" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSSpacing.swiftconstvalues",
+    "dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSSpacing.d",
+    "diagnostics" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSSpacing.dia",
+    "object" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSSpacing.o",
+    "swift-dependencies" : "/Users/halilbagosi/snippets/build/Build/Intermediates.noindex/Snippets.build/Debug/Snippets.build/Objects-normal/arm64/DSSpacing.swiftdeps"
   }
 }

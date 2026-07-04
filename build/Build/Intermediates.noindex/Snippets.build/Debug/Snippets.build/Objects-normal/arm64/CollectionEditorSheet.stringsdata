@@ -116,9 +116,17 @@
       },
       {
         "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 678
+        }
+      },
+      {
+        "comment": "",
         "key": "Select collection…",
         "location": {
-          "startingColumn": 32,
+          "startingColumn": 30,
           "startingLine": 679
         }
       },
@@ -127,7 +135,7 @@
         "key": "No snippets yet",
         "location": {
           "startingColumn": 26,
-          "startingLine": 780
+          "startingLine": 763
         }
       },
       {
@@ -135,7 +143,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 26,
-          "startingLine": 758
+          "startingLine": 741
         }
       },
       {
@@ -143,7 +151,7 @@
         "key": "Snippets",
         "location": {
           "startingColumn": 30,
-          "startingLine": 750
+          "startingLine": 733
         }
       }
     ]

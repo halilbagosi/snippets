@@ -7,7 +7,7 @@
         "key": "Delete this snippet?",
         "location": {
           "startingColumn": 13,
-          "startingLine": 687
+          "startingLine": 731
         }
       },
       {
@@ -15,15 +15,15 @@
         "key": "Delete Collection?",
         "location": {
           "startingColumn": 13,
-          "startingLine": 709
+          "startingLine": 754
         }
       },
       {
         "comment": "",
         "key": "Undo",
         "location": {
-          "startingColumn": 40,
-          "startingLine": 602
+          "startingColumn": 44,
+          "startingLine": 634
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "Delete Snippet",
         "location": {
           "startingColumn": 20,
-          "startingLine": 694
+          "startingLine": 738
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Cancel",
         "location": {
           "startingColumn": 20,
-          "startingLine": 702
+          "startingLine": 747
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "This will move \"%@\" to the trash. You can restore it within 30 days.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 705
+          "startingLine": 750
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "Delete Collection Only",
         "location": {
           "startingColumn": 20,
-          "startingLine": 716
+          "startingLine": 761
         }
       },
       {
@@ -63,7 +63,7 @@
         "key": "Delete Collection & Contents",
         "location": {
           "startingColumn": 20,
-          "startingLine": 721
+          "startingLine": 767
         }
       },
       {
@@ -71,7 +71,7 @@
         "key": "Cancel",
         "location": {
           "startingColumn": 20,
-          "startingLine": 727
+          "startingLine": 774
         }
       },
       {
@@ -79,7 +79,55 @@
         "key": "What would you like to do with this collection and its contents?",
         "location": {
           "startingColumn": 18,
-          "startingLine": 729
+          "startingLine": 776
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete, Keep Collection Contents",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 788
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Collections & Contents",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 796
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 805
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 814
+        }
+      },
+      {
+        "comment": "",
+        "key": "The selected items will be moved to the trash. Should the contents of the selected collections go to the trash as well?",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 819
+        }
+      },
+      {
+        "comment": "",
+        "key": "This will move the selected items to the trash. You can restore them within 30 days.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 821
         }
       },
       {
@@ -87,7 +135,7 @@
         "key": "New Collection",
         "location": {
           "startingColumn": 19,
-          "startingLine": 818
+          "startingLine": 936
         }
       },
       {
@@ -95,7 +143,7 @@
         "key": "New Collection",
         "location": {
           "startingColumn": 23,
-          "startingLine": 816
+          "startingLine": 934
         }
       }
     ]

@@ -1,0 +1,24 @@
+{
+  "source": "/Users/halilbagosi/snippets/Sources/Snippets/Intents/SnippetStore.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "That snippet no longer exists.",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 10
+        }
+      },
+      {
+        "comment": "",
+        "key": "That collection no longer exists.",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 11
+        }
+      }
+    ]
+  },
+  "version": 1
+}
