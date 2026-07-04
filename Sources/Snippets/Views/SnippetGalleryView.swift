@@ -62,8 +62,11 @@ struct SnippetGalleryView: View {
     @State private var keyEventMonitor: Any? = nil
 #endif
 
-    private let columns = [GridItem(.adaptive(minimum: 420, maximum: 640), spacing: 20)]
-    private let subcollectionColumns = [GridItem(.adaptive(minimum: 440, maximum: 680), spacing: 16)]
+    // Narrower columns keep snippet cards closer to square so the attachment
+    // preview reads well for both landscape and portrait media. Collection
+    // cards stay a touch wider, matching the ratio they had before.
+    private let columns = [GridItem(.adaptive(minimum: 340, maximum: 440), spacing: 20)]
+    private let subcollectionColumns = [GridItem(.adaptive(minimum: 360, maximum: 470), spacing: 16)]
     /// Deleted cards fade out with the same opacity transition used when
     /// collapsing gallery sections.
     private var cardRemovalAnimation: Animation {
@@ -71,6 +74,16 @@ struct SnippetGalleryView: View {
     }
     private var sectionCollapseAnimation: Animation {
         .interactiveSpring(response: 0.34, dampingFraction: 0.96, blendDuration: 0.08)
+    }
+    /// Changes whenever the Snippets strip (or the empty state that replaces it)
+    /// appears or disappears, so the section itself fades in/out with the same
+    /// opacity transition the cards use — e.g. when the last snippet is deleted.
+    private var snippetsSectionVisibilityKey: Int {
+        var hasher = Hasher()
+        hasher.combine(hasAnyGalleryContent)
+        hasher.combine(snippets.isEmpty)
+        hasher.combine(searchResultSnippets.isEmpty)
+        return hasher.finalize()
     }
     private var hasVisibleSubcollections: Bool {
         searchQuery.isEmpty && !subcollections.isEmpty && selectedLanguages.isEmpty && selectedSearchCollections.isEmpty
@@ -159,6 +172,7 @@ struct SnippetGalleryView: View {
                                 emptyState
                                     .frame(maxWidth: .infinity)
                                     .padding(.top, 36)
+                                    .transition(.opacity)
                             } else if !searchQuery.isEmpty {
                                 if !searchResultCollections.isEmpty && selectedLanguages.isEmpty {
                                     GallerySection(
@@ -188,6 +202,7 @@ struct SnippetGalleryView: View {
                                         ) {
                                             snippetGrid(viewModel.ordered(searchResultSnippets))
                                         }
+                                        .transition(.opacity)
                                     }
                                 }
                             } else {
@@ -221,6 +236,7 @@ struct SnippetGalleryView: View {
                                         ) {
                                             snippetGrid(viewModel.ordered(snippets))
                                         }
+                                        .transition(.opacity)
                                     }
                                 }
                             }
@@ -229,6 +245,7 @@ struct SnippetGalleryView: View {
                         .padding(.top, 16)
                         .padding(.bottom, isTrashMode ? 24 : 112)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .animation(cardRemovalAnimation, value: snippetsSectionVisibilityKey)
                 }
             }
             .scrollIndicators(.never)
@@ -1108,6 +1125,10 @@ struct SnippetGalleryView: View {
                     .font(Mono.font(size: 11, weight: .semibold))
             }
             .foregroundStyle(theme.text)
+            // Keep the "snippets" label at full width; the flexible text field
+            // and its helper placeholder absorb any shrinking as the window
+            // narrows, so only the helper text truncates.
+            .fixedSize()
 
             Text(">")
                 .font(Mono.font(size: 12, weight: .bold))

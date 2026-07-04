@@ -164,7 +164,10 @@ struct SnippetCard: View {
                     .background(theme.canvasDeep)
                 }
             }
-            .frame(height: 160)
+            // Preview area is locked to 16:9 so image/video attachments keep a
+            // familiar aspect; the card grows slightly taller with its width.
+            .aspectRatio(16.0 / 9.0, contentMode: .fit)
+            .frame(maxWidth: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
