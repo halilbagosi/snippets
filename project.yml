@@ -6,9 +6,13 @@ settings:
     PRODUCT_NAME: Snippets
     SWIFT_VERSION: 6.0
     MACOSX_DEPLOYMENT_TARGET: 26.0
-    ENABLE_DEBUG_DYLIB: YES
-    DEVELOPMENT_TEAM: ""
+    ENABLE_DEBUG_DYLIB: NO
+    # A real Development team (not ad-hoc "") is REQUIRED for App Intents:
+    # macOS refuses to establish the Shortcuts/Siri intent connection to an
+    # ad-hoc-signed app ("Shortcuts couldn't communicate with the app").
+    DEVELOPMENT_TEAM: KCH5545G6F
     CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: Apple Development
     ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     SUPPORTED_PLATFORMS: macosx
@@ -30,7 +34,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.halilbagosi.Snippets
         SWIFT_EMIT_LOC_STRINGS: YES
-        ENABLE_DEBUG_DYLIB: YES
+        ENABLE_DEBUG_DYLIB: NO
         ENABLE_APP_SANDBOX: NO
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
