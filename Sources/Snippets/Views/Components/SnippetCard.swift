@@ -582,6 +582,9 @@ private struct CardImagePreview: View {
             if let image {
                 Image(nsImage: image)
                     .resizable()
+                    // Fit so a portrait attachment shows whole, centered inside
+                    // its (bounded) preview slot; a landscape attachment whose
+                    // slot matches its aspect fills exactly with no bars.
                     .scaledToFit()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {

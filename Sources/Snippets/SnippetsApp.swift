@@ -110,23 +110,34 @@ struct SnippetsApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(environment)
-                .environment(appearanceSettings)
-                .environment(AppIntentNavigator.shared)
+            if #available(macOS 15.0, *) {
+                ContentView()
+                    .environment(environment)
+                    .environment(appearanceSettings)
+                    .environment(AppIntentNavigator.shared)
                 // Appearance preference is applied via NSApp.appearance in
                 // AppearanceSettings: preferredColorScheme would pin a per-window
                 // override that AppKit can't clear when following the system.
-                .frame(minWidth: 1100, minHeight: 720)
+                    .frame(minWidth: 1100, minHeight: 720)
                 // Without this the window can be zoom-only (green button shows
                 // "+"); this makes it a real full-screen-capable window.
-                .windowFullScreenBehavior(.enabled)
+                    .windowFullScreenBehavior(.enabled)
                 // The gallery draws its own glass bar under the toolbar area;
                 // hide the system toolbar background so it doesn't stack a
                 // darker adaptive layer on top (visible on hover / when the
                 // sidebar is collapsed).
-                .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-                .task { SnippetsApp.backfillUUIDs() }
+                    .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+                    .task { SnippetsApp.backfillUUIDs() }
+            } else {
+                ContentView()
+                    .environment(environment)
+                    .environment(appearanceSettings)
+                    .environment(AppIntentNavigator.shared)
+                // Appearance preference is applied via NSApp.appearance in
+                // AppearanceSettings: preferredColorScheme would pin a per-window
+                // override that AppKit can't clear when following the system.
+                    .frame(minWidth: 1100, minHeight: 720)
+                    .task { SnippetsApp.backfillUUIDs() }            }
         }
         #if os(macOS)
         // Hides the "Snippets" title in the toolbar via the supported API.

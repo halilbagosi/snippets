@@ -1,0 +1,175 @@
+{
+  "features" : [
+    "refractivity",
+    "specular-location"
+  ],
+  "fill-specializations" : [
+    {
+      "value" : {
+        "automatic-gradient" : "display-p3:0.20404,0.38388,0.23306,1.00000"
+      }
+    },
+    {
+      "appearance" : "dark",
+      "value" : {
+        "automatic-gradient" : "display-p3:0.06666,0.12542,0.07614,1.00000"
+      }
+    }
+  ],
+  "groups" : [
+    {
+      "hidden" : false,
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "value" : "system-dark"
+            },
+            {
+              "appearance" : "light",
+              "value" : "system-light"
+            }
+          ],
+          "glass" : true,
+          "image-name" : "scissors-icon-18.png",
+          "name" : "scissors-icon-18",
+          "position" : {
+            "scale" : 1.22,
+            "translation-in-points" : [
+              -385.5559388437293,
+              266.4787701361812
+            ]
+          }
+        }
+      ],
+      "refractivity" : {
+        "depth" : 0.5,
+        "enabled" : true,
+        "strength" : 0
+      },
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.6
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.61
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "solid" : "display-p3:0.19763,0.37744,0.22534,1.00000"
+          },
+          "image-name" : "1729059-200.png",
+          "name" : "1729059-200",
+          "position" : {
+            "scale" : 4.43,
+            "translation-in-points" : [
+              -0.8650000000000091,
+              275.3387701361812
+            ]
+          }
+        }
+      ],
+      "lighting" : "individual",
+      "refractivity" : {
+        "depth" : 0.349765625,
+        "enabled" : true,
+        "strength" : -0.1678515625
+      },
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.6
+      },
+      "specular" : "inside",
+      "translucency" : {
+        "enabled" : false,
+        "value" : 1
+      }
+    },
+    {
+      "blur-material" : null,
+      "layers" : [
+        {
+          "blend-mode" : "normal",
+          "fill" : {
+            "solid" : "display-p3:0.24268,0.44287,0.27686,1.00000"
+          },
+          "image-name" : "13706.png",
+          "name" : "13706",
+          "position" : {
+            "scale" : 1.33,
+            "translation-in-points" : [
+              0,
+              -46.3697225399867
+            ]
+          }
+        }
+      ],
+      "name" : "logo",
+      "refractivity" : {
+        "depth" : 0.4608984375,
+        "enabled" : true,
+        "strength" : -0.1042578125
+      },
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.6
+      },
+      "specular" : "inside",
+      "translucency" : {
+        "enabled" : true,
+        "value" : 1
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "value" : "system-dark"
+            },
+            {
+              "appearance" : "light",
+              "value" : "system-light"
+            }
+          ],
+          "image-name" : "square.png",
+          "name" : "square",
+          "position" : {
+            "scale" : 1.73,
+            "translation-in-points" : [
+              0,
+              -26
+            ]
+          }
+        }
+      ],
+      "name" : "square",
+      "refractivity" : {
+        "depth" : 0.11765625,
+        "enabled" : true,
+        "strength" : -0.286875
+      },
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.6
+      },
+      "specular" : "inside",
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.51
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : [
+      "macOS"
+    ]
+  }
+}

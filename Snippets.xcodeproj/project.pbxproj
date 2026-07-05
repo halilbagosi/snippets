@@ -68,6 +68,7 @@
 		BDA308DF249FA373D892C3CC /* SnippetGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ECC648E99C364BFA89801A4 /* SnippetGalleryView.swift */; };
 		BDC6F6C5E365C5EC65C80F1C /* AppearanceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE2410E27F5506076DCBF84 /* AppearanceSettings.swift */; };
 		C11C09789C033BF4EC93B3CA /* DSShadow.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAC94E55FF41B69407AB0406 /* DSShadow.swift */; };
+		C124BF522FFA5675008B595C /* SnippetsIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = C124BF512FFA5675008B595C /* SnippetsIcon.icon */; };
 		C4BEBBAD49D93D11C7C96D11 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19F417FA322ACE927C52F4E8 /* AboutView.swift */; };
 		C6C3F6B866BAD5A697725954 /* CollectionMoveTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B312587778E5F792F91D4E8 /* CollectionMoveTree.swift */; };
 		CEFBD8DCF49611190B9FEAB9 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD11467A40DD47264EDFEACA /* Theme.swift */; };
@@ -138,6 +139,8 @@
 		BD11467A40DD47264EDFEACA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		BD6AB4D23DA0BD9897EF31D0 /* SnippetCollectionEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetCollectionEntity.swift; sourceTree = "<group>"; };
 		C002CC5D0BE4C24D08C08D7E /* MediaManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManaging.swift; sourceTree = "<group>"; };
+		C124BF442FF9B12E008B595C /* Snippets-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Snippets-Info.plist"; sourceTree = SOURCE_ROOT; };
+		C124BF512FFA5675008B595C /* SnippetsIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = SnippetsIcon.icon; sourceTree = "<group>"; };
 		C22D8859737516C8AF09273C /* SnippetQueryFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetQueryFilter.swift; sourceTree = "<group>"; };
 		C705146AEB83C4F2B48E87D9 /* ColorExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorExtensions.swift; sourceTree = "<group>"; };
 		C865FC767A106A831B3B7ADC /* Snippets.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Snippets.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -195,6 +198,7 @@
 		1E17A019410FDC31829BB3FA /* Snippets */ = {
 			isa = PBXGroup;
 			children = (
+				C124BF442FF9B12E008B595C /* Snippets-Info.plist */,
 				0B9284FC624AB4701E78C6EA /* SnippetsApp.swift */,
 				52340538EFD250B44AE38B68 /* App */,
 				B996AA964155DC8F483D4FD4 /* Core */,
@@ -312,6 +316,7 @@
 			isa = PBXGroup;
 			children = (
 				1E17A019410FDC31829BB3FA /* Snippets */,
+				C124BF512FFA5675008B595C /* SnippetsIcon.icon */,
 				BCC329E0F8754AC69CB26D35 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -505,6 +510,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				18842E040399CB803941F5F9 /* Assets.xcassets in Resources */,
+				C124BF522FFA5675008B595C /* SnippetsIcon.icon in Resources */,
 				5F83E4E6DBEBBC102F4EE2BD /* DisintegrationShaders.metal.txt in Resources */,
 				49595C2F65E32BDA2D559953 /* babel.min.js in Resources */,
 				7B4A1C9753EB99BEF4E902A1 /* react-dom.production.min.js in Resources */,
@@ -738,14 +744,19 @@
 		3A041FDB52F4DF20F57058FE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = SnippetsIcon;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_DEBUG_DYLIB = NO;
+				INFOPLIST_FILE = "Snippets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.halilbagosi.Snippets;
 				SDKROOT = macosx;
 				SUPPORTS_MACCATALYST = NO;
@@ -757,14 +768,19 @@
 		6925DDC254447688B906C53B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = SnippetsIcon;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_DEBUG_DYLIB = NO;
+				INFOPLIST_FILE = "Snippets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.halilbagosi.Snippets;
 				SDKROOT = macosx;
 				SUPPORTS_MACCATALYST = NO;

@@ -1,0 +1,289 @@
+{
+  "features" : [
+    "refractivity",
+    "specular-location"
+  ],
+  "fill-specializations" : [
+    {
+      "value" : {
+        "solid" : "display-p3:0.97559,0.99378,1.00000,1.00000"
+      }
+    },
+    {
+      "appearance" : "dark",
+      "value" : {
+        "solid" : "display-p3:0.00000,0.00000,0.00000,1.00000"
+      }
+    }
+  ],
+  "groups" : [
+    {
+      "hidden" : true,
+      "layers" : [
+        {
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "cursor.png",
+          "name" : "cursor",
+          "position" : {
+            "scale" : 1.17,
+            "translation-in-points" : [
+              -19.184999999999945,
+              29.32877013618122
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.6
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.2
+      }
+    },
+    {
+      "hidden" : false,
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.96594,0.95931,1.00000,1.00000",
+                  "display-p3:0.71582,0.40967,0.83594,1.00000"
+                ],
+                "orientation" : {
+                  "start" : {
+                    "x" : 0.18352984393308228,
+                    "y" : 0.4999999999999994
+                  },
+                  "stop" : {
+                    "x" : 0.4236554560519366,
+                    "y" : 0.4999999999999994
+                  }
+                }
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.00000,0.00000,0.00000,1.00000",
+                  "display-p3:0.61914,0.30688,0.79102,1.00000"
+                ],
+                "orientation" : {
+                  "start" : {
+                    "x" : 0.18352984393308228,
+                    "y" : 0.4999999999999994
+                  },
+                  "stop" : {
+                    "x" : 0.4240966500012895,
+                    "y" : 0.4999999999999994
+                  }
+                }
+              }
+            }
+          ],
+          "glass" : true,
+          "image-name" : "composing group.png",
+          "name" : "composing group",
+          "position" : {
+            "scale" : 1.17,
+            "translation-in-points" : [
+              -19.184999999999945,
+              29.32877013618122
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "none",
+        "opacity" : 0.6
+      },
+      "specular" : "inside",
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.58
+      }
+    },
+    {
+      "blur-material" : null,
+      "layers" : [
+        {
+          "blend-mode" : "normal",
+          "fill-specializations" : [
+            {
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.93164,0.52888,0.67855,1.00000",
+                  "display-p3:0.93213,0.57715,0.97607,1.00000"
+                ],
+                "orientation" : {
+                  "start" : {
+                    "x" : 0.5391627515640784,
+                    "y" : 0.3942027545364561
+                  },
+                  "stop" : {
+                    "x" : 0.5359454577367336,
+                    "y" : 0.9306344217490005
+                  }
+                }
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.54674,0.20912,0.28091,1.00000",
+                  "display-p3:0.52974,0.24133,0.54726,1.00000"
+                ],
+                "orientation" : {
+                  "start" : {
+                    "x" : 0.5,
+                    "y" : 0.22789103812819458
+                  },
+                  "stop" : {
+                    "x" : 0.5359454577367336,
+                    "y" : 0.9306344217490005
+                  }
+                }
+              }
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "solid" : "display-p3:1.00000,1.00000,1.00000,1.00000"
+              }
+            }
+          ],
+          "glass" : true,
+          "image-name" : "13706.png",
+          "name" : "13706",
+          "position" : {
+            "scale" : 1.33,
+            "translation-in-points" : [
+              0,
+              -46.3697225399867
+            ]
+          }
+        }
+      ],
+      "name" : "logo",
+      "refractivity" : {
+        "depth" : 0.085546875,
+        "enabled" : true,
+        "strength" : -0.36921875
+      },
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.6
+      },
+      "specular" : "inside",
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.46
+      }
+    },
+    {
+      "blur-material" : null,
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.10556,0.10556,0.10556,1.00000",
+                  "display-p3:0.00000,0.00000,0.00000,1.00000"
+                ]
+              }
+            },
+            {
+              "appearance" : "light",
+              "value" : {
+                "solid" : "display-p3:0.96816,1.00000,0.95956,1.00000"
+              }
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "solid" : "display-p3:0.63676,0.63676,0.63676,1.00000"
+              }
+            }
+          ],
+          "image-name" : "square.png",
+          "name" : "square",
+          "position" : {
+            "scale" : 1.73,
+            "translation-in-points" : [
+              0,
+              -26
+            ]
+          }
+        }
+      ],
+      "name" : "square",
+      "refractivity" : {
+        "depth" : 0.433203125,
+        "enabled" : true,
+        "strength" : -0.069375
+      },
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.6
+      },
+      "specular" : "inside",
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.79
+      }
+    },
+    {
+      "blend-mode-specializations" : [
+        {
+          "value" : "normal"
+        },
+        {
+          "appearance" : "dark",
+          "value" : "normal"
+        }
+      ],
+      "hidden" : false,
+      "layers" : [
+        {
+          "blend-mode" : "multiply",
+          "fill" : "none",
+          "image-name" : "Untitled - July 4, 2026 22.13.27.png",
+          "name" : "Untitled - July 4, 2026 22.13.27",
+          "opacity-specializations" : [
+            {
+              "value" : 1
+            },
+            {
+              "appearance" : "dark",
+              "value" : 0.71
+            }
+          ]
+        }
+      ],
+      "opacity" : 0.89,
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.6
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.2
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : [
+      "macOS"
+    ]
+  }
+}
