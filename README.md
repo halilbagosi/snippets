@@ -27,11 +27,6 @@ Snippets is a native macOS app built with SwiftUI and SwiftData for organizing, 
 - Sources/Snippets/Core/Services: service protocols shared across the app
 - Tests/SnippetsTests: unit tests for view models and app behavior
 
-## Documentation
-
-- Docs/VIEWS.md: overview of each screen and its responsibilities
-- Docs/COMPONENTS.md: reference for the reusable UI components
-
 ## Requirements
 
 - macOS 15+
