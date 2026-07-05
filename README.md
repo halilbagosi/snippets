@@ -34,7 +34,7 @@ Snippets is a native macOS app built with SwiftUI and SwiftData for organizing, 
 
 ## Requirements
 
-- macOS 26+
+- macOS 15+
 - Xcode (beta) with Swift 6.2 tools; SwiftData macros require the full Xcode toolchain, not the Command Line Tools alone
 - Swift Package Manager
 
