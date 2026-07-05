@@ -16,3 +16,7 @@ build/
 *.swp
 *.swo
 graphify-out/
+
+# Local agent skills and working docs
+.agents/
+Docs/
