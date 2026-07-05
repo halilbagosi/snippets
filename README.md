@@ -8,18 +8,23 @@ Snippets is a native macOS app built with SwiftUI and SwiftData for organizing, 
 - Organize snippets into nested collections
 - Search and filter by text, language, and collection
 - Attach images and videos to snippets
-- Browse snippets in a polished gallery interface with glass-style UI components
+- Browse snippets in a polished gallery interface built on a Liquid Glass design system
+- Drive the app from Shortcuts and Siri via App Intents (create, find, copy, open, and favorite snippets)
 - Recover deleted snippets from Trash before permanent cleanup
 - Persist data locally using SwiftData
 
 ## Project Structure
 
 - Sources/Snippets/SnippetsApp.swift: app entry point, SwiftData setup, and app environment configuration
+- Sources/Snippets/App: shared app environment and appearance settings
 - Sources/Snippets/Models: SwiftData models for snippets, collections, and media
 - Sources/Snippets/Views: main app screens and modal flows
 - Sources/Snippets/Views/Components: reusable UI components and rendering helpers
+- Sources/Snippets/DesignSystem: design tokens, modifiers, and glass-style components
 - Sources/Snippets/Features: view models for gallery and editor behavior
+- Sources/Snippets/Intents: App Intents, entities, and App Shortcuts for Shortcuts/Siri
 - Sources/Snippets/Services: theme, language detection, media handling, and other shared services
+- Sources/Snippets/Core/Services: service protocols shared across the app
 - Tests/SnippetsTests: unit tests for view models and app behavior
 
 ## Documentation
@@ -29,8 +34,8 @@ Snippets is a native macOS app built with SwiftUI and SwiftData for organizing, 
 
 ## Requirements
 
-- macOS 14+
-- Xcode with Swift 6.2 support
+- macOS 26+
+- Xcode (beta) with Swift 6.2 tools; SwiftData macros require the full Xcode toolchain, not the Command Line Tools alone
 - Swift Package Manager
 
 ## Build and Run
