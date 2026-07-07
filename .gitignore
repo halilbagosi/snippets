@@ -20,3 +20,14 @@ graphify-out/
 # Local agent skills and working docs
 .agents/
 Docs/
+
+# design-sync scaffolding (regenerated) / build output / machine state
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+
+# web design-system build output
+web/design-system/node_modules/
+web/design-system/dist/

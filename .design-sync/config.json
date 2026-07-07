@@ -1,0 +1,12 @@
+{
+  "projectId": "4d6c33ac-df48-42da-8619-8ccbf52d101e",
+  "pkg": "@snippets/design-system",
+  "shape": "package",
+  "buildCmd": "cd web/design-system && npm run build",
+  "cssEntry": "dist/styles.css",
+  "componentSrcMap": {
+    "Color": null,
+    "DSToken": null
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}
