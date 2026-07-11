@@ -400,10 +400,18 @@ struct ContentView: View {
     }
 
     private func buildBackgroundPalette() -> [Color] {
+        // When inside a collection, only use language colors from that collection's snippets
+        let sourceSnippets: [Snippet]
+        if let collection = selectedCollection {
+            sourceSnippets = collection.snippets.filter { $0.deletedAt == nil }
+        } else {
+            sourceSnippets = snippets
+        }
+
         var colors: [Color] = []
         var seenHex = Set<String>()
 
-        for snippet in snippets {
+        for snippet in sourceSnippets {
             guard
                 let language = SupportedLanguage(rawValue: snippet.language),
                 !seenHex.contains(language.accentHex.lowercased())
@@ -548,6 +556,10 @@ struct ContentView: View {
                                 withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
                                     selectedSnippetID = nil
                                 }
+                            } onOpenSnippet: { dependency in
+                                withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                    selectedSnippetID = dependency.persistentModelID
+                                }
                             }
                             .frame(width: cardWidth, height: cardHeight)
                             .background {
@@ -587,6 +599,7 @@ struct ContentView: View {
                             SnippetEditorView(
                                 mode: .create(preselectedCollectionID: newSnippetPreselectedCollectionID),
                                 availableCollections: collections,
+                                availableSnippets: snippets,
                                 onRequestDismiss: {
                                     withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
                                         isPresentingNew = false
@@ -596,8 +609,6 @@ struct ContentView: View {
                                     modelContext.insert(newSnippet)
                                     try? modelContext.save()
                                     withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
-                                        selectedSnippetID = newSnippet.persistentModelID
-                                        sidebarSelectionContext = .allSnippets
                                         isPresentingNew = false
                                     }
                                 }
@@ -682,6 +693,9 @@ struct ContentView: View {
         .onChange(of: colorScheme) { _, _ in
             rebuildDerivedCaches()
         }
+        .onChange(of: selectedCollectionID) { _, _ in
+            rebuildDerivedCaches()
+        }
         .onChange(of: sidebarSelectionContext) { _, newValue in
             if newValue == .allSnippets {
                 showUncategorizedOnly = true
@@ -707,7 +721,7 @@ struct ContentView: View {
             presentNewSnippetFromIntent()
         }
         .sheet(item: $editingSnippet) { snippet in
-            SnippetEditorView(mode: .edit(snippet), availableCollections: collections) { _ in
+            SnippetEditorView(mode: .edit(snippet), availableCollections: collections, availableSnippets: snippets) { _ in
                 try? modelContext.save()
             }
         }
