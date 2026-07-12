@@ -5,6 +5,32 @@ description: Build, launch, and drive the Snippets macOS app to verify changes a
 
 # Verifying Snippets changes
 
+## Two build systems — new files must be registered in BOTH
+This repo builds via SPM (`Package.swift`, globs `Sources/` automatically)
+AND a hand-managed `Snippets.xcodeproj` with explicit per-file references
+(NOT filesystem-synchronized groups). A new `.swift` file compiles under
+`swift build`/`swift test` but is INVISIBLE to Xcode until added to the
+`Snippets` target — so the app build breaks while tests stay green.
+**After adding/moving/removing any source file, run the xcodebuild gate
+below, not just `swift test`.** To register files (no Ruby xcodeproj gem
+on system Ruby; use Python `mod-pbxproj`):
+```bash
+python3 -m pip install --user pbxproj
+# XcodeProject.load(...); get_or_create_group('Preview', path='Preview', parent=<group>)
+# add_file('Name.swift', parent=grp, tree=TreeType.GROUP, target_name='Snippets',
+#          force=False, file_options=FileOptions(create_build_files=True)); p.save()
+# TreeType/FileOptions import from pbxproj.pbxextensions.ProjectFiles
+```
+mod-pbxproj's save() sets the file executable; restore with
+`git update-index --chmod=-x Snippets.xcodeproj/project.pbxproj`.
+
+## Xcodebuild gate (the real app-build check)
+```bash
+export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
+xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' build \
+  2>&1 | grep -iE "error:|BUILD SUCCEEDED|BUILD FAILED|cannot be found"
+```
+
 ## Build & launch
 ```bash
 export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer   # CLT lacks SwiftData macros
