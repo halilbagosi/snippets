@@ -141,22 +141,24 @@ struct SnippetDetailView: View {
             }
 
             if !snippet.dependencies.isEmpty {
-                HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("uses")
                         .font(Mono.font(size: 11, weight: .semibold))
                         .foregroundStyle(theme.comment)
-                    ForEach(snippet.dependencies) { dependency in
-                        FilterTag(
-                            label: dependency.title.lowercased(),
-                            icon: "link",
-                            accent: theme.textMuted,
-                            isSelected: false
-                        ) {
-                            onOpenSnippet(dependency)
+                    FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
+                        ForEach(snippet.dependencies) { dependency in
+                            FilterTag(
+                                label: dependency.title.lowercased(),
+                                icon: "link",
+                                accent: theme.textMuted,
+                                isSelected: false
+                            ) {
+                                onOpenSnippet(dependency)
+                            }
                         }
                     }
-                    Spacer(minLength: 0)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

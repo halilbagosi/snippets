@@ -30,6 +30,7 @@
 		3DD50ACD1026D704D5300D0F /* DSIconButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E370D61C438CA4261C3B0081 /* DSIconButton.swift */; };
 		3F714A9FADBF061104B2F55F /* NewSnippetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93008995B81756F2952B4E33 /* NewSnippetIntent.swift */; };
 		43260EDC3C75C408FE45C49D /* StatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D40E0FD0DBEC4CDF48159F /* StatusBar.swift */; };
+		44904403A3F6403C6D88D8F8 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 941B4888889E0A24B1E11498 /* FlowLayout.swift */; };
 		45090D04E962028F81E10D04 /* GallerySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90285C260B1BC9E05BE3F39 /* GallerySection.swift */; };
 		459BBD5F5836F8B436096EB7 /* SnippetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC7CCF177163E4ECAF9E15C /* SnippetStore.swift */; };
 		478B92E532B135F823A846E8 /* UUIDBackfill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6835C4A57BCBDC4D200AAABA /* UUIDBackfill.swift */; };
@@ -140,6 +141,7 @@
 		90D40E0FD0DBEC4CDF48159F /* StatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar.swift; sourceTree = "<group>"; };
 		92AB91DFDD3B0645519C5B24 /* SnippetEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetEditorViewModel.swift; sourceTree = "<group>"; };
 		93008995B81756F2952B4E33 /* NewSnippetIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSnippetIntent.swift; sourceTree = "<group>"; };
+		941B4888889E0A24B1E11498 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FlowLayout.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		9E4F3F66542C3CBC2A55DA1E /* DisintegrationShaders.metal.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = DisintegrationShaders.metal.txt; sourceTree = "<group>"; };
 		9F7660C09B90A40CD33676C8 /* react.production.min.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = react.production.min.js; sourceTree = "<group>"; };
 		A29E430CBE6D1CCAF9D1B5B9 /* SnippetPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SnippetPreviewView.swift; path = SnippetPreviewView.swift; sourceTree = "<group>"; };
@@ -289,6 +291,7 @@
 				90D40E0FD0DBEC4CDF48159F /* StatusBar.swift */,
 				53F647721774252E892243AA /* ViewSnapshot.swift */,
 				B8694111A0634FC813A9C5D8 /* Preview */,
+				941B4888889E0A24B1E11498 /* FlowLayout.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -660,6 +663,7 @@
 				2FD94053B8D7B3C8BA46B525 /* WebPreviewView.swift in Sources */,
 				87F442BEBCC7D335262558B5 /* MetalShaderPreviewView.swift in Sources */,
 				D004495F99FF2617CA144285 /* SwiftPreviewHostView.swift in Sources */,
+				44904403A3F6403C6D88D8F8 /* FlowLayout.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
