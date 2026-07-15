@@ -613,9 +613,9 @@ private struct CardImagePreview: View {
         imageLoadTask?.cancel()
         let url = MediaManager.resolvedURL(for: item.fileName)
         imageLoadTask = Task { @MainActor in
-            let data = await CardImageFileLoader.data(from: url)
+            let thumbnail = await CardImageFileLoader.thumbnail(from: url)
             guard !Task.isCancelled else { return }
-            image = data.flatMap(NSImage.init(data:))
+            image = thumbnail.map { NSImage(cgImage: $0, size: NSSize(width: $0.width, height: $0.height)) }
         }
         #endif
     }
@@ -634,9 +634,23 @@ private struct CardVideoPreview: View {
 
 #if canImport(AppKit)
 private enum CardImageFileLoader {
-    static func data(from url: URL) async -> Data? {
+    /// Card preview slots top out around 360pt wide, so 800px covers Retina
+    /// without decoding the full-resolution attachment into memory.
+    private static let maxThumbnailPixelSize: CGFloat = 800
+
+    static func thumbnail(from url: URL) async -> CGImage? {
         await Task.detached(priority: .userInitiated) {
-            try? Data(contentsOf: url)
+            guard let source = CGImageSourceCreateWithURL(
+                url as CFURL,
+                [kCGImageSourceShouldCache: false] as CFDictionary
+            ) else { return nil }
+            let options = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceShouldCacheImmediately: true,
+                kCGImageSourceThumbnailMaxPixelSize: maxThumbnailPixelSize
+            ] as CFDictionary
+            return CGImageSourceCreateThumbnailAtIndex(source, 0, options)
         }.value
     }
 }
@@ -651,20 +665,4 @@ private extension View {
             self
         }
     }
-}
-
-#Preview("SnippetCard") {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: Snippet.self, SnippetCollection.self, MediaItem.self, configurations: config)
-    let snippet = Snippet(
-        title: "Hello World",
-        snippetDescription: "A simple hello world script.",
-        language: "swift",
-        code: "print(\"Hello World\")"
-    )
-    SnippetCard(snippet: snippet)
-        .padding()
-        .frame(width: 300)
-        .modelContainer(container)
-        .environment(AppearanceSettings())
 }

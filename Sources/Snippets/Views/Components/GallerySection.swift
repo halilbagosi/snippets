@@ -164,23 +164,3 @@ struct CollapsibleSectionContent<Content: View>: View {
         }
     }
 }
-
-#Preview("GallerySection") {
-    struct PreviewWrapper: View {
-        @State private var isExpanded = true
-        var body: some View {
-            GallerySection(
-                title: "Files",
-                count: 5,
-                icon: "folder",
-                tint: .blue,
-                isExpanded: $isExpanded
-            ) {
-                Text("Item 1")
-                Text("Item 2")
-            }
-            .padding()
-        }
-    }
-    return PreviewWrapper()
-}
