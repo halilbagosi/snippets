@@ -1,0 +1,45 @@
+# Runner feasibility (plan 007, decided 2026-07-15): the hosted `macos-26`
+# arm64 image (github.com/actions/runner-images, macos-26-arm64-Readme.md)
+# ships Xcode 26.x (default 26.5) with the macOS 26.x SDKs, which this
+# package requires (Package.swift targets .macOS(.v26) and SwiftData macros
+# need a full Xcode toolchain). The Swift job therefore runs unconditionally
+# on macos-26 with the image's default Xcode.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  swift-tests:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache SwiftPM build
+        uses: actions/cache@v4
+        with:
+          path: .build-ci
+          key: swiftpm-${{ runner.os }}-${{ hashFiles('Package.swift') }}
+          restore-keys: swiftpm-${{ runner.os }}-
+      - name: Run tests
+        run: swift test --build-path .build-ci
+
+  web-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web/design-system
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/design-system/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
