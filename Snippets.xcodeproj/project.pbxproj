@@ -23,11 +23,9 @@
 		2B9F6EC9F2798F37F16C9CEB /* ViewSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53F647721774252E892243AA /* ViewSnapshot.swift */; };
 		2EB2253FE8AC97B83EC5C799 /* DSToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = 811EA17B4448872F52368F4E /* DSToken.swift */; };
 		2FD94053B8D7B3C8BA46B525 /* WebPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28094A4A8A9B664AA5F1B2A6 /* WebPreviewView.swift */; };
-		38824AE3A5FB0F42B8984FA8 /* DSBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBD1C3E6EEC4EBD2DA12AA4B /* DSBadge.swift */; };
 		38E4A6BBA1118D66A3042E59 /* FindSnippetsIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD3FBD380DC714E06CB62B /* FindSnippetsIntent.swift */; };
 		3932582D4909B410B7313D53 /* DSSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE92B0C04F75EABB54836B81 /* DSSpacing.swift */; };
 		397143D34A386C5AB9B9F776 /* EditorTabHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E7553D99F70014816334E2E /* EditorTabHeader.swift */; };
-		3DD50ACD1026D704D5300D0F /* DSIconButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E370D61C438CA4261C3B0081 /* DSIconButton.swift */; };
 		3F714A9FADBF061104B2F55F /* NewSnippetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93008995B81756F2952B4E33 /* NewSnippetIntent.swift */; };
 		43260EDC3C75C408FE45C49D /* StatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D40E0FD0DBEC4CDF48159F /* StatusBar.swift */; };
 		44904403A3F6403C6D88D8F8 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 941B4888889E0A24B1E11498 /* FlowLayout.swift */; };
@@ -36,7 +34,6 @@
 		478B92E532B135F823A846E8 /* UUIDBackfill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6835C4A57BCBDC4D200AAABA /* UUIDBackfill.swift */; };
 		4926D30AB3A22D5DEFA9F689 /* react.production.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 9F7660C09B90A40CD33676C8 /* react.production.min.js */; };
 		49595C2F65E32BDA2D559953 /* babel.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 29089448FCCCF08708B6D5BE /* babel.min.js */; };
-		49FCB8C33E10C72B6EAEC7E8 /* DSButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF047FFF5E33067161E7D0AA /* DSButton.swift */; };
 		4A9995936C7133E38EFE0ECC /* SnippetsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE20D31F335E0361D10CC51 /* SnippetsData.swift */; };
 		4B28ACF3E7434535A53A7557 /* MetalDisintegrationRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B2656C1F0CA0F70BF32616B /* MetalDisintegrationRenderer.swift */; };
 		4E9253E54F5DA0B1B83330E2 /* SnippetCollectionEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6AB4D23DA0BD9897EF31D0 /* SnippetCollectionEntity.swift */; };
@@ -63,8 +60,6 @@
 		8F3191ED945089431C000C5D /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E923CF09607326EACCF905D0 /* TrashView.swift */; };
 		983FBD981744431AEA0FBA0E /* ColorExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C705146AEB83C4F2B48E87D9 /* ColorExtensions.swift */; };
 		9B234FBFDBABE1B76CD0F9A5 /* SnippetQueryFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22D8859737516C8AF09273C /* SnippetQueryFilter.swift */; };
-		9E187FCEE3B8C8240E734277 /* DSGlassCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D648EA67E21DFD87CA71C7A2 /* DSGlassCard.swift */; };
-		9FFD2F5621BC7F2F07ED608F /* DSTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAA6A7C242247085A91EA9A4 /* DSTag.swift */; };
 		A0C9005949BBBE4C9692FF02 /* SnippetEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59B7E708E9A71A8D278A41B3 /* SnippetEditorView.swift */; };
 		A4B9E7EA1DD86F360150AFA7 /* DSTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E755FD360416D4858461B1 /* DSTypography.swift */; };
 		A597CA97EA43C8D4A3C0C695 /* AppearanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FE6005FDBD6D97E65546E29 /* AppearanceView.swift */; };
@@ -169,16 +164,12 @@
 		C705146AEB83C4F2B48E87D9 /* ColorExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorExtensions.swift; sourceTree = "<group>"; };
 		C865FC767A106A831B3B7ADC /* Snippets.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Snippets.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CEC7CCF177163E4ECAF9E15C /* SnippetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetStore.swift; sourceTree = "<group>"; };
-		D648EA67E21DFD87CA71C7A2 /* DSGlassCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSGlassCard.swift; sourceTree = "<group>"; };
 		DE92B0C04F75EABB54836B81 /* DSSpacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSSpacing.swift; sourceTree = "<group>"; };
 		DF187CF147DC1A469228D65B /* Snippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snippet.swift; sourceTree = "<group>"; };
 		E26B11F164FE7140EB8BADA7 /* MetalDisintegrationOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalDisintegrationOverlay.swift; sourceTree = "<group>"; };
-		E370D61C438CA4261C3B0081 /* DSIconButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSIconButton.swift; sourceTree = "<group>"; };
 		E79EF8AF3BA056D9C7D1FCB3 /* DSRadius.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSRadius.swift; sourceTree = "<group>"; };
 		E923CF09607326EACCF905D0 /* TrashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashView.swift; sourceTree = "<group>"; };
 		EA8F72B9D99EE79A5560B20B /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
-		EAA6A7C242247085A91EA9A4 /* DSTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSTag.swift; sourceTree = "<group>"; };
-		EBD1C3E6EEC4EBD2DA12AA4B /* DSBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSBadge.swift; sourceTree = "<group>"; };
 		EC81238946BF781158E8BD10 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		EE6D5D60A49D9012A433BB0B /* SnippetCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetCard.swift; sourceTree = "<group>"; };
 		F03E294B335BB3E3BF02C8FB /* MediaItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaItem.swift; sourceTree = "<group>"; };
@@ -187,7 +178,6 @@
 		F9544908AF26BCE6FEDB330E /* MetalShaderPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MetalShaderPreviewView.swift; path = MetalShaderPreviewView.swift; sourceTree = "<group>"; };
 		FAA046938633C6AB461C2EC3 /* Snippet+Linkable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "Snippet+Linkable.swift"; path = "Snippet+Linkable.swift"; sourceTree = "<group>"; };
 		FDCE1D4586F0F153EC14552A /* MediaManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
-		FF047FFF5E33067161E7D0AA /* DSButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSButton.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -251,12 +241,7 @@
 		35091A2A046BC98DDA7F9D28 /* Components */ = {
 			isa = PBXGroup;
 			children = (
-				EBD1C3E6EEC4EBD2DA12AA4B /* DSBadge.swift */,
-				FF047FFF5E33067161E7D0AA /* DSButton.swift */,
-				D648EA67E21DFD87CA71C7A2 /* DSGlassCard.swift */,
 				01362798D5520FFC54DBDD42 /* DSGlassContainer.swift */,
-				E370D61C438CA4261C3B0081 /* DSIconButton.swift */,
-				EAA6A7C242247085A91EA9A4 /* DSTag.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -598,17 +583,12 @@
 				2A2BBE7653270548A8B5B6EE /* ContentView.swift in Sources */,
 				5D25E9517E83411EF39DD1CB /* CopySnippetIntent.swift in Sources */,
 				508E91F3E13AAED492361DCD /* CreateSnippetIntent.swift in Sources */,
-				38824AE3A5FB0F42B8984FA8 /* DSBadge.swift in Sources */,
-				49FCB8C33E10C72B6EAEC7E8 /* DSButton.swift in Sources */,
 				2667C24E86F4DABA8C7C683B /* DSColor.swift in Sources */,
-				9E187FCEE3B8C8240E734277 /* DSGlassCard.swift in Sources */,
 				5660D85C627F5B77194A8810 /* DSGlassContainer.swift in Sources */,
 				12B5E4FA5AAB903D1705EA07 /* DSGlassModifier.swift in Sources */,
-				3DD50ACD1026D704D5300D0F /* DSIconButton.swift in Sources */,
 				8A9184022D48C05EE2463D6E /* DSRadius.swift in Sources */,
 				C11C09789C033BF4EC93B3CA /* DSShadow.swift in Sources */,
 				3932582D4909B410B7313D53 /* DSSpacing.swift in Sources */,
-				9FFD2F5621BC7F2F07ED608F /* DSTag.swift in Sources */,
 				2EB2253FE8AC97B83EC5C799 /* DSToken.swift in Sources */,
 				A4B9E7EA1DD86F360150AFA7 /* DSTypography.swift in Sources */,
 				19FDFDF94315B732D1434FFF /* DotGridBackground.swift in Sources */,
