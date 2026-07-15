@@ -12,7 +12,7 @@ Build/test commands used throughout (see plan 001):
 | 001 | Fix README requirements; add repo CLAUDE.md | P1 | S | — | DONE |
 | 002 | Trash/delete integrity (purge collections, honor permanent, surface saves) | P1 | M | — | DONE |
 | 003 | Web preview CSP + navigation lockdown | P1 | M | — | DONE |
-| 004 | Crash-safe Swift-preview dylib cache | P2 | S | — | TODO |
+| 004 | Crash-safe Swift-preview dylib cache | P2 | S | — | DONE |
 | 005 | Design doc: sandbox/contain Swift-preview execution | P2 | L (design M) | — | TODO |
 | 006 | Characterization tests for App Intents | P1 | M | — | TODO |
 | 007 | CI workflow (swift test + web build) | P2 | M | 001, 006 | TODO |

@@ -75,14 +75,20 @@ actor SwiftPreviewBuilder {
         let harness = try SwiftPreviewHarness.make(entry: entry, helpers: helpers)
         let dylibURL = cacheDirectory.appendingPathComponent("\(harness.hash).dylib")
 
-        if !FileManager.default.fileExists(atPath: dylibURL.path) {
-            try FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
-            let sourceURL = cacheDirectory.appendingPathComponent("\(harness.hash).swift")
-            try harness.source.write(to: sourceURL, atomically: true, encoding: .utf8)
-            try compile(swiftc: swiftc, source: sourceURL, output: dylibURL, hash: harness.hash)
+        let usedCache = FileManager.default.fileExists(atPath: dylibURL.path)
+        if !usedCache {
+            try compileToCache(swiftc: swiftc, harness: harness, dylibURL: dylibURL)
         }
 
-        guard let handle = dlopen(dylibURL.path, RTLD_NOW) else {
+        var handle = dlopen(dylibURL.path, RTLD_NOW)
+        if handle == nil, usedCache {
+            // Poisoned cache (e.g. a truncated dylib left by a crash
+            // mid-write): drop the artifact and rebuild once.
+            try? FileManager.default.removeItem(at: dylibURL)
+            try compileToCache(swiftc: swiftc, harness: harness, dylibURL: dylibURL)
+            handle = dlopen(dylibURL.path, RTLD_NOW)
+        }
+        guard let handle else {
             let message = dlerror().map { String(cString: $0) } ?? "dlopen failed"
             throw BuildError.loadFailed(message)
         }
@@ -93,6 +99,40 @@ actor SwiftPreviewBuilder {
         let factory = unsafeBitCast(symbol, to: Factory.self)
         return {
             Unmanaged<NSView>.fromOpaque(factory()).takeRetainedValue()
+        }
+    }
+
+    /// Compiles to a uniquely-named temp path in the cache directory, then
+    /// atomically promotes it to `dylibURL` — a crash mid-compile can never
+    /// leave a truncated dylib at the final path.
+    private func compileToCache(swiftc: URL, harness: SwiftPreviewHarness.Harness, dylibURL: URL) throws {
+        try FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+        let sourceURL = cacheDirectory.appendingPathComponent("\(harness.hash).swift")
+        try harness.source.write(to: sourceURL, atomically: true, encoding: .utf8)
+        let tempURL = cacheDirectory
+            .appendingPathComponent("\(harness.hash).dylib.tmp-\(UUID().uuidString)")
+        do {
+            try compile(swiftc: swiftc, source: sourceURL, output: tempURL, hash: harness.hash)
+        } catch {
+            try? FileManager.default.removeItem(at: tempURL)
+            throw error
+        }
+        try Self.promoteArtifact(at: tempURL, to: dylibURL)
+    }
+
+    /// Moves a freshly-built artifact into its final cache location. If the
+    /// destination already exists (a concurrent build won), the temp file is
+    /// discarded and the existing artifact is used. The temp file never
+    /// survives, success or failure.
+    static func promoteArtifact(
+        at tempURL: URL, to finalURL: URL, fileManager: FileManager = .default
+    ) throws {
+        defer { try? fileManager.removeItem(at: tempURL) }
+        guard !fileManager.fileExists(atPath: finalURL.path) else { return }
+        do {
+            try fileManager.moveItem(at: tempURL, to: finalURL)
+        } catch CocoaError.fileWriteFileExists {
+            // Concurrent winner appeared between the check and the move.
         }
     }
 
