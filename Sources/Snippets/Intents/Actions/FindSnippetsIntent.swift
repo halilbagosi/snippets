@@ -25,6 +25,19 @@ struct FindSnippetsIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<[SnippetEntity]> {
         let context = SnippetsData.sharedModelContainer.mainContext
+        let matched = try Self.execute(
+            searchText: searchText, collectionID: collection?.id,
+            favoritesOnly: favoritesOnly, in: context
+        )
+        return .result(value: matched.map(SnippetEntity.init))
+    }
+
+    /// Core logic, context-injected for tests.
+    @MainActor
+    static func execute(
+        searchText: String?, collectionID: UUID?, favoritesOnly: Bool,
+        in context: ModelContext
+    ) throws -> [Snippet] {
         var descriptor = FetchDescriptor<Snippet>(
             predicate: #Predicate { $0.deletedAt == nil },
             sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
@@ -35,10 +48,10 @@ struct FindSnippetsIntent: AppIntent {
             try? context.save()
         }
 
-        let matched = SnippetQueryFilter.filter(
+        return SnippetQueryFilter.filter(
             snippets,
             query: searchText,
-            collectionUUID: collection?.id,
+            collectionUUID: collectionID,
             favoritesOnly: favoritesOnly,
             projection: { snippet in
                 SnippetQueryFilter.Candidate(
@@ -50,6 +63,5 @@ struct FindSnippetsIntent: AppIntent {
                 )
             }
         )
-        return .result(value: matched.map(SnippetEntity.init))
     }
 }
