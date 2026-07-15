@@ -301,21 +301,3 @@ struct SnippetCollectionCard: View {
         }
     }
 }
-
-#Preview("SnippetCollectionCard") {
-    do {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try ModelContainer(for: Snippet.self, SnippetCollection.self, MediaItem.self, configurations: config)
-        let collection = SnippetCollection(
-            name: "Favorites",
-            colorHex: "#FF0000",
-            iconName: "star.fill"
-        )
-        return SnippetCollectionCard(collection: collection, onOpen: {})
-            .padding()
-            .frame(width: 300)
-            .modelContainer(container)
-    } catch {
-        return Text("Failed to create preview container")
-    }
-}

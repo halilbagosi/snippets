@@ -11,9 +11,11 @@ struct SnippetDetailView: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onClose: () -> Void
+    var onOpenSnippet: (Snippet) -> Void = { _ in }
 
     @State private var didCopy: Bool = false
     @State private var lightboxIndex: Int? = nil
+    @State private var showPreview: Bool = false
 
     private var theme: Theme { Theme.current(colorScheme) }
 
@@ -134,8 +136,29 @@ struct SnippetDetailView: View {
                 }
                 
                 Spacer(minLength: 16)
-                
+
                 actionBar
+            }
+
+            if !snippet.dependencies.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("uses")
+                        .font(Mono.font(size: 11, weight: .semibold))
+                        .foregroundStyle(theme.comment)
+                    FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
+                        ForEach(snippet.dependencies) { dependency in
+                            FilterTag(
+                                label: dependency.title.lowercased(),
+                                icon: "link",
+                                accent: theme.textMuted,
+                                isSelected: false
+                            ) {
+                                onOpenSnippet(dependency)
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
@@ -204,14 +227,40 @@ struct SnippetDetailView: View {
 
     private var codeBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeader("source")
-            HighlightedCodeView(
-                code: snippet.code,
-                language: language,
-                theme: theme,
-                fontSize: 13
-            )
-            .frame(minHeight: 240, maxHeight: 520)
+            let resolution = showPreview ? SnippetLinker.resolve(entry: snippet) : nil
+            HStack(spacing: 8) {
+                SectionHeader(showPreview ? "preview" : "source")
+                if let resolution, !resolution.excluded.isEmpty {
+                    Text("\(resolution.excluded.count) connected not previewable")
+                        .font(Mono.font(size: 10))
+                        .foregroundStyle(theme.textMuted)
+                }
+                Spacer(minLength: 16)
+                if language.previewKind != nil {
+                    FilterTag(
+                        label: showPreview ? "code" : "preview",
+                        icon: showPreview ? "chevron.left.forwardslash.chevron.right" : "play.rectangle",
+                        accent: theme.accent,
+                        isSelected: showPreview
+                    ) {
+                        showPreview.toggle()
+                    }
+                }
+            }
+            Group {
+                if let resolution, language.previewKind != nil {
+                    SnippetPreviewView(resolution: resolution, language: language, theme: theme)
+                        .frame(height: 420)
+                } else {
+                    HighlightedCodeView(
+                        code: snippet.code,
+                        language: language,
+                        theme: theme,
+                        fontSize: 13
+                    )
+                    .frame(minHeight: 240, maxHeight: 520)
+                }
+            }
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .liquidGlassSurface(
                 in: RoundedRectangle(cornerRadius: 14, style: .continuous),
@@ -219,6 +268,9 @@ struct SnippetDetailView: View {
                 shadowRadius: 10,
                 shadowY: 5
             )
+        }
+        .onChange(of: snippet.persistentModelID) {
+            showPreview = false
         }
     }
 
@@ -810,10 +862,11 @@ private struct ImageMediaView: View {
         loadFailed = false
         let url = MediaManager.resolvedURL(for: item.fileName)
         imageLoadTask = Task { @MainActor in
-            let data = await ImageFileLoader.data(from: url)
+            // 2048px covers the detail pane at Retina; full res stays in the lightbox.
+            let cgImage = await ImageFileLoader.downsampledImage(from: url, maxPixelSize: 2048)
             guard !Task.isCancelled else { return }
-            if let data, let nsImage = NSImage(data: data) {
-                image = nsImage
+            if let cgImage {
+                image = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
             } else {
                 loadFailed = true
             }
@@ -840,6 +893,24 @@ private enum ImageFileLoader {
     static func data(from url: URL) async -> Data? {
         await Task.detached(priority: .userInitiated) {
             try? Data(contentsOf: url)
+        }.value
+    }
+
+    /// Downsampled decode for inline display; the lightbox keeps the
+    /// full-resolution path above for zooming.
+    static func downsampledImage(from url: URL, maxPixelSize: CGFloat) async -> CGImage? {
+        await Task.detached(priority: .userInitiated) {
+            guard let source = CGImageSourceCreateWithURL(
+                url as CFURL,
+                [kCGImageSourceShouldCache: false] as CFDictionary
+            ) else { return nil }
+            let options = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceShouldCacheImmediately: true,
+                kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
+            ] as CFDictionary
+            return CGImageSourceCreateThumbnailAtIndex(source, 0, options)
         }.value
     }
 }

@@ -98,11 +98,3 @@ extension Color {
         #endif
     }
 }
-
-#Preview("LanguageBadge") {
-    HStack {
-        LanguageBadge(language: .swift)
-        LanguageBadge(language: .python, compact: true)
-    }
-    .padding()
-}

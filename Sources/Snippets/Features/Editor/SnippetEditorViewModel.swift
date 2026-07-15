@@ -23,6 +23,8 @@ final class SnippetEditorViewModel {
     var manualLanguage: SupportedLanguage?
     var mediaItems: [MediaItem] = []
     var selectedCollectionIDs: Set<PersistentIdentifier> = []
+    /// Snippets this one depends on for combined previews, in user order.
+    var dependencies: [Snippet] = []
     var saveErrorMessage: String?
 
     private var hasLoaded = false
@@ -52,6 +54,7 @@ final class SnippetEditorViewModel {
                 || snippetDescription != original.snippetDescription
                 || code != original.code
                 || mediaItems != original.mediaItems
+                || dependencies.map(\.persistentModelID) != original.dependencies.map(\.persistentModelID)
         }
     }
 
@@ -65,6 +68,7 @@ final class SnippetEditorViewModel {
             code = snippet.code
             mediaItems = snippet.mediaItems
             selectedCollectionIDs = Set(snippet.collections.map(\.persistentModelID))
+            dependencies = snippet.dependencies
 
             if let language = SupportedLanguage(rawValue: snippet.language) {
                 manualLanguage = language
@@ -99,6 +103,25 @@ final class SnippetEditorViewModel {
         } else {
             selectedCollectionIDs.insert(id)
         }
+    }
+
+    func addDependency(_ snippet: Snippet) {
+        guard !dependencies.contains(where: { $0.persistentModelID == snippet.persistentModelID }) else { return }
+        dependencies.append(snippet)
+    }
+
+    func removeDependency(_ snippet: Snippet) {
+        dependencies.removeAll { $0.persistentModelID == snippet.persistentModelID }
+    }
+
+    /// Whether `snippet` can be offered in the connections picker: not the
+    /// snippet being edited and not already a dependency.
+    func isDependencyCandidate(_ snippet: Snippet, mode: SnippetEditorMode) -> Bool {
+        if case .edit(let original) = mode,
+           original.persistentModelID == snippet.persistentModelID {
+            return false
+        }
+        return !dependencies.contains { $0.persistentModelID == snippet.persistentModelID }
     }
 
     func attachMedia(using mediaManager: any MediaManaging) {
@@ -147,6 +170,7 @@ final class SnippetEditorViewModel {
             for collection in selectedCollections {
                 collection.updatedAt = .now
             }
+            snippet.dependencies = dependencies
 
             do {
                 try onSave(snippet)
@@ -180,6 +204,7 @@ final class SnippetEditorViewModel {
                 collection.updatedAt = .now
             }
             snippet.collections = selectedCollections
+            snippet.dependencies = dependencies
 
             do {
                 try modelContext.save()
