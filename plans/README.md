@@ -15,7 +15,7 @@ Build/test commands used throughout (see plan 001):
 | 004 | Crash-safe Swift-preview dylib cache | P2 | S | — | DONE |
 | 005 | Design doc: sandbox/contain Swift-preview execution | P2 | L (design M) | — | DONE (design at plans/005-design-output.md; spike skipped, rationale in doc) |
 | 006 | Characterization tests for App Intents | P1 | M | — | DONE |
-| 007 | CI workflow (swift test + web build) | P2 | M | 001, 006 | TODO |
+| 007 | CI workflow (swift test + web build) | P2 | M | 001, 006 | DONE (remote run unverified — not pushed yet) |
 | 008 | Delete dead DesignSystem components | P2 | S | — | TODO |
 | 009 | Incremental web-preview updates | P3 | M | 003 | TODO |
 | 010 | Memoize gallery filtering/search | P3 | M | 002 (same file) | TODO |
