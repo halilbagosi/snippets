@@ -15,6 +15,32 @@ final class WebPreviewHTMLBuilderTests: XCTestCase {
         )
     }
 
+    // MARK: Content-Security-Policy
+
+    func test_allFlavors_includeRestrictiveCSP() {
+        let samples: [(String, WebPreviewFlavor)] = [
+            ("<button>Tap</button>", .html),
+            (".card { color: red; }", .css),
+            ("console.log(1)", .javascript),
+            ("const n: number = 1", .typescript),
+            ("export default function App() { return <p>hi</p> }", .react),
+        ]
+        for (code, flavor) in samples {
+            let doc = document(code, flavor)
+            XCTAssertTrue(doc.contains("Content-Security-Policy"), "\(flavor) missing CSP meta")
+            XCTAssertTrue(doc.contains("connect-src 'none'"), "\(flavor) missing connect-src 'none'")
+        }
+    }
+
+    func test_csp_appearsBeforeFirstStyleTag() {
+        let doc = document("<button>Tap</button>", .html)
+        let csp = doc.range(of: "Content-Security-Policy")
+        let style = doc.range(of: "<style")
+        XCTAssertNotNil(csp)
+        XCTAssertNotNil(style)
+        XCTAssertTrue(csp!.lowerBound < style!.lowerBound)
+    }
+
     // MARK: HTML
 
     func test_htmlFragment_isWrappedInFullDocument() {

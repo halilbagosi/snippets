@@ -14,7 +14,8 @@ struct WebPreviewView: NSViewRepresentable {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.setValue(false, forKey: "drawsBackground")
+        webView.navigationDelegate = context.coordinator
+        webView.underPageBackgroundColor = .clear
         return webView
     }
 
@@ -36,7 +37,7 @@ struct WebPreviewView: NSViewRepresentable {
         webView.loadHTMLString(document, baseURL: nil)
     }
 
-    final class Coordinator {
+    final class Coordinator: NSObject, WKNavigationDelegate {
         private var lastSources: [LinkedSource]?
         private var lastFlavor: WebPreviewFlavor?
         private var lastIsDark: Bool?
@@ -45,6 +46,24 @@ struct WebPreviewView: NSViewRepresentable {
             if lastSources == sources, lastFlavor == flavor, lastIsDark == isDark { return false }
             (lastSources, lastFlavor, lastIsDark) = (sources, flavor, isDark)
             return true
+        }
+
+        /// Snippet JS must not navigate the preview anywhere. Only the initial
+        /// `loadHTMLString` (which arrives with a nil or `about:` URL) is
+        /// allowed; everything else — especially http(s) — is cancelled. This
+        /// also constrains full-document passthrough snippets, which bypass the
+        /// skeleton CSP; subresource fetches inside such documents remain a
+        /// known residual gap.
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            guard let url = navigationAction.request.url else {
+                decisionHandler(.allow)
+                return
+            }
+            decisionHandler(url.scheme == "about" ? .allow : .cancel)
         }
     }
 }

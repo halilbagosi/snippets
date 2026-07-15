@@ -387,11 +387,19 @@ enum WebPreviewHTMLBuilder {
         extraCSS: String = "",
         headExtras: String = ""
     ) -> String {
+        // Everything the preview legitimately needs is inline: 'unsafe-inline'
+        // covers the embedded runtimes and snippet code, 'unsafe-eval' the React
+        // path (Babel output runs via eval). connect-src 'none' is the actual
+        // security payoff — no fetch/XHR/WebSocket egress; img-src data:/blob:
+        // keeps data-URI images working while blocking remote beacons.
+        // Note: full-document passthrough snippets bypass this skeleton (and its
+        // CSP); the WebPreviewView navigation delegate constrains those instead.
         """
         <!doctype html>
         <html>
         <head>
         <meta charset="utf-8">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
         <meta name="color-scheme" content="\(appearance.isDark ? "dark" : "light")">
         <style>
         html, body { margin: 0; padding: 0; height: 100%; }
