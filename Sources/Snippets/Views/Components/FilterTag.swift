@@ -82,11 +82,3 @@ private struct FilterTagButtonStyle: ButtonStyle {
             .animation(.spring(response: 0.22, dampingFraction: 0.72), value: configuration.isPressed)
     }
 }
-
-#Preview("FilterTag") {
-    HStack {
-        FilterTag(label: "Swift", icon: "swift", accent: .orange, isSelected: false, action: {})
-        FilterTag(label: "Selected", icon: "checkmark", accent: .green, isSelected: true, action: {})
-    }
-    .padding()
-}

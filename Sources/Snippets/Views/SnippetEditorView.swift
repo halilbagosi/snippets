@@ -13,6 +13,7 @@ struct SnippetEditorView: View {
 
     let mode: Mode
     let availableCollections: [SnippetCollection]
+    let availableSnippets: [Snippet]
     let onSave: (Snippet) throws -> Void
     var onRequestDismiss: (() -> Void)? = nil
     private let mediaManager: any MediaManaging
@@ -25,18 +26,22 @@ struct SnippetEditorView: View {
     @State private var languageDetectionTask: Task<Void, Never>? = nil
     @State private var showValidationFeedback: Bool = false
     @State private var validationShake: Bool = false
+    @State private var isAddingConnection: Bool = false
+    @State private var connectionSearch: String = ""
 
     enum Field: Hashable { case title, description }
 
     init(
         mode: Mode,
         availableCollections: [SnippetCollection],
+        availableSnippets: [Snippet] = [],
         mediaManager: any MediaManaging = MediaManager.shared,
         onRequestDismiss: (() -> Void)? = nil,
         onSave: @escaping (Snippet) throws -> Void
     ) {
         self.mode = mode
         self.availableCollections = availableCollections
+        self.availableSnippets = availableSnippets
         self.mediaManager = mediaManager
         self.onRequestDismiss = onRequestDismiss
         self.onSave = onSave
@@ -64,6 +69,7 @@ struct SnippetEditorView: View {
                         descriptionSection
                         languageSection
                         collectionsSection
+                        connectionsSection
                         codeSection
                         mediaSection
                     }
@@ -433,6 +439,121 @@ struct SnippetEditorView: View {
         }
     }
 
+    /// Snippets this one depends on for combined previews (see SnippetLinker).
+    private var connectionsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeader("connections") {
+                Text("optional")
+                    .font(Mono.font(size: 10, weight: .medium))
+                    .foregroundStyle(theme.textMuted)
+            }
+
+            if !viewModel.dependencies.isEmpty {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
+                    ForEach(viewModel.dependencies) { dependency in
+                        Button {
+                            viewModel.removeDependency(dependency)
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "link")
+                                    .font(Mono.font(size: 9, weight: .semibold))
+                                Text(dependency.title.lowercased())
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                                Image(systemName: "xmark")
+                                    .font(Mono.font(size: 8, weight: .bold))
+                            }
+                            .font(Mono.font(size: 11, weight: .semibold))
+                            .foregroundStyle(theme.accent)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(theme.accent.opacity(colorScheme == .dark ? 0.22 : 0.12))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .strokeBorder(theme.accent.opacity(0.4), lineWidth: 1)
+                                    }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .help("Remove connection")
+                    }
+                }
+            }
+
+            if isAddingConnection {
+                VStack(alignment: .leading, spacing: 6) {
+                    TextField("search snippets", text: $connectionSearch)
+                        .textFieldStyle(.plain)
+                        .font(Mono.font(size: 12))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(theme.surface)
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .strokeBorder(theme.border, lineWidth: 1)
+                                }
+                        }
+                    if connectionCandidates.isEmpty {
+                        Text("no matching snippets")
+                            .font(Mono.font(size: 11))
+                            .foregroundStyle(theme.textMuted)
+                            .padding(.horizontal, 4)
+                    } else {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 2) {
+                                ForEach(connectionCandidates.prefix(20)) { candidate in
+                                    Button {
+                                        viewModel.addDependency(candidate)
+                                        connectionSearch = ""
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "plus.circle")
+                                                .foregroundStyle(theme.accent)
+                                            Text(candidate.title)
+                                                .lineLimit(1)
+                                            Spacer(minLength: 8)
+                                            Text(candidate.language.lowercased())
+                                                .foregroundStyle(theme.textMuted)
+                                        }
+                                        .font(Mono.font(size: 11))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 6)
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 160)
+                    }
+                }
+            }
+
+            Button {
+                isAddingConnection.toggle()
+                if !isAddingConnection { connectionSearch = "" }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: isAddingConnection ? "chevron.up" : "plus")
+                    Text(isAddingConnection ? "done" : "add connection")
+                }
+                .font(Mono.font(size: 11, weight: .semibold))
+                .foregroundStyle(theme.textMuted)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var connectionCandidates: [Snippet] {
+        let base = availableSnippets.filter { viewModel.isDependencyCandidate($0, mode: mode) }
+        guard !connectionSearch.isEmpty else { return base }
+        return base.filter { $0.title.localizedCaseInsensitiveContains(connectionSearch) }
+    }
+
     private var mediaSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader("attachments") {
@@ -637,10 +758,10 @@ private struct MediaThumbnail: View {
         loadFailed = false
         let url = MediaManager.resolvedURL(for: item.fileName)
         imageLoadTask = Task { @MainActor in
-            let data = await EditorImageFileLoader.data(from: url)
+            let cgImage = await EditorImageFileLoader.thumbnail(from: url)
             guard !Task.isCancelled else { return }
-            if let data, let nsImage = NSImage(data: data) {
-                image = nsImage
+            if let cgImage {
+                image = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
             } else {
                 loadFailed = true
             }
@@ -653,9 +774,21 @@ private struct MediaThumbnail: View {
 
 #if canImport(AppKit)
 private enum EditorImageFileLoader {
-    static func data(from url: URL) async -> Data? {
+    /// Editor attachment tiles are small; 600px covers them at Retina without
+    /// decoding the full-resolution file.
+    static func thumbnail(from url: URL) async -> CGImage? {
         await Task.detached(priority: .userInitiated) {
-            try? Data(contentsOf: url)
+            guard let source = CGImageSourceCreateWithURL(
+                url as CFURL,
+                [kCGImageSourceShouldCache: false] as CFDictionary
+            ) else { return nil }
+            let options = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceShouldCacheImmediately: true,
+                kCGImageSourceThumbnailMaxPixelSize: 600
+            ] as CFDictionary
+            return CGImageSourceCreateThumbnailAtIndex(source, 0, options)
         }.value
     }
 }

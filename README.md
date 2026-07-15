@@ -29,7 +29,7 @@ Snippets is a native macOS app built with SwiftUI and SwiftData for organizing, 
 
 ## Requirements
 
-- macOS 15+
+- macOS 26+ (the app links against the macOS 26 SDK for the Liquid Glass design system)
 - Xcode (beta) with Swift 6.2 tools; SwiftData macros require the full Xcode toolchain, not the Command Line Tools alone
 - Swift Package Manager
 
@@ -37,15 +37,23 @@ Snippets is a native macOS app built with SwiftUI and SwiftData for organizing, 
 
 From the project root:
 
+> SwiftData macros require the full Xcode (beta) toolchain. Point `DEVELOPER_DIR` at it before building or testing:
+
 ```sh
+export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
 swift build
 ```
 
 To run the app from Xcode, open the project and launch the Snippets scheme.
 
+### Dual build system
+
+SwiftPM (`Package.swift`) auto-discovers sources, but the Xcode project lists files manually — any new source file under `Sources/` must also be added to `Snippets.xcodeproj`.
+
 ## Testing
 
 ```sh
+export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
 swift test
 ```
 

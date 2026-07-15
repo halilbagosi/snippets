@@ -21,6 +21,13 @@ final class Snippet {
     @Relationship(inverse: \SnippetCollection.snippets)
     var collections: [SnippetCollection]
 
+    /// Snippets this snippet needs to build a combined live preview.
+    /// Array order is the user's arranged order and is preserved.
+    @Relationship(inverse: \Snippet.dependents)
+    var dependencies: [Snippet] = []
+
+    var dependents: [Snippet] = []
+
     var isDeleted: Bool {
         deletedAt != nil
     }

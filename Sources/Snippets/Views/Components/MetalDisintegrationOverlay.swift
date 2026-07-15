@@ -85,9 +85,3 @@ private struct MetalDisintegrationRepresentable: NSViewRepresentable {
     }
 }
 #endif
-
-#Preview("MetalDisintegrationOverlay") {
-    MetalDisintegrationOverlay(startDate: Date(), duration: 1.15, accent: .blue, fixedProgress: 0.5)
-        .frame(width: 300, height: 400)
-        .background(Color.black)
-}

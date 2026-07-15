@@ -70,11 +70,3 @@ extension SnippetCollection {
         #endif
     }
 }
-
-#Preview("CollectionIconView") {
-    HStack(spacing: 20) {
-        CollectionIconView(iconName: "folder.fill", color: .blue, size: 32, isSelected: false)
-        CollectionIconView(iconName: "star.fill", color: .yellow, size: 32, isSelected: true)
-    }
-    .padding()
-}
