@@ -49,6 +49,12 @@ Maps 1:1 to the SwiftUI system font scale — no custom font family or sizes:
 
 ## Components (`Sources/.../DesignSystem/Components/`)
 
+> Note: of these, only `DSGlassContainer` still exists in the Swift app — the
+> others were removed as dead code (plan 008; recover specs from git history
+> if ever needed). Their React counterparts in `web/design-system/` remain and
+> serve the external Claude Design workflow; the descriptions below stay as
+> the spec for that port.
+
 - **DSButton** — `title`, `style` (`primary` / `secondary` / `ghost` / `destructive`), `action`. Full-width, `md` radius, `body` font, horizontal `md` / vertical `sm` padding. `primary`/`destructive` use solid fill with white text; `secondary` is `surface` fill with a 20%-opacity border; `ghost` is transparent. Dims to 50% opacity when disabled.
 - **DSIconButton** — SF Symbol icon button, `sm` padding, `md` radius, fills with `surface` color on hover, dims to 50% when disabled.
 - **DSTag** — toggle-style pill: `caption` font, `sm` radius, selected state inverts to `textPrimary` fill / `background` text; unselected has a `textSecondary` 1pt border.
