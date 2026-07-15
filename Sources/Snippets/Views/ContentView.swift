@@ -607,7 +607,7 @@ struct ContentView: View {
                                 },
                                 onSave: { newSnippet in
                                     modelContext.insert(newSnippet)
-                                    try? modelContext.save()
+                                    saveOrToast(modelContext)
                                     withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
                                         isPresentingNew = false
                                     }
@@ -722,7 +722,7 @@ struct ContentView: View {
         }
         .sheet(item: $editingSnippet) { snippet in
             SnippetEditorView(mode: .edit(snippet), availableCollections: collections, availableSnippets: snippets) { _ in
-                try? modelContext.save()
+                saveOrToast(modelContext)
             }
         }
         .sheet(isPresented: $isPresentingCollectionEditor) {
@@ -1072,6 +1072,11 @@ struct ContentView: View {
         hideToastAfterDelay()
     }
 
+    private func saveOrToast(_ context: ModelContext) {
+        do { try context.save() }
+        catch { showToast("Couldn't save changes: \(error.localizedDescription)") }
+    }
+
     private func performDeleteSnippet(_ snippet: Snippet) {
         lastDeletion.append(.snippet(snippet.persistentModelID))
         lastUndoKind = .deletion
@@ -1082,7 +1087,7 @@ struct ContentView: View {
         // Soft-delete: set deletedAt so the snippet is retained in Trash for 30 days
         snippet.deletedAt = Date.now
         snippet.updatedAt = .now
-        try? modelContext.save()
+        saveOrToast(modelContext)
 
         showToast("Snippet moved to Recently Deleted", showsUndo: true)
     }
@@ -1111,7 +1116,7 @@ struct ContentView: View {
             }
         }
         if restoredAny {
-            try? modelContext.save()
+            saveOrToast(modelContext)
         }
         lastDeletion.removeAll()
         lastUndoKind = nil
@@ -1151,24 +1156,27 @@ struct ContentView: View {
             }
         }
         if undidAny {
-            try? modelContext.save()
+            saveOrToast(modelContext)
         }
         lastMove.removeAll()
         lastUndoKind = nil
         return undidAny
     }
 
+    // MARK: - Trash lifecycle
+
     private func performTrashCleanup() {
         let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date.now) ?? Date.distantPast
-        for snippet in trashedSnippets {
-            if let deletedAt = snippet.deletedAt, deletedAt < cutoff {
-                for media in snippet.mediaItems {
-                    MediaManager.deleteFile(for: media)
-                }
-                modelContext.delete(snippet)
-            }
+        do {
+            try TrashLifecycle.cleanup(
+                snippets: trashedSnippets,
+                collections: collections.filter { $0.deletedAt != nil },
+                cutoff: cutoff,
+                context: modelContext
+            )
+        } catch {
+            showToast("Couldn't save changes: \(error.localizedDescription)")
         }
-        try? modelContext.save()
     }
 
     private func beginCreateCollection() {
@@ -1251,7 +1259,7 @@ struct ContentView: View {
         }
         collection.snippets = snippets.filter { selectedIDs.contains($0.persistentModelID) }
         collection.updatedAt = .now
-        try? modelContext.save()
+        saveOrToast(modelContext)
         
         if editingCollection == nil {
             selectedCollectionID = collection.persistentModelID
@@ -1268,7 +1276,7 @@ struct ContentView: View {
             snippet.collections.append(collection)
             collection.updatedAt = .now
             snippet.updatedAt = .now
-            try? modelContext.save()
+            saveOrToast(modelContext)
             showToast("Copied to \u{201C}\(collection.name)\u{201D}.")
         }
     }
@@ -1309,7 +1317,14 @@ struct ContentView: View {
 
     private func deleteCollectionContentsRecursively(_ collection: SnippetCollection, permanent: Bool) {
         for snippet in collection.snippets {
-            self.performDeleteSnippet(snippet)
+            if permanent {
+                if selectedSnippetID == snippet.persistentModelID {
+                    selectedSnippetID = nil
+                }
+                TrashLifecycle.purgeSnippet(snippet, context: modelContext)
+            } else {
+                self.performDeleteSnippet(snippet)
+            }
         }
         for child in collection.children {
             deleteCollectionContentsRecursively(child, permanent: permanent)
@@ -1342,7 +1357,7 @@ struct ContentView: View {
                 sidebarSelectionContext = .allSnippets
             }
         }
-        try? modelContext.save()
+        saveOrToast(modelContext)
 
         if !permanent {
             showToast("Collection moved to Recently Deleted", showsUndo: true)
@@ -1361,7 +1376,7 @@ struct ContentView: View {
     private func restore(_ collection: SnippetCollection) {
         collection.deletedAt = nil
         collection.updatedAt = .now
-        try? modelContext.save()
+        saveOrToast(modelContext)
     }
 
     // MARK: - Move primitives (mutation only; no toast, save, or undo bookkeeping)
@@ -1406,14 +1421,14 @@ struct ContentView: View {
     private func moveSnippetToLibrary(_ snippet: Snippet) {
         lastMove = [setSnippetCollections(snippet, to: [])]
         lastUndoKind = .move
-        try? modelContext.save()
+        saveOrToast(modelContext)
         showToast("Moved to Library", showsUndo: true)
     }
 
     private func moveSnippet(_ snippet: Snippet, to collection: SnippetCollection) {
         lastMove = [setSnippetCollections(snippet, to: [collection])]
         lastUndoKind = .move
-        try? modelContext.save()
+        saveOrToast(modelContext)
         showToast("Moved to \u{201C}\(collection.name)\u{201D}", showsUndo: true)
     }
 
@@ -1440,7 +1455,7 @@ struct ContentView: View {
 
         lastMove = records
         lastUndoKind = .move
-        try? modelContext.save()
+        saveOrToast(modelContext)
 
         let destination = target.map { "\u{201C}\($0.name)\u{201D}" } ?? "Library"
         if records.count == 1 {
@@ -1448,6 +1463,44 @@ struct ContentView: View {
         } else {
             showToast("\(records.count) items moved to \(destination)", showsUndo: true)
         }
+    }
+}
+
+/// Hard-delete operations shared by the Trash cleanup and permanent collection
+/// delete flows. Context-injected so the logic is testable outside the view.
+@MainActor
+enum TrashLifecycle {
+    /// Hard-deletes a snippet: removes media files from disk, then deletes the model.
+    static func purgeSnippet(_ snippet: Snippet, context: ModelContext) {
+        for media in snippet.mediaItems {
+            MediaManager.deleteFile(for: media)
+        }
+        context.delete(snippet)
+    }
+
+    /// Hard-deletes soft-deleted snippets and collections whose `deletedAt` is
+    /// before `cutoff`. Live snippets belonging to an expired collection are
+    /// kept; only their membership in the purged collection is removed.
+    static func cleanup(
+        snippets: [Snippet],
+        collections: [SnippetCollection],
+        cutoff: Date,
+        context: ModelContext
+    ) throws {
+        for snippet in snippets {
+            if let deletedAt = snippet.deletedAt, deletedAt < cutoff {
+                purgeSnippet(snippet, context: context)
+            }
+        }
+        for collection in collections {
+            if let deletedAt = collection.deletedAt, deletedAt < cutoff {
+                for member in collection.snippets {
+                    member.collections.removeAll { $0.persistentModelID == collection.persistentModelID }
+                }
+                context.delete(collection)
+            }
+        }
+        try context.save()
     }
 }
 
