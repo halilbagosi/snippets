@@ -14,9 +14,11 @@ struct SnippetCard: View {
     var isSelectionMode: Bool = false
     var onRestore: (() -> Void)? = nil
     var onPermanentDelete: (() -> Void)? = nil
-    /// Extra trailing room in the footer row so an external overlay (the
-    /// gallery's "N linked" stack badge) doesn't cover the date.
-    var footerTrailingInset: CGFloat = 0
+    /// When > 0, renders an inline "N linked" chip in the footer row — the
+    /// gallery's toggle for the connected-snippet stack behind this card.
+    var linkedCount: Int = 0
+    var isStackExpanded: Bool = false
+    var onToggleStack: (() -> Void)? = nil
 
     @State private var didCopy: Bool = false
     @State private var copyResetTask: Task<Void, Never>? = nil
@@ -98,6 +100,35 @@ struct SnippetCard: View {
         .buttonStyle(.plain)
         .help("Copy snippet code")
         .accessibilityLabel(didCopy ? "Copied" : "Copy code")
+    }
+
+    /// Footer chip toggling the connected-snippet stack; styled to sit
+    /// alongside the language badge and copy chip.
+    @ViewBuilder
+    private func linkedChip(theme: Theme) -> some View {
+        Button { onToggleStack?() } label: {
+            HStack(spacing: 5) {
+                Image(systemName: isStackExpanded ? "chevron.up" : "square.3.layers.3d.down.right")
+                    .font(Mono.font(size: 9, weight: .semibold))
+                Text(isStackExpanded ? "hide" : "\(linkedCount) linked")
+                    .font(Mono.font(size: 10, weight: .semibold))
+            }
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .foregroundStyle(isStackExpanded ? theme.accent : theme.textMuted)
+            .background {
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(theme.surfaceElevated)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .stroke(isStackExpanded ? theme.accent.opacity(0.5) : theme.border, lineWidth: 1)
+                    }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(isStackExpanded ? "Hide connected snippets" : "Show the snippets stacked behind this one")
+        .accessibilityLabel("\(linkedCount) connected snippets")
     }
 
     private var formattedDate: String {
@@ -221,6 +252,9 @@ struct SnippetCard: View {
                 }
                 .buttonStyle(.plain)
                 .help(snippet.isFavorite ? "Remove from favorites" : "Add to favorites")
+                if linkedCount > 0 {
+                    linkedChip(theme: theme)
+                }
                 Spacer(minLength: 8)
                 if inTrashView {
                     let days = snippet.daysUntilPermanentDeletion
@@ -240,7 +274,6 @@ struct SnippetCard: View {
                         .foregroundStyle(theme.textFaint)
                 }
             }
-            .padding(.trailing, footerTrailingInset)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
         }

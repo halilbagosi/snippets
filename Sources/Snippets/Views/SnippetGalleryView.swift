@@ -523,13 +523,10 @@ struct SnippetGalleryView: View {
                 snippetCell(
                     item.snippet,
                     index: index,
-                    footerTrailingInset: item.connectedCount > 0 ? 78 : 0
+                    linkedCount: item.connectedCount,
+                    isStackExpanded: expandedStacks.contains(item.snippet.persistentModelID),
+                    onToggleStack: { toggleStack(item.snippet.persistentModelID) }
                 )
-                    .overlay(alignment: .bottomTrailing) {
-                        if item.connectedCount > 0 {
-                            stackBadge(entryID: item.snippet.persistentModelID, count: item.connectedCount)
-                        }
-                    }
                     .overlay {
                         // Revealed stack members read as part of the group via
                         // a subtle accent ring instead of shapes behind the
@@ -551,7 +548,13 @@ struct SnippetGalleryView: View {
         .padding(.bottom, 18)
     }
 
-    private func snippetCell(_ snippet: Snippet, index: Int, footerTrailingInset: CGFloat = 0) -> some View {
+    private func snippetCell(
+        _ snippet: Snippet,
+        index: Int,
+        linkedCount: Int = 0,
+        isStackExpanded: Bool = false,
+        onToggleStack: (() -> Void)? = nil
+    ) -> some View {
         ZStack {
                     SnippetCard(
                         snippet: snippet,
@@ -559,7 +562,9 @@ struct SnippetGalleryView: View {
                         isSelectionMode: viewModel.isSelectMode,
                         onRestore: { onRestore?(snippet) },
                         onPermanentDelete: { requestPermanentDelete(snippet) },
-                        footerTrailingInset: footerTrailingInset
+                        linkedCount: linkedCount,
+                        isStackExpanded: isStackExpanded,
+                        onToggleStack: onToggleStack
                     )
 
                     if viewModel.isSelectMode {
@@ -650,41 +655,14 @@ struct SnippetGalleryView: View {
                     }
     }
 
-    private func stackBadge(entryID: PersistentIdentifier, count: Int) -> some View {
-        let isExpanded = expandedStacks.contains(entryID)
-        return Button {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
-                if isExpanded {
-                    expandedStacks.remove(entryID)
-                } else {
-                    expandedStacks.insert(entryID)
-                }
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: isExpanded ? "chevron.up" : "square.3.layers.3d.down.right")
-                    .font(Mono.font(size: 9, weight: .bold))
-                Text(isExpanded ? "hide" : "\(count) linked")
-                    .font(Mono.font(size: 10, weight: .semibold))
-            }
-            .foregroundStyle(isExpanded ? theme.accent : theme.textMuted)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background {
-                // Concentric with the card corner: inner radius = card
-                // radius (12) minus the badge's inset (6).
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(theme.surfaceElevated)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(
-                            isExpanded ? theme.accent.opacity(0.4) : theme.border, lineWidth: 1
-                        )
-                    }
+    private func toggleStack(_ entryID: PersistentIdentifier) {
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+            if expandedStacks.contains(entryID) {
+                expandedStacks.remove(entryID)
+            } else {
+                expandedStacks.insert(entryID)
             }
         }
-        .buttonStyle(.plain)
-        .padding(6)
-        .help(isExpanded ? "Hide connected snippets" : "Show the snippets stacked behind this one")
     }
 
     /// Marks a revealed stack member as belonging to the entry it was fanned
