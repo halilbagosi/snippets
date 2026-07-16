@@ -55,6 +55,8 @@ struct SnippetGalleryView: View {
     @State private var expandedLanguageSections: Set<String> = []
     @State private var fabHovered = false
     @State private var pressedSnippetID: PersistentIdentifier? = nil
+    /// Stack entries whose connected snippets are currently fanned out.
+    @State private var expandedStacks: Set<PersistentIdentifier> = []
     @State private var pressedResetTask: Task<Void, Never>? = nil
     @State private var showMoveSheet: Bool = false
     @State private var collectionFilterSearchText = ""
@@ -488,10 +490,60 @@ struct SnippetGalleryView: View {
         }
     }
 
+    private struct StackDisplayItem {
+        let snippet: Snippet
+        let connectedCount: Int
+        let isConnected: Bool
+    }
+
+    /// Flattens the source into display rows: connected snippets are hidden
+    /// behind their entry's card (SnippetLinker.stacks) and appear as rows
+    /// only while that stack is expanded. Trash stays flat.
+    private func stackDisplayItems(_ source: [Snippet]) -> [StackDisplayItem] {
+        guard !isTrashMode else {
+            return source.map { StackDisplayItem(snippet: $0, connectedCount: 0, isConnected: false) }
+        }
+        var added: Set<PersistentIdentifier> = []
+        var items: [StackDisplayItem] = []
+        for (entry, connected) in SnippetLinker.stacks(in: source) {
+            guard added.insert(entry.persistentModelID).inserted else { continue }
+            items.append(StackDisplayItem(snippet: entry, connectedCount: connected.count, isConnected: false))
+            guard expandedStacks.contains(entry.persistentModelID) else { continue }
+            for member in connected where added.insert(member.persistentModelID).inserted {
+                items.append(StackDisplayItem(snippet: member, connectedCount: 0, isConnected: true))
+            }
+        }
+        return items
+    }
+
     private func snippetGrid(_ source: [Snippet]) -> some View {
-        LazyVGrid(columns: columns, spacing: 18) {
-            ForEach(Array(source.enumerated()), id: \.element.persistentModelID) { index, snippet in
-                ZStack {
+        let items = stackDisplayItems(source)
+        return LazyVGrid(columns: columns, spacing: 18) {
+            ForEach(Array(items.enumerated()), id: \.element.snippet.persistentModelID) { index, item in
+                snippetCell(item.snippet, index: index)
+                    .background {
+                        if item.connectedCount > 0 {
+                            stackedCardBacks(count: item.connectedCount)
+                        }
+                    }
+                    .overlay(alignment: .bottomTrailing) {
+                        if item.connectedCount > 0 {
+                            stackBadge(entryID: item.snippet.persistentModelID, count: item.connectedCount)
+                        }
+                    }
+                    .overlay(alignment: .topLeading) {
+                        if item.isConnected { connectedMarker }
+                    }
+            }
+        }
+        .animation(cardRemovalAnimation, value: snippetIdentityKey(for: source))
+        .padding(.horizontal, 18)
+        .padding(.top, 18)
+        .padding(.bottom, 18)
+    }
+
+    private func snippetCell(_ snippet: Snippet, index: Int) -> some View {
+        ZStack {
                     SnippetCard(
                         snippet: snippet,
                         inTrashView: isTrashMode,
@@ -586,12 +638,87 @@ struct SnippetGalleryView: View {
                             }
                         }
                     }
+    }
+
+    /// Deck edges peeking out below a stack entry's card.
+    private func stackedCardBacks(count: Int) -> some View {
+        ZStack {
+            if count > 1 {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(theme.surface)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(theme.border, lineWidth: 1)
+                    }
+                    .scaleEffect(0.90)
+                    .offset(y: 13)
+                    .opacity(0.7)
+            }
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(theme.surface)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(theme.border, lineWidth: 1)
+                }
+                .scaleEffect(0.95)
+                .offset(y: 7)
+        }
+        .allowsHitTesting(false)
+    }
+
+    private func stackBadge(entryID: PersistentIdentifier, count: Int) -> some View {
+        let isExpanded = expandedStacks.contains(entryID)
+        return Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+                if isExpanded {
+                    expandedStacks.remove(entryID)
+                } else {
+                    expandedStacks.insert(entryID)
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: isExpanded ? "chevron.up" : "square.3.layers.3d.down.right")
+                    .font(Mono.font(size: 9, weight: .bold))
+                Text(isExpanded ? "hide" : "\(count) linked")
+                    .font(Mono.font(size: 10, weight: .semibold))
+            }
+            .foregroundStyle(isExpanded ? theme.accent : theme.textMuted)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background {
+                Capsule()
+                    .fill(theme.surfaceElevated)
+                    .overlay {
+                        Capsule().strokeBorder(
+                            isExpanded ? theme.accent.opacity(0.4) : theme.border, lineWidth: 1
+                        )
+                    }
             }
         }
-        .animation(cardRemovalAnimation, value: snippetIdentityKey(for: source))
-        .padding(.horizontal, 18)
-        .padding(.top, 18)
-        .padding(.bottom, 18)
+        .buttonStyle(.plain)
+        .padding(8)
+        .help(isExpanded ? "Hide connected snippets" : "Show the snippets stacked behind this one")
+    }
+
+    /// Marks a revealed stack member as belonging to the entry above it.
+    private var connectedMarker: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "link")
+                .font(Mono.font(size: 9, weight: .bold))
+            Text("connected")
+                .font(Mono.font(size: 10, weight: .semibold))
+        }
+        .foregroundStyle(theme.accent)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background {
+            Capsule()
+                .fill(theme.accent.opacity(0.14))
+                .overlay { Capsule().strokeBorder(theme.accent.opacity(0.35), lineWidth: 1) }
+        }
+        .padding(8)
+        .allowsHitTesting(false)
     }
 
     private func snippetIdentityKey(for source: [Snippet]) -> Int {
