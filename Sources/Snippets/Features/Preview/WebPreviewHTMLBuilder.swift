@@ -161,8 +161,21 @@ enum WebPreviewHTMLBuilder {
     /// optionally through an inlined Babel with the given presets.
     private static func executionBlock(code: String, babel: String?, presets: String?) -> String {
         let babelTag = babel.map { "<script>\($0)</script>" } ?? ""
+        return """
+        <pre id="console" class="snippet-console"></pre>
+        \(babelTag)
+        <script>
+        \(consoleShim)
+        \(scriptProgram(code: code, useBabel: babel != nil, presets: presets))
+        </script>
+        """
+    }
+
+    /// The user program for JS/TS flavors — one source of truth shared by the
+    /// initial document and `sourceUpdateScript`.
+    private static func scriptProgram(code: String, useBabel: Bool, presets: String?) -> String {
         let run: String
-        if babel != nil, let presets {
+        if useBabel, let presets {
             run = """
             const __out = Babel.transform(__snippetSource, { presets: \(presets), filename: "snippet.ts" });
             (0, eval)(__out.code);
@@ -171,17 +184,12 @@ enum WebPreviewHTMLBuilder {
             run = "(0, eval)(__snippetSource);"
         }
         return """
-        <pre id="console" class="snippet-console"></pre>
-        \(babelTag)
-        <script>
-        \(consoleShim)
         const __snippetSource = \(jsonLiteral(code));
         try {
           \(run)
         } catch (e) {
           __snippetConsole.append("error", String(e && e.stack || e));
         }
-        </script>
         """
     }
 
@@ -199,12 +207,56 @@ enum WebPreviewHTMLBuilder {
         // scoped to it: the component must be captured from within the
         // evaluated source, not probed from the shim afterwards. Mount-target
         // detection uses the entry code only — helpers never become the root.
+        // Stripped react imports leave hooks unbound; the UMD runtime only
+        // exposes the React/ReactDOM globals. (All handled in `reactSource`.)
+        let source = reactSource(code: code, helperScript: helperScript)
+        var body = ""
+        if !prependedHTML.isEmpty { body += prependedHTML + "\n" }
+        body += """
+        <div id="root"></div>
+        <pre id="console" class="snippet-console"></pre>
+        <script>\(runtime.react)</script>
+        <script>\(runtime.reactDOM)</script>
+        <script>\(runtime.babel)</script>
+        <script>
+        \(consoleShim)
+        \(reactProgram(source: source))
+        </script>
+        """
+        return skeleton(appearance: appearance, body: body, headExtras: styleTag(extraCSS))
+    }
+
+    /// The transform+mount program for the React flavor — one source of truth
+    /// shared by the initial document and `sourceUpdateScript`. The root is
+    /// kept on `window` so an update can re-render without a second
+    /// `createRoot` on the same container.
+    private static func reactProgram(source: String) -> String {
+        """
+        const __snippetSource = \(jsonLiteral(source));
+        function __snippetMount() {
+          const out = Babel.transform(__snippetSource, {
+            presets: [["react"], ["typescript", { "isTSX": true, "allExtensions": true }]],
+            filename: "snippet.tsx"
+          });
+          (0, eval)(out.code);
+          const component = window.__SnippetExport;
+          if (!component) { throw new Error("No component found — export a default component or define one named App."); }
+          window.__previewRoot = window.__previewRoot || ReactDOM.createRoot(document.getElementById("root"));
+          window.__previewRoot.render(React.createElement(component));
+        }
+        try { __snippetMount(); } catch (e) {
+          __snippetConsole.append("error", String(e && e.stack || e));
+        }
+        """
+    }
+
+    /// The complete evaluated React source (helpers stripped and prepended,
+    /// hook bindings, export capture) — shared by document and update paths.
+    private static func reactSource(code: String, helperScript: String) -> String {
         var source = stripModuleSyntax(code, rewriteDefaultExport: true)
         if !helperScript.isEmpty {
             source = stripModuleSyntax(helperScript, rewriteDefaultExport: false) + "\n\n" + source
         }
-        // Stripped react imports leave hooks unbound; the UMD runtime only
-        // exposes the React/ReactDOM globals.
         source = """
         const { useState, useEffect, useRef, useMemo, useCallback, useContext,
                 useReducer, useLayoutEffect, useId, Fragment, createElement } = React;
@@ -217,33 +269,7 @@ enum WebPreviewHTMLBuilder {
 
         window.__SnippetExport = (typeof __SnippetDefault !== "undefined" && __SnippetDefault) || \(target);
         """
-        var body = ""
-        if !prependedHTML.isEmpty { body += prependedHTML + "\n" }
-        body += """
-        <div id="root"></div>
-        <pre id="console" class="snippet-console"></pre>
-        <script>\(runtime.react)</script>
-        <script>\(runtime.reactDOM)</script>
-        <script>\(runtime.babel)</script>
-        <script>
-        \(consoleShim)
-        const __snippetSource = \(jsonLiteral(source));
-        function __snippetMount() {
-          const out = Babel.transform(__snippetSource, {
-            presets: [["react"], ["typescript", { "isTSX": true, "allExtensions": true }]],
-            filename: "snippet.tsx"
-          });
-          (0, eval)(out.code);
-          const component = window.__SnippetExport;
-          if (!component) { throw new Error("No component found — export a default component or define one named App."); }
-          ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(component));
-        }
-        try { __snippetMount(); } catch (e) {
-          __snippetConsole.append("error", String(e && e.stack || e));
-        }
-        </script>
-        """
-        return skeleton(appearance: appearance, body: body, headExtras: styleTag(extraCSS))
+        return source
     }
 
     /// Rewrites module syntax that Babel's script-mode transform won't accept.
@@ -379,6 +405,69 @@ enum WebPreviewHTMLBuilder {
         )
     }
 
+    // MARK: - Incremental updates
+
+    /// JS that retints an already-loaded shell in place — theme flips must
+    /// not re-parse the inlined runtimes.
+    static func themeUpdateScript(appearance: Appearance) -> String {
+        """
+        (function() {
+          const s = document.documentElement.style;
+          s.setProperty("--preview-bg", \(jsonLiteral(appearance.backgroundHex)));
+          s.setProperty("--preview-text", \(jsonLiteral(appearance.textHex)));
+          const meta = document.querySelector('meta[name="color-scheme"]');
+          if (meta) meta.setAttribute("content", \(jsonLiteral(appearance.isDark ? "dark" : "light")));
+        })();
+        """
+    }
+
+    /// JS that re-runs the user program inside the already-loaded shell.
+    /// Returns nil for flavors whose shell depends on the source (HTML —
+    /// including the full-document passthrough — CSS, and GLSL): those force
+    /// a full reload. The program payload is built by the same functions the
+    /// document path uses (`scriptProgram` / `reactSource` + `reactProgram`).
+    static func sourceUpdateScript(
+        linked: [LinkedSource],
+        entryFlavor: WebPreviewFlavor
+    ) -> String? {
+        guard let entry = linked.last else { return nil }
+        let helpers = linked.dropLast()
+        let scriptHelpers = helpers.filter { [.javascript, .typescript, .react].contains($0.language) }
+        let helperScript = scriptHelpers.map(\.code).joined(separator: "\n\n")
+        let helpersNeedBabel = scriptHelpers.contains { $0.language != .javascript }
+
+        let program: String
+        switch entryFlavor {
+        case .javascript, .typescript:
+            let combined = helperScript.isEmpty ? entry.code : helperScript + "\n\n" + entry.code
+            // The Babel runtime is only present when the shell was built with
+            // it; the view's classifier only takes this path when the flavor
+            // (and thus the Babel decision) is unchanged.
+            let useBabel = entryFlavor == .typescript || helpersNeedBabel
+            program = scriptProgram(
+                code: combined, useBabel: useBabel,
+                presets: useBabel ? typescriptPresets : nil
+            )
+        case .react:
+            program = reactProgram(source: reactSource(code: entry.code, helperScript: helperScript))
+        case .html, .css, .glsl:
+            return nil
+        }
+        // The IIFE scopes the program's consts (the shell already declared
+        // them at top level); the generation counter lets any future async
+        // consumer detect that a newer update superseded it.
+        return """
+        (function() {
+          window.__previewGeneration = (window.__previewGeneration || 0) + 1;
+          const __generation = window.__previewGeneration;
+          const __consoleEl = document.getElementById("console");
+          if (__consoleEl) __consoleEl.textContent = "";
+          if (__generation !== window.__previewGeneration) { return; }
+          \(program)
+        })();
+        """
+    }
+
     // MARK: - Shared pieces
 
     private static func skeleton(
@@ -402,10 +491,11 @@ enum WebPreviewHTMLBuilder {
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
         <meta name="color-scheme" content="\(appearance.isDark ? "dark" : "light")">
         <style>
+        :root { --preview-bg: \(appearance.backgroundHex); --preview-text: \(appearance.textHex); }
         html, body { margin: 0; padding: 0; height: 100%; }
         body {
-          background: \(appearance.backgroundHex);
-          color: \(appearance.textHex);
+          background: var(--preview-bg);
+          color: var(--preview-text);
           font: 14px -apple-system, system-ui, sans-serif;
           padding: 16px;
           box-sizing: border-box;

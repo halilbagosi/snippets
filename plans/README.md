@@ -17,7 +17,7 @@ Build/test commands used throughout (see plan 001):
 | 006 | Characterization tests for App Intents | P1 | M | — | DONE |
 | 007 | CI workflow (swift test + web build) | P2 | M | 001, 006 | DONE (remote run unverified — not pushed yet) |
 | 008 | Delete dead DesignSystem components | P2 | S | — | DONE |
-| 009 | Incremental web-preview updates | P3 | M | 003 | TODO |
+| 009 | Incremental web-preview updates | P3 | M | 003 | DONE (source fast path covers JS/TS/React; HTML/CSS/GLSL force full reload) |
 | 010 | Memoize gallery filtering/search | P3 | M | 002 (same file) | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
