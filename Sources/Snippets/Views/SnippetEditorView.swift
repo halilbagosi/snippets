@@ -439,6 +439,31 @@ struct SnippetEditorView: View {
         }
     }
 
+    /// How to author snippets so combined previews actually run — written
+    /// from the preview engine's real constraints (see WebPreviewHTMLBuilder).
+    private var connectionsHint: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("connections run before this snippet in one shared preview:")
+            Text("• reference a connection by the name it defines — import lines are ignored")
+            Text("• keep a component's css as its own connected css snippet (import \"./x.css\" is dropped)")
+            Text("• npm packages (framer-motion, gsap…) can't load — only react itself is bundled")
+            Text("• web languages link with web entries; swift with swift; glsl with glsl")
+        }
+        .font(Mono.font(size: 10))
+        .foregroundStyle(theme.textMuted)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(theme.surface.opacity(0.6))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(theme.border, lineWidth: 1)
+                }
+        }
+    }
+
     /// Snippets this one depends on for combined previews (see SnippetLinker).
     private var connectionsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -484,6 +509,7 @@ struct SnippetEditorView: View {
 
             if isAddingConnection {
                 VStack(alignment: .leading, spacing: 6) {
+                    connectionsHint
                     TextField("search snippets", text: $connectionSearch)
                         .textFieldStyle(.plain)
                         .font(Mono.font(size: 12))
