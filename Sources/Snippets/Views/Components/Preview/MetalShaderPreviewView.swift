@@ -62,7 +62,9 @@ private struct ShaderRenderView: NSViewRepresentable {
     func makeNSView(context: Context) -> MouseTrackingMTKView {
         let view = MouseTrackingMTKView(frame: .zero, device: pipeline.device)
         view.colorPixelFormat = .bgra8Unorm
-        view.preferredFramesPerSecond = 60
+        // Match ProMotion displays (the disintegration renderer already runs
+        // at 120); MTKView clamps to the actual display refresh rate.
+        view.preferredFramesPerSecond = 120
         view.delegate = context.coordinator
         context.coordinator.attach(pipeline: pipeline, view: view)
         return view
