@@ -14,6 +14,9 @@ struct SnippetCard: View {
     var isSelectionMode: Bool = false
     var onRestore: (() -> Void)? = nil
     var onPermanentDelete: (() -> Void)? = nil
+    /// Extra trailing room in the footer row so an external overlay (the
+    /// gallery's "N linked" stack badge) doesn't cover the date.
+    var footerTrailingInset: CGFloat = 0
 
     @State private var didCopy: Bool = false
     @State private var copyResetTask: Task<Void, Never>? = nil
@@ -237,6 +240,7 @@ struct SnippetCard: View {
                         .foregroundStyle(theme.textFaint)
                 }
             }
+            .padding(.trailing, footerTrailingInset)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
         }
