@@ -520,7 +520,11 @@ struct SnippetGalleryView: View {
         let items = stackDisplayItems(source)
         return LazyVGrid(columns: columns, spacing: 18) {
             ForEach(Array(items.enumerated()), id: \.element.snippet.persistentModelID) { index, item in
-                snippetCell(item.snippet, index: index)
+                snippetCell(
+                    item.snippet,
+                    index: index,
+                    footerTrailingInset: item.connectedCount > 0 ? 78 : 0
+                )
                     .overlay(alignment: .bottomTrailing) {
                         if item.connectedCount > 0 {
                             stackBadge(entryID: item.snippet.persistentModelID, count: item.connectedCount)
@@ -547,14 +551,15 @@ struct SnippetGalleryView: View {
         .padding(.bottom, 18)
     }
 
-    private func snippetCell(_ snippet: Snippet, index: Int) -> some View {
+    private func snippetCell(_ snippet: Snippet, index: Int, footerTrailingInset: CGFloat = 0) -> some View {
         ZStack {
                     SnippetCard(
                         snippet: snippet,
                         inTrashView: isTrashMode,
                         isSelectionMode: viewModel.isSelectMode,
                         onRestore: { onRestore?(snippet) },
-                        onPermanentDelete: { requestPermanentDelete(snippet) }
+                        onPermanentDelete: { requestPermanentDelete(snippet) },
+                        footerTrailingInset: footerTrailingInset
                     )
 
                     if viewModel.isSelectMode {
@@ -666,17 +671,19 @@ struct SnippetGalleryView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
             .background {
-                Capsule()
+                // Concentric with the card corner: inner radius = card
+                // radius (12) minus the badge's inset (6).
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(theme.surfaceElevated)
                     .overlay {
-                        Capsule().strokeBorder(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(
                             isExpanded ? theme.accent.opacity(0.4) : theme.border, lineWidth: 1
                         )
                     }
             }
         }
         .buttonStyle(.plain)
-        .padding(8)
+        .padding(6)
         .help(isExpanded ? "Hide connected snippets" : "Show the snippets stacked behind this one")
     }
 
