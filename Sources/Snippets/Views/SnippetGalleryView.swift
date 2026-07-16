@@ -521,17 +521,22 @@ struct SnippetGalleryView: View {
         return LazyVGrid(columns: columns, spacing: 18) {
             ForEach(Array(items.enumerated()), id: \.element.snippet.persistentModelID) { index, item in
                 snippetCell(item.snippet, index: index)
-                    .background(alignment: .bottom) {
-                        if item.connectedCount > 0 {
-                            stackedCardBacks(count: item.connectedCount)
-                        }
-                    }
                     .overlay(alignment: .bottomTrailing) {
                         if item.connectedCount > 0 {
                             stackBadge(entryID: item.snippet.persistentModelID, count: item.connectedCount)
                         }
                     }
-                    .overlay(alignment: .topLeading) {
+                    .overlay {
+                        // Revealed stack members read as part of the group via
+                        // a subtle accent ring instead of shapes behind the
+                        // glass card (which show through its material).
+                        if item.isConnected {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(theme.accent.opacity(0.35), lineWidth: 1)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                    .overlay(alignment: .topTrailing) {
                         if item.isConnected { connectedMarker }
                     }
             }
@@ -640,34 +645,6 @@ struct SnippetGalleryView: View {
                     }
     }
 
-    /// Deck edges peeking out below a stack entry's card. Bottom-anchored
-    /// slivers, never full-card shapes: the cards are translucent glass, and
-    /// anything sitting behind them shows through and ruins their material.
-    private func stackedCardBacks(count: Int) -> some View {
-        ZStack(alignment: .bottom) {
-            if count > 1 {
-                deckEdge
-                    .padding(.horizontal, 18)
-                    .offset(y: 12)
-                    .opacity(0.6)
-            }
-            deckEdge
-                .padding(.horizontal, 9)
-                .offset(y: 6)
-        }
-        .allowsHitTesting(false)
-    }
-
-    private var deckEdge: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .fill(theme.surface)
-            .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(theme.border, lineWidth: 1)
-            }
-            .frame(height: 24)
-    }
-
     private func stackBadge(entryID: PersistentIdentifier, count: Int) -> some View {
         let isExpanded = expandedStacks.contains(entryID)
         return Button {
@@ -703,7 +680,9 @@ struct SnippetGalleryView: View {
         .help(isExpanded ? "Hide connected snippets" : "Show the snippets stacked behind this one")
     }
 
-    /// Marks a revealed stack member as belonging to the entry above it.
+    /// Marks a revealed stack member as belonging to the entry it was fanned
+    /// out from. Top-trailing: the only card corner without content (title is
+    /// top-leading; language/copy/favorite and date own the bottom row).
     private var connectedMarker: some View {
         HStack(spacing: 4) {
             Image(systemName: "link")
@@ -716,10 +695,10 @@ struct SnippetGalleryView: View {
         .padding(.vertical, 5)
         .background {
             Capsule()
-                .fill(theme.accent.opacity(0.14))
+                .fill(theme.surfaceElevated)
                 .overlay { Capsule().strokeBorder(theme.accent.opacity(0.35), lineWidth: 1) }
         }
-        .padding(8)
+        .padding(10)
         .allowsHitTesting(false)
     }
 
