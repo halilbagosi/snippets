@@ -189,89 +189,112 @@ struct ContentView: View {
         return collectionIndexCache.descendantIDs
     }
 
-    private var baseFilteredSnippets: [Snippet] {
+    /// Memoized gallery filter results, following the `CollectionIndexCache`
+    /// pattern: a non-observed class so refreshing during body evaluation
+    /// doesn't invalidate the view; the signature keeps it consistent.
+    ///
+    /// Signature audit (plan 010): mutation paths and how the signature sees
+    /// them —
+    /// - title/code/language/description: editor save bumps `updatedAt`
+    ///   (`SnippetEditorViewModel.save`).
+    /// - deletedAt: the `snippets` query filters on it, so the array itself
+    ///   changes (and delete/restore paths bump `updatedAt` anyway).
+    /// - isFavorite: SnippetCard/SnippetDetailView/SnippetCollectionCard
+    ///   toggle WITHOUT bumping `updatedAt` → hashed directly.
+    /// - collection membership: `commitCollectionEditor` removals don't bump
+    ///   the snippet's `updatedAt` → membership ids hashed directly.
+    /// - collection name/isFavorite/deletedAt feed the search predicates →
+    ///   hashed directly; parent links via `collectionStructureSignature`.
+    private final class SnippetFilterCache {
+        var signature: Int? = nil
+        var base: [Snippet] = []
+        var searchFiltered: [Snippet] = []
+        var searchResults: [Snippet] = []
+        var searchResultCollections: [SnippetCollection] = []
+    }
+    @State private var snippetFilterCache = SnippetFilterCache()
+
+    /// Every input the filter predicates read. Any new gallery filter MUST be
+    /// added here — a missing input means stale results, not slow ones.
+    private var filterSignature: Int {
+        var hasher = Hasher()
+        hasher.combine(collectionStructureSignature)
+        hasher.combine(snippets.count)
+        for snippet in snippets {
+            hasher.combine(snippet.persistentModelID)
+            hasher.combine(snippet.updatedAt)
+            hasher.combine(snippet.isFavorite)
+            for collection in snippet.collections {
+                hasher.combine(collection.persistentModelID)
+            }
+        }
+        for collection in collections {
+            hasher.combine(collection.name)
+            hasher.combine(collection.isFavorite)
+            hasher.combine(collection.deletedAt)
+        }
+        hasher.combine(selectedLanguages)
+        hasher.combine(selectedCollectionID)
+        hasher.combine(showUncategorizedOnly)
+        hasher.combine(selectedSearchCollections)
+        hasher.combine(showFavoritesOnly)
+        hasher.combine(trimmedSearchText)
+        return hasher.finalize()
+    }
+
+    private func refreshFilterCacheIfNeeded() {
+        let signature = filterSignature
+        guard snippetFilterCache.signature != signature else { return }
+
         let lookup = collectionLookup
         let descendantIDs = descendantIDsByCollectionID
+        let needle = trimmedSearchText
 
-        return snippets.filter { snippet in
-            if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
+        snippetFilterCache.base = GallerySnippetFilter.base(
+            snippets: snippets,
+            selectedLanguages: selectedLanguages,
+            selectedCollectionID: selectedCollectionID,
+            showUncategorizedOnly: showUncategorizedOnly,
+            selectedSearchCollections: selectedSearchCollections,
+            showFavoritesOnly: showFavoritesOnly,
+            lookup: lookup,
+            descendantIDs: descendantIDs
+        )
+        let pool = GallerySnippetFilter.searchPool(
+            snippets: snippets,
+            selectedLanguages: selectedLanguages,
+            showUncategorizedOnly: showUncategorizedOnly,
+            selectedSearchCollections: selectedSearchCollections,
+            showFavoritesOnly: showFavoritesOnly,
+            lookup: lookup,
+            descendantIDs: descendantIDs
+        )
+        snippetFilterCache.searchFiltered = pool
+        snippetFilterCache.searchResults = GallerySnippetFilter.searchResults(in: pool, needle: needle)
+        snippetFilterCache.searchResultCollections = GallerySnippetFilter.searchCollections(
+            collections, needle: needle, showFavoritesOnly: showFavoritesOnly
+        )
+        snippetFilterCache.signature = signature
+    }
 
-            let belongsDirectlyToCollection = { (colID: PersistentIdentifier) -> Bool in
-                snippet.collections.contains(where: { $0.persistentModelID == colID })
-            }
-
-            let belongsToCollection = { (colID: PersistentIdentifier) -> Bool in
-                guard lookup[colID] != nil, let allowedIDs = descendantIDs[colID] else { return false }
-                return snippet.collections.contains(where: { allowedIDs.contains($0.persistentModelID) })
-            }
-
-            if let selectedCollectionID {
-                if !belongsDirectlyToCollection(selectedCollectionID) { return false }
-            }
-
-            if showUncategorizedOnly && snippet.collections.contains(where: { !$0.isDeleted }) {
-                return false
-            }
-
-            if !selectedSearchCollections.isEmpty {
-                if !selectedSearchCollections.contains(where: { belongsToCollection($0) }) { return false }
-            }
-
-            if showFavoritesOnly && !snippet.isFavorite { return false }
-
-            return true
-        }
+    private var baseFilteredSnippets: [Snippet] {
+        refreshFilterCacheIfNeeded()
+        return snippetFilterCache.base
     }
 
     private var searchFilteredSnippets: [Snippet] {
-        let lookup = collectionLookup
-        let descendantIDs = descendantIDsByCollectionID
-
-        return snippets.filter { snippet in
-            if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
-
-            if showFavoritesOnly && !snippet.isFavorite { return false }
-
-            if showUncategorizedOnly && snippet.collections.contains(where: { !$0.isDeleted }) {
-                return false
-            }
-
-            guard !selectedSearchCollections.isEmpty else { return true }
-            return selectedSearchCollections.contains { collectionID in
-                guard lookup[collectionID] != nil, let allowedIDs = descendantIDs[collectionID] else { return false }
-                return snippet.collections.contains { allowedIDs.contains($0.persistentModelID) }
-            }
-        }
-    }
-
-    /// Case-insensitive substring match without allocating a lowercased copy
-    /// of `haystack` (search runs over every snippet's full code per pass).
-    private func matches(_ haystack: String, _ needle: String) -> Bool {
-        haystack.range(of: needle, options: .caseInsensitive) != nil
+        refreshFilterCacheIfNeeded()
+        return snippetFilterCache.searchFiltered
     }
 
     private var searchResultCollections: [SnippetCollection] {
-        let needle = trimmedSearchText
-        guard !needle.isEmpty else { return [] }
-
-        return collections.filter { collection in
-            !collection.isDeleted &&
-            (!showFavoritesOnly || collection.isFavorite) &&
-            matches(collection.name, needle)
-        }
+        refreshFilterCacheIfNeeded()
+        return snippetFilterCache.searchResultCollections
     }
 
     private var searchResultSnippets: [Snippet] {
-        let needle = trimmedSearchText
-        guard !needle.isEmpty else { return [] }
-
-        return searchFilteredSnippets.filter { snippet in
-            matches(snippet.title, needle) ||
-            matches(snippet.snippetDescription, needle) ||
-            matches(snippet.code, needle) ||
-            matches(snippet.language, needle) ||
-            snippet.collections.contains { !$0.isDeleted && matches($0.name, needle) }
-        }
+        refreshFilterCacheIfNeeded()
+        return snippetFilterCache.searchResults
     }
 
     private var gallerySnippets: [Snippet] {
@@ -1462,6 +1485,108 @@ struct ContentView: View {
             showToast("Moved to \(destination)", showsUndo: true)
         } else {
             showToast("\(records.count) items moved to \(destination)", showsUndo: true)
+        }
+    }
+}
+
+/// Pure filter core for the gallery — plain functions of inputs to outputs,
+/// no SwiftUI or view state, so the predicates are directly unit-testable.
+/// Predicate logic moved verbatim from the former computed properties.
+@MainActor
+enum GallerySnippetFilter {
+    static func base(
+        snippets: [Snippet],
+        selectedLanguages: Set<SupportedLanguage>,
+        selectedCollectionID: PersistentIdentifier?,
+        showUncategorizedOnly: Bool,
+        selectedSearchCollections: Set<PersistentIdentifier>,
+        showFavoritesOnly: Bool,
+        lookup: [PersistentIdentifier: SnippetCollection],
+        descendantIDs: [PersistentIdentifier: Set<PersistentIdentifier>]
+    ) -> [Snippet] {
+        snippets.filter { snippet in
+            if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
+
+            let belongsDirectlyToCollection = { (colID: PersistentIdentifier) -> Bool in
+                snippet.collections.contains(where: { $0.persistentModelID == colID })
+            }
+
+            let belongsToCollection = { (colID: PersistentIdentifier) -> Bool in
+                guard lookup[colID] != nil, let allowedIDs = descendantIDs[colID] else { return false }
+                return snippet.collections.contains(where: { allowedIDs.contains($0.persistentModelID) })
+            }
+
+            if let selectedCollectionID {
+                if !belongsDirectlyToCollection(selectedCollectionID) { return false }
+            }
+
+            if showUncategorizedOnly && snippet.collections.contains(where: { !$0.isDeleted }) {
+                return false
+            }
+
+            if !selectedSearchCollections.isEmpty {
+                if !selectedSearchCollections.contains(where: { belongsToCollection($0) }) { return false }
+            }
+
+            if showFavoritesOnly && !snippet.isFavorite { return false }
+
+            return true
+        }
+    }
+
+    static func searchPool(
+        snippets: [Snippet],
+        selectedLanguages: Set<SupportedLanguage>,
+        showUncategorizedOnly: Bool,
+        selectedSearchCollections: Set<PersistentIdentifier>,
+        showFavoritesOnly: Bool,
+        lookup: [PersistentIdentifier: SnippetCollection],
+        descendantIDs: [PersistentIdentifier: Set<PersistentIdentifier>]
+    ) -> [Snippet] {
+        snippets.filter { snippet in
+            if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
+
+            if showFavoritesOnly && !snippet.isFavorite { return false }
+
+            if showUncategorizedOnly && snippet.collections.contains(where: { !$0.isDeleted }) {
+                return false
+            }
+
+            guard !selectedSearchCollections.isEmpty else { return true }
+            return selectedSearchCollections.contains { collectionID in
+                guard lookup[collectionID] != nil, let allowedIDs = descendantIDs[collectionID] else { return false }
+                return snippet.collections.contains { allowedIDs.contains($0.persistentModelID) }
+            }
+        }
+    }
+
+    /// Case-insensitive substring match without allocating a lowercased copy
+    /// of `haystack` (search runs over every snippet's full code per pass).
+    static func matches(_ haystack: String, _ needle: String) -> Bool {
+        haystack.range(of: needle, options: .caseInsensitive) != nil
+    }
+
+    static func searchResults(in pool: [Snippet], needle: String) -> [Snippet] {
+        guard !needle.isEmpty else { return [] }
+
+        return pool.filter { snippet in
+            matches(snippet.title, needle) ||
+            matches(snippet.snippetDescription, needle) ||
+            matches(snippet.code, needle) ||
+            matches(snippet.language, needle) ||
+            snippet.collections.contains { !$0.isDeleted && matches($0.name, needle) }
+        }
+    }
+
+    static func searchCollections(
+        _ collections: [SnippetCollection], needle: String, showFavoritesOnly: Bool
+    ) -> [SnippetCollection] {
+        guard !needle.isEmpty else { return [] }
+
+        return collections.filter { collection in
+            !collection.isDeleted &&
+            (!showFavoritesOnly || collection.isFavorite) &&
+            matches(collection.name, needle)
         }
     }
 }
