@@ -20,14 +20,39 @@ struct WebPreviewView: NSViewRepresentable {
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
-        guard context.coordinator.needsReload(sources: sources, flavor: flavor, isDark: theme.scheme == .dark) else {
-            return
-        }
         let appearance = WebPreviewHTMLBuilder.Appearance(
             isDark: theme.scheme == .dark,
             backgroundHex: theme.canvasDeep.hexString(fallback: "#0E1014"),
             textHex: theme.text.hexString(fallback: "#E6E8EC")
         )
+        switch context.coordinator.classify(sources: sources, flavor: flavor, isDark: theme.scheme == .dark) {
+        case .none:
+            return
+        case .themeOnly:
+            webView.evaluateJavaScript(WebPreviewHTMLBuilder.themeUpdateScript(appearance: appearance))
+        case .sourceOnly:
+            if let script = WebPreviewHTMLBuilder.sourceUpdateScript(linked: sources, entryFlavor: flavor) {
+                let sources = sources, flavor = flavor
+                webView.evaluateJavaScript(script) { _, error in
+                    guard error != nil else { return }
+                    // The incremental path failed (e.g. shell in an unexpected
+                    // state) — fall back to a full reload of the same content.
+                    Self.loadFullDocument(webView, sources: sources, flavor: flavor, appearance: appearance)
+                }
+            } else {
+                Self.loadFullDocument(webView, sources: sources, flavor: flavor, appearance: appearance)
+            }
+        case .full:
+            Self.loadFullDocument(webView, sources: sources, flavor: flavor, appearance: appearance)
+        }
+    }
+
+    private static func loadFullDocument(
+        _ webView: WKWebView,
+        sources: [LinkedSource],
+        flavor: WebPreviewFlavor,
+        appearance: WebPreviewHTMLBuilder.Appearance
+    ) {
         let document = WebPreviewHTMLBuilder.document(
             linked: sources,
             entryFlavor: flavor,
@@ -37,15 +62,34 @@ struct WebPreviewView: NSViewRepresentable {
         webView.loadHTMLString(document, baseURL: nil)
     }
 
+    enum Change {
+        case none, themeOnly, sourceOnly, full
+    }
+
     final class Coordinator: NSObject, WKNavigationDelegate {
         private var lastSources: [LinkedSource]?
         private var lastFlavor: WebPreviewFlavor?
         private var lastIsDark: Bool?
 
-        func needsReload(sources: [LinkedSource], flavor: WebPreviewFlavor, isDark: Bool) -> Bool {
-            if lastSources == sources, lastFlavor == flavor, lastIsDark == isDark { return false }
-            (lastSources, lastFlavor, lastIsDark) = (sources, flavor, isDark)
-            return true
+        /// Classifies what changed since the last render so the view can pick
+        /// the cheapest update: retint in place (`themeOnly`), re-run the user
+        /// program in the existing shell (`sourceOnly`), or rebuild the
+        /// document (`full`). Non-script helpers (CSS/HTML) live in the shell,
+        /// so a change to them forces `full` even when the flavor matches.
+        func classify(sources: [LinkedSource], flavor: WebPreviewFlavor, isDark: Bool) -> Change {
+            defer { (lastSources, lastFlavor, lastIsDark) = (sources, flavor, isDark) }
+            guard let lastSources, let lastFlavor, let lastIsDark else { return .full }
+
+            if sources == lastSources, flavor == lastFlavor {
+                return isDark == lastIsDark ? .none : .themeOnly
+            }
+            guard flavor == lastFlavor, isDark == lastIsDark else { return .full }
+
+            let shellHelpers: ([LinkedSource]) -> [LinkedSource] = { linked in
+                linked.dropLast().filter { [.css, .html].contains($0.language) }
+            }
+            guard shellHelpers(sources) == shellHelpers(lastSources) else { return .full }
+            return .sourceOnly
         }
 
         /// Snippet JS must not navigate the preview anywhere. Only the initial
@@ -56,14 +100,10 @@ struct WebPreviewView: NSViewRepresentable {
         /// known residual gap.
         func webView(
             _ webView: WKWebView,
-            decidePolicyFor navigationAction: WKNavigationAction,
-            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
-        ) {
-            guard let url = navigationAction.request.url else {
-                decisionHandler(.allow)
-                return
-            }
-            decisionHandler(url.scheme == "about" ? .allow : .cancel)
+            decidePolicyFor navigationAction: WKNavigationAction
+        ) async -> WKNavigationActionPolicy {
+            guard let url = navigationAction.request.url else { return .allow }
+            return url.scheme == "about" ? .allow : .cancel
         }
     }
 }

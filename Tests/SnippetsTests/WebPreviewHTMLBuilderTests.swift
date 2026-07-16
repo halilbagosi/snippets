@@ -15,6 +15,61 @@ final class WebPreviewHTMLBuilderTests: XCTestCase {
         )
     }
 
+    // MARK: Incremental updates
+
+    func test_themeUpdateScript_setsCustomPropertiesWithEscapedValues() {
+        let script = WebPreviewHTMLBuilder.themeUpdateScript(appearance: appearance)
+        XCTAssertTrue(script.contains("--preview-bg"))
+        XCTAssertTrue(script.contains("--preview-text"))
+        XCTAssertTrue(script.contains("\"#0E1014\""))
+        XCTAssertTrue(script.contains("\"#E6E8EC\""))
+    }
+
+    func test_sourceUpdateScript_javascript_containsCodeAndGenerationGuard() {
+        let script = WebPreviewHTMLBuilder.sourceUpdateScript(
+            linked: [LinkedSource(language: .javascript, code: "console.log(42)")],
+            entryFlavor: .javascript
+        )
+        XCTAssertNotNil(script)
+        XCTAssertTrue(script!.contains("console.log(42)"))
+        XCTAssertTrue(script!.contains("__previewGeneration"))
+    }
+
+    func test_sourceUpdateScript_returnsNilForHTMLPassthrough() {
+        let full = "<!DOCTYPE html><html><body><p>hi</p></body></html>"
+        XCTAssertNil(WebPreviewHTMLBuilder.sourceUpdateScript(
+            linked: [LinkedSource(language: .html, code: full)],
+            entryFlavor: .html
+        ))
+    }
+
+    func test_sourceUpdateScript_react_routesThroughBabelTransform() {
+        let script = WebPreviewHTMLBuilder.sourceUpdateScript(
+            linked: [LinkedSource(language: .react, code: "export default function App() { return <p>hi</p> }")],
+            entryFlavor: .react
+        )
+        XCTAssertNotNil(script)
+        XCTAssertTrue(script!.contains("Babel.transform"))
+        XCTAssertTrue(script!.contains("__snippetMount"))
+    }
+
+    func test_documentAndUpdateScript_embedSameUserProgramPayload() {
+        let code = "export default function App() { return <p>shared-marker-xyz</p> }"
+        let doc = document(code, .react)
+        let update = WebPreviewHTMLBuilder.sourceUpdateScript(
+            linked: [LinkedSource(language: .react, code: code)],
+            entryFlavor: .react
+        )!
+        // Both paths embed the payload via the shared reactSource/reactProgram
+        // functions — the JSON-escaped source literal must match exactly.
+        let payload = doc.range(of: "const __snippetSource = ").flatMap { r in
+            doc[r.upperBound...].split(separator: "\n").first.map(String.init)
+        }
+        XCTAssertNotNil(payload)
+        XCTAssertTrue(update.contains(payload!))
+        XCTAssertTrue(payload!.contains("shared-marker-xyz"))
+    }
+
     // MARK: Content-Security-Policy
 
     func test_allFlavors_includeRestrictiveCSP() {
