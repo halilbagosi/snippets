@@ -5,24 +5,38 @@ import Foundation
 /// state when unavailable.
 enum SwiftToolchain {
     /// Resolved once per launch; `xcrun` honors DEVELOPER_DIR / xcode-select.
+    ///
+    /// The subprocess runs on a background queue and the caller blocks on a
+    /// semaphore. Never inline this into the static initializer: this lazy
+    /// static is first touched during SwiftUI body evaluation, and
+    /// `waitUntilExit()` on the main thread spins the run loop — an animation
+    /// frame then re-enters body → re-enters this `dispatch_once` → SIGTRAP
+    /// (the preview-toggle crash).
     static let swiftcURL: URL? = {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
-        process.arguments = ["--find", "swiftc"]
-        let stdout = Pipe()
-        process.standardOutput = stdout
-        process.standardError = Pipe()
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            return nil
+        var resolved: URL?
+        let semaphore = DispatchSemaphore(value: 0)
+        DispatchQueue.global(qos: .userInitiated).async {
+            defer { semaphore.signal() }
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
+            process.arguments = ["--find", "swiftc"]
+            let stdout = Pipe()
+            process.standardOutput = stdout
+            process.standardError = Pipe()
+            do {
+                try process.run()
+                process.waitUntilExit()
+            } catch {
+                return
+            }
+            guard process.terminationStatus == 0 else { return }
+            let path = String(
+                decoding: stdout.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self
+            ).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !path.isEmpty { resolved = URL(fileURLWithPath: path) }
         }
-        guard process.terminationStatus == 0 else { return nil }
-        let path = String(
-            decoding: stdout.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self
-        ).trimmingCharacters(in: .whitespacesAndNewlines)
-        return path.isEmpty ? nil : URL(fileURLWithPath: path)
+        semaphore.wait()
+        return resolved
     }()
 
     static var isAvailable: Bool { swiftcURL != nil }
