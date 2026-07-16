@@ -243,7 +243,9 @@ struct SnippetDetailView: View {
                         accent: theme.accent,
                         isSelected: showPreview
                     ) {
-                        showPreview.toggle()
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            showPreview.toggle()
+                        }
                     }
                 }
             }
@@ -251,6 +253,7 @@ struct SnippetDetailView: View {
                 if let resolution, language.previewKind != nil {
                     SnippetPreviewView(resolution: resolution, language: language, theme: theme)
                         .frame(height: 420)
+                        .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
                 } else {
                     HighlightedCodeView(
                         code: snippet.code,
@@ -259,6 +262,7 @@ struct SnippetDetailView: View {
                         fontSize: 13
                     )
                     .frame(minHeight: 240, maxHeight: 520)
+                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
