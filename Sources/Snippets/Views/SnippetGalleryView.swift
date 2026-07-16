@@ -521,7 +521,7 @@ struct SnippetGalleryView: View {
         return LazyVGrid(columns: columns, spacing: 18) {
             ForEach(Array(items.enumerated()), id: \.element.snippet.persistentModelID) { index, item in
                 snippetCell(item.snippet, index: index)
-                    .background {
+                    .background(alignment: .bottom) {
                         if item.connectedCount > 0 {
                             stackedCardBacks(count: item.connectedCount)
                         }
@@ -640,30 +640,32 @@ struct SnippetGalleryView: View {
                     }
     }
 
-    /// Deck edges peeking out below a stack entry's card.
+    /// Deck edges peeking out below a stack entry's card. Bottom-anchored
+    /// slivers, never full-card shapes: the cards are translucent glass, and
+    /// anything sitting behind them shows through and ruins their material.
     private func stackedCardBacks(count: Int) -> some View {
-        ZStack {
+        ZStack(alignment: .bottom) {
             if count > 1 {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(theme.surface)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(theme.border, lineWidth: 1)
-                    }
-                    .scaleEffect(0.90)
-                    .offset(y: 13)
-                    .opacity(0.7)
+                deckEdge
+                    .padding(.horizontal, 18)
+                    .offset(y: 12)
+                    .opacity(0.6)
             }
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(theme.surface)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(theme.border, lineWidth: 1)
-                }
-                .scaleEffect(0.95)
-                .offset(y: 7)
+            deckEdge
+                .padding(.horizontal, 9)
+                .offset(y: 6)
         }
         .allowsHitTesting(false)
+    }
+
+    private var deckEdge: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(theme.surface)
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(theme.border, lineWidth: 1)
+            }
+            .frame(height: 24)
     }
 
     private func stackBadge(entryID: PersistentIdentifier, count: Int) -> some View {
