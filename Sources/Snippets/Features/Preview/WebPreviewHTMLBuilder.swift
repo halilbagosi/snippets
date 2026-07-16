@@ -253,11 +253,22 @@ enum WebPreviewHTMLBuilder {
     /// The complete evaluated React source (helpers stripped and prepended,
     /// hook bindings, export capture) — shared by document and update paths.
     private static func reactSource(code: String, helperScript: String) -> String {
+        // Surface stripped npm imports before the inevitable ReferenceError:
+        // the runtime only bundles react/react-dom, so a framer-motion/gsap
+        // import can never work — tell the user why, in the preview console.
+        let unsupported = unsupportedImports(in: helperScript + "\n" + code)
+        let importWarning = unsupported.isEmpty ? "" : """
+        __snippetConsole.append("error", \(jsonLiteral(
+            "This preview can't load npm packages: \(unsupported.joined(separator: ", ")). "
+            + "Only react/react-dom are bundled — inline the library code or add it as a connected snippet."
+        )));
+
+        """
         var source = stripModuleSyntax(code, rewriteDefaultExport: true)
         if !helperScript.isEmpty {
             source = stripModuleSyntax(helperScript, rewriteDefaultExport: false) + "\n\n" + source
         }
-        source = """
+        source = importWarning + """
         const { useState, useEffect, useRef, useMemo, useCallback, useContext,
                 useReducer, useLayoutEffect, useId, Fragment, createElement } = React;
 
@@ -276,9 +287,22 @@ enum WebPreviewHTMLBuilder {
     /// Imports are satisfied by the inlined globals. The entry's default
     /// export becomes the well-known `__SnippetDefault` binding; helper
     /// default exports keep their declaration but lose the export marker.
-    private static func stripModuleSyntax(_ code: String, rewriteDefaultExport: Bool) -> String {
+    /// Internal (not private) so tests can pin the stripping behavior.
+    static func stripModuleSyntax(_ code: String, rewriteDefaultExport: Bool) -> String {
+        // An import statement always ends at its module string literal, so
+        // match through it non-greedily — this removes multi-line named
+        // imports (the ReactBits convention) that a line-based strip leaves
+        // half-behind, breaking Babel with "} from" residue.
         var source = code.replacingOccurrences(
-            of: #"(?m)^\s*import\s[^\n]*$"#, with: "", options: .regularExpression
+            of: #"(?m)^[ \t]*import\b[\s\S]*?["'][^"'\n]*["'][ \t]*;?"#,
+            with: "", options: .regularExpression
+        )
+        // Export lists (`export { A, B };`, optionally multi-line or
+        // re-exporting from a module) vanish entirely; the generic marker
+        // strip below would leave a bare block behind.
+        source = source.replacingOccurrences(
+            of: #"(?m)^[ \t]*export[ \t]*\{[\s\S]*?\}([ \t]*from[ \t]*["'][^"'\n]*["'])?[ \t]*;?"#,
+            with: "", options: .regularExpression
         )
         if rewriteDefaultExport {
             source = source.replacingOccurrences(of: "export default", with: "const __SnippetDefault =")
@@ -290,6 +314,24 @@ enum WebPreviewHTMLBuilder {
         return source.replacingOccurrences(
             of: #"(?m)^\s*export\s+"#, with: "", options: .regularExpression
         )
+    }
+
+    /// Module specifiers the preview cannot satisfy: anything that is not a
+    /// relative path (relative imports are covered by connected snippets and
+    /// stripped CSS imports) or the bundled react/react-dom globals. Used to
+    /// warn instead of failing with a bare "x is not defined".
+    static func unsupportedImports(in code: String) -> [String] {
+        let specifiers = allMatches(
+            #"(?m)^[ \t]*import\b[\s\S]*?["']([^"'\n]*)["']"#, in: code
+        )
+        var seen: Set<String> = []
+        return specifiers.filter { spec in
+            guard !spec.hasPrefix("."), !spec.hasPrefix("/"),
+                  spec != "react", spec != "react-dom",
+                  !spec.hasPrefix("react/"), !spec.hasPrefix("react-dom/")
+            else { return false }
+            return seen.insert(spec).inserted
+        }
     }
 
     /// Which top-level identifier the react shim should render, mirroring the

@@ -15,6 +15,76 @@ final class WebPreviewHTMLBuilderTests: XCTestCase {
         )
     }
 
+    // MARK: Module-syntax stripping (ReactBits-style sources)
+
+    func test_strip_removesMultiLineNamedImports() {
+        let code = """
+        import {
+          useEffect,
+          useRef,
+        } from "react";
+        import React, {
+          useState,
+        } from 'react';
+
+        export default function App() { return <p>hi</p> }
+        """
+        let stripped = WebPreviewHTMLBuilder.stripModuleSyntax(code, rewriteDefaultExport: true)
+        XCTAssertFalse(stripped.contains("from"))
+        XCTAssertFalse(stripped.contains("useEffect,"))
+        XCTAssertTrue(stripped.contains("const __SnippetDefault = function App()"))
+    }
+
+    func test_strip_removesSideEffectAndNamespaceImports() {
+        let code = """
+        import "./GradientText.css";
+        import * as THREE from "three";
+        function App() { return null }
+        """
+        let stripped = WebPreviewHTMLBuilder.stripModuleSyntax(code, rewriteDefaultExport: true)
+        XCTAssertFalse(stripped.contains("import"))
+        XCTAssertFalse(stripped.contains("GradientText.css"))
+        XCTAssertTrue(stripped.contains("function App()"))
+    }
+
+    func test_strip_removesMultiLineExportLists() {
+        let code = """
+        function A() {}
+        function B() {}
+        export {
+          A,
+          B,
+        };
+        """
+        let stripped = WebPreviewHTMLBuilder.stripModuleSyntax(code, rewriteDefaultExport: false)
+        XCTAssertFalse(stripped.contains("export"))
+        XCTAssertFalse(stripped.contains("A,"))
+        XCTAssertTrue(stripped.contains("function A() {}"))
+    }
+
+    func test_unsupportedImports_flagsNpmPackagesOnly() {
+        let code = """
+        import { motion } from "framer-motion";
+        import gsap from "gsap";
+        import GradientText from "./GradientText";
+        import { useState } from "react";
+        import ReactDOM from "react-dom/client";
+        """
+        XCTAssertEqual(
+            WebPreviewHTMLBuilder.unsupportedImports(in: code),
+            ["framer-motion", "gsap"]
+        )
+    }
+
+    func test_reactDocument_withNpmImport_embedsConsoleWarning() {
+        let doc = document(
+            "import { motion } from \"framer-motion\";\nexport default function App() { return <p>hi</p> }",
+            .react
+        )
+        XCTAssertTrue(doc.contains("framer-motion"))
+        XCTAssertTrue(doc.contains("npm packages"))
+    }
+
     // MARK: Incremental updates
 
     func test_themeUpdateScript_setsCustomPropertiesWithEscapedValues() {
