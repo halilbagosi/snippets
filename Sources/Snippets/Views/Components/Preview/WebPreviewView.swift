@@ -56,14 +56,10 @@ struct WebPreviewView: NSViewRepresentable {
         /// known residual gap.
         func webView(
             _ webView: WKWebView,
-            decidePolicyFor navigationAction: WKNavigationAction,
-            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
-        ) {
-            guard let url = navigationAction.request.url else {
-                decisionHandler(.allow)
-                return
-            }
-            decisionHandler(url.scheme == "about" ? .allow : .cancel)
+            decidePolicyFor navigationAction: WKNavigationAction
+        ) async -> WKNavigationActionPolicy {
+            guard let url = navigationAction.request.url else { return .allow }
+            return url.scheme == "about" ? .allow : .cancel
         }
     }
 }
