@@ -679,11 +679,16 @@ struct SnippetGalleryView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
         .background {
-            Capsule()
+            // Concentric with the card corner: inner radius = card
+            // radius (12) minus the badge's inset (6).
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(theme.surfaceElevated)
-                .overlay { Capsule().strokeBorder(theme.accent.opacity(0.35), lineWidth: 1) }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .strokeBorder(theme.accent.opacity(0.35), lineWidth: 1)
+                }
         }
-        .padding(10)
+        .padding(6)
         .allowsHitTesting(false)
     }
 
