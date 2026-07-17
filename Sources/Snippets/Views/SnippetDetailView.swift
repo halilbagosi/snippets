@@ -16,6 +16,8 @@ struct SnippetDetailView: View {
     @State private var didCopy: Bool = false
     @State private var lightboxIndex: Int? = nil
     @State private var showPreview: Bool = false
+    /// Rendered height of the code area, so the preview can track it.
+    @State private var codeAreaHeight: CGFloat = 0
 
     private var theme: Theme { Theme.current(colorScheme) }
 
@@ -225,6 +227,14 @@ struct SnippetDetailView: View {
         }
     }
 
+    /// Preview height is capped at 20% taller than the measured code area,
+    /// so toggling never balloons the pane; falls back to the old fixed
+    /// height until the code has been measured.
+    private var previewHeight: CGFloat {
+        guard codeAreaHeight > 0 else { return 420 }
+        return min(420, codeAreaHeight * 1.2)
+    }
+
     private var codeBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
             let resolution = showPreview ? SnippetLinker.resolve(entry: snippet) : nil
@@ -252,7 +262,7 @@ struct SnippetDetailView: View {
             Group {
                 if let resolution, language.previewKind != nil {
                     SnippetPreviewView(resolution: resolution, language: language, theme: theme)
-                        .frame(height: 420)
+                        .frame(height: previewHeight)
                         .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
                 } else {
                     HighlightedCodeView(
@@ -262,6 +272,11 @@ struct SnippetDetailView: View {
                         fontSize: 13
                     )
                     .frame(minHeight: 240, maxHeight: 520)
+                    .onGeometryChange(for: CGFloat.self) { proxy in
+                        proxy.size.height
+                    } action: { height in
+                        codeAreaHeight = height
+                    }
                     .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
                 }
             }
@@ -275,6 +290,7 @@ struct SnippetDetailView: View {
         }
         .onChange(of: snippet.persistentModelID) {
             showPreview = false
+            codeAreaHeight = 0
         }
     }
 
