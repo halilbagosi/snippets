@@ -19,6 +19,9 @@ struct SnippetCard: View {
     var linkedCount: Int = 0
     var isStackExpanded: Bool = false
     var onToggleStack: (() -> Void)? = nil
+    /// Marks a card revealed from another card's connected-snippet stack;
+    /// renders a "connected" chip on the title row.
+    var isConnected: Bool = false
 
     @State private var didCopy: Bool = false
     @State private var copyResetTask: Task<Void, Never>? = nil
@@ -102,26 +105,31 @@ struct SnippetCard: View {
         .accessibilityLabel(didCopy ? "Copied" : "Copy code")
     }
 
-    /// Footer chip toggling the connected-snippet stack; styled to sit
-    /// alongside the language badge and copy chip.
+    /// Footer chip toggling the connected-snippet stack. Same metrics and
+    /// color recipe as `copyButton` so the footer chips read as one family.
     @ViewBuilder
-    private func linkedChip(theme: Theme) -> some View {
+    private func linkedChip(theme: Theme, languageAccent: Color) -> some View {
+        let fgColor = colorScheme == .dark ? .white : languageAccent.blended(with: .black, ratio: 0.45)
+        let strokeColor = languageAccent.saturation(3.0).brightness(colorScheme == .dark ? 0.22 : -0.15).opacity(0.50)
+        let fillColor = languageAccent.saturation(2.5).brightness(0.15).opacity(colorScheme == .dark ? 0.20 : 0.12)
+
         Button { onToggleStack?() } label: {
             HStack(spacing: 5) {
                 Image(systemName: isStackExpanded ? "chevron.up" : "square.3.layers.3d.down.right")
+                    .symbolRenderingMode(.hierarchical)
                     .font(Mono.font(size: 9, weight: .semibold))
                 Text(isStackExpanded ? "hide" : "\(linkedCount) linked")
                     .font(Mono.font(size: 10, weight: .semibold))
             }
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
-            .foregroundStyle(isStackExpanded ? theme.accent : theme.textMuted)
+            .foregroundStyle(fgColor)
             .background {
                 RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(theme.surfaceElevated)
+                    .fill(isStackExpanded ? languageAccent.opacity(colorScheme == .dark ? 0.40 : 0.25) : fillColor)
                     .overlay {
                         RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .stroke(isStackExpanded ? theme.accent.opacity(0.5) : theme.border, lineWidth: 1)
+                            .stroke(isStackExpanded ? languageAccent.opacity(0.8) : strokeColor, lineWidth: 1)
                     }
             }
             .contentShape(Rectangle())
@@ -129,6 +137,29 @@ struct SnippetCard: View {
         .buttonStyle(.plain)
         .help(isStackExpanded ? "Hide connected snippets" : "Show the snippets stacked behind this one")
         .accessibilityLabel("\(linkedCount) connected snippets")
+    }
+
+    /// Title-row chip marking a card revealed from a connected-snippet stack.
+    @ViewBuilder
+    private func connectedChip(theme: Theme) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: "link")
+                .font(Mono.font(size: 9, weight: .semibold))
+            Text("connected")
+                .font(Mono.font(size: 10, weight: .semibold))
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .foregroundStyle(theme.accent)
+        .background {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(theme.accent.opacity(colorScheme == .dark ? 0.20 : 0.12))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .stroke(theme.accent.opacity(0.5), lineWidth: 1)
+                }
+        }
+        .accessibilityLabel("Connected snippet")
     }
 
     private var formattedDate: String {
@@ -155,8 +186,12 @@ struct SnippetCard: View {
                         .font(Sans.font(size: 15, weight: .semibold))
                         .foregroundStyle(theme.text)
                         .lineLimit(1)
-                    
+
                     Spacer()
+
+                    if isConnected {
+                        connectedChip(theme: theme)
+                    }
                 }
 
                 if !snippet.snippetDescription.isEmpty {
@@ -253,7 +288,7 @@ struct SnippetCard: View {
                 .buttonStyle(.plain)
                 .help(snippet.isFavorite ? "Remove from favorites" : "Add to favorites")
                 if linkedCount > 0 {
-                    linkedChip(theme: theme)
+                    linkedChip(theme: theme, languageAccent: languageAccent)
                 }
                 Spacer(minLength: 8)
                 if inTrashView {

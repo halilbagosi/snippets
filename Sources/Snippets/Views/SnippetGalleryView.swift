@@ -525,7 +525,8 @@ struct SnippetGalleryView: View {
                     index: index,
                     linkedCount: item.connectedCount,
                     isStackExpanded: expandedStacks.contains(item.snippet.persistentModelID),
-                    onToggleStack: { toggleStack(item.snippet.persistentModelID) }
+                    onToggleStack: { toggleStack(item.snippet.persistentModelID) },
+                    isConnected: item.isConnected
                 )
                     .overlay {
                         // Revealed stack members read as part of the group via
@@ -536,9 +537,6 @@ struct SnippetGalleryView: View {
                                 .strokeBorder(theme.accent.opacity(0.35), lineWidth: 1)
                                 .allowsHitTesting(false)
                         }
-                    }
-                    .overlay(alignment: .topTrailing) {
-                        if item.isConnected { connectedMarker }
                     }
             }
         }
@@ -553,7 +551,8 @@ struct SnippetGalleryView: View {
         index: Int,
         linkedCount: Int = 0,
         isStackExpanded: Bool = false,
-        onToggleStack: (() -> Void)? = nil
+        onToggleStack: (() -> Void)? = nil,
+        isConnected: Bool = false
     ) -> some View {
         ZStack {
                     SnippetCard(
@@ -564,7 +563,8 @@ struct SnippetGalleryView: View {
                         onPermanentDelete: { requestPermanentDelete(snippet) },
                         linkedCount: linkedCount,
                         isStackExpanded: isStackExpanded,
-                        onToggleStack: onToggleStack
+                        onToggleStack: onToggleStack,
+                        isConnected: isConnected
                     )
 
                     if viewModel.isSelectMode {
@@ -663,33 +663,6 @@ struct SnippetGalleryView: View {
                 expandedStacks.insert(entryID)
             }
         }
-    }
-
-    /// Marks a revealed stack member as belonging to the entry it was fanned
-    /// out from. Top-trailing: the only card corner without content (title is
-    /// top-leading; language/copy/favorite and date own the bottom row).
-    private var connectedMarker: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "link")
-                .font(Mono.font(size: 9, weight: .bold))
-            Text("connected")
-                .font(Mono.font(size: 10, weight: .semibold))
-        }
-        .foregroundStyle(theme.accent)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background {
-            // Concentric with the card corner: inner radius = card
-            // radius (12) minus the badge's inset (6).
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(theme.surfaceElevated)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .strokeBorder(theme.accent.opacity(0.35), lineWidth: 1)
-                }
-        }
-        .padding(6)
-        .allowsHitTesting(false)
     }
 
     private func snippetIdentityKey(for source: [Snippet]) -> Int {
