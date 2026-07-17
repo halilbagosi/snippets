@@ -13,7 +13,11 @@ enum SwiftToolchain {
     /// frame then re-enters body → re-enters this `dispatch_once` → SIGTRAP
     /// (the preview-toggle crash).
     static let swiftcURL: URL? = {
-        var resolved: URL?
+        // Boxed so the background closure can hand the value back without
+        // capturing a mutable local (Swift 6 concurrency); the semaphore
+        // orders the write before the read.
+        final class ResultBox: @unchecked Sendable { var url: URL? }
+        let box = ResultBox()
         let semaphore = DispatchSemaphore(value: 0)
         DispatchQueue.global(qos: .userInitiated).async {
             defer { semaphore.signal() }
@@ -33,10 +37,10 @@ enum SwiftToolchain {
             let path = String(
                 decoding: stdout.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self
             ).trimmingCharacters(in: .whitespacesAndNewlines)
-            if !path.isEmpty { resolved = URL(fileURLWithPath: path) }
+            if !path.isEmpty { box.url = URL(fileURLWithPath: path) }
         }
         semaphore.wait()
-        return resolved
+        return box.url
     }()
 
     static var isAvailable: Bool { swiftcURL != nil }
