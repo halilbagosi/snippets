@@ -8,10 +8,14 @@ struct SnippetDetailView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     let snippet: Snippet
+    /// Whether a previously-viewed snippet exists to navigate back to; drives
+    /// the back button's visibility.
+    var canGoBack: Bool = false
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onClose: () -> Void
     var onOpenSnippet: (Snippet) -> Void = { _ in }
+    var onBack: () -> Void = {}
 
     @State private var didCopy: Bool = false
     @State private var lightboxIndex: Int? = nil
@@ -58,6 +62,9 @@ struct SnippetDetailView: View {
                     }
                     codeBlock
                     metadata
+                    if !snippet.dependencies.isEmpty {
+                        connectedCode
+                    }
                     Spacer(minLength: 24)
                 }
                 .padding(.horizontal, 32)
@@ -81,6 +88,27 @@ struct SnippetDetailView: View {
             .padding(.top, 14)
             .padding(.trailing, 14)
             .accessibilityLabel("Close snippet")
+
+            if canGoBack {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(theme.text)
+                        .frame(width: 30, height: 30)
+                        .contentShape(Circle())
+                        .liquidGlassSurface(
+                            in: Circle(),
+                            shadowRadius: 12,
+                            shadowY: 6
+                        )
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 14)
+                .padding(.leading, 14)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                .accessibilityLabel("Back to previous snippet")
+            }
         }
 
         .sheet(isPresented: showMediaLightbox, onDismiss: { lightboxIndex = nil }) {
@@ -342,6 +370,52 @@ struct SnippetDetailView: View {
                 metaPill(label: "chars", value: "\(snippet.code.count)")
                 Spacer()
             }
+        }
+    }
+
+    /// One syntax-highlighted "code window" per directly connected snippet,
+    /// shown below the metadata. Each window mirrors the source block's chrome,
+    /// scrolls its own code independently, and its header opens that snippet.
+    private var connectedCode: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SectionHeader("connected") {
+                Text("\(snippet.dependencies.count)")
+                    .font(Mono.font(size: 10, weight: .semibold))
+                    .foregroundStyle(theme.textFaint)
+            }
+            ForEach(snippet.dependencies) { dependency in
+                connectedCodeWindow(dependency)
+            }
+        }
+    }
+
+    private func connectedCodeWindow(_ dependency: Snippet) -> some View {
+        let depLanguage = SupportedLanguage(rawValue: dependency.language) ?? .unknown
+        return VStack(alignment: .leading, spacing: 8) {
+            Button {
+                onOpenSnippet(dependency)
+            } label: {
+                SectionHeader(dependency.title.isEmpty ? "untitled" : dependency.title) {
+                    LanguageBadge(language: depLanguage)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            HighlightedCodeView(
+                code: dependency.code,
+                language: depLanguage,
+                theme: theme,
+                fontSize: 13
+            )
+            .frame(height: 240)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .liquidGlassSurface(
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                tint: (Color(hex: depLanguage.accentHex) ?? theme.accent).opacity(0.08),
+                shadowRadius: 10,
+                shadowY: 5
+            )
         }
     }
 

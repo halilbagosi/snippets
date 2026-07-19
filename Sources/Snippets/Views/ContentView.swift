@@ -38,6 +38,10 @@ struct ContentView: View {
     @State private var collectionDraftParentID: PersistentIdentifier? = nil
     @State private var isSubcollectionDraft: Bool = false
     @State private var selectedSnippetID: PersistentIdentifier? = nil
+    /// Snippets visited before the current one, so the detail view can offer a
+    /// back button when navigating into connected snippets. Cleared whenever the
+    /// detail overlay closes (see `.onChange(of: selectedSnippetID)`).
+    @State private var snippetHistory: [PersistentIdentifier] = []
     enum SidebarSelectionContext: Hashable {
         case frequentlyUsed
         case favorites
@@ -571,7 +575,7 @@ struct ContentView: View {
                             let cardWidth = min(max(proxy.size.width * 0.86, 700), 1080)
                             let cardHeight = min(max(proxy.size.height * 0.84, 500), 860)
 
-                            SnippetDetailView(snippet: snippet) {
+                            SnippetDetailView(snippet: snippet, canGoBack: !snippetHistory.isEmpty) {
                                 editingSnippet = snippet
                             } onDelete: {
                                 delete(snippet)
@@ -581,7 +585,16 @@ struct ContentView: View {
                                 }
                             } onOpenSnippet: { dependency in
                                 withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                    if let current = selectedSnippetID {
+                                        snippetHistory.append(current)
+                                    }
                                     selectedSnippetID = dependency.persistentModelID
+                                }
+                            } onBack: {
+                                withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                    if let previous = snippetHistory.popLast() {
+                                        selectedSnippetID = previous
+                                    }
                                 }
                             }
                             .frame(width: cardWidth, height: cardHeight)
@@ -686,6 +699,13 @@ struct ContentView: View {
                     }
                 }
                 .animation(.spring(response: 0.4, dampingFraction: 0.88), value: selectedSnippetID)
+                // Closing the detail overlay (X, tap-outside, delete) ends the
+                // navigation session, so drop any accumulated back history.
+                .onChange(of: selectedSnippetID) { _, newValue in
+                    if newValue == nil {
+                        snippetHistory.removeAll()
+                    }
+                }
                 .animation(.spring(response: 0.4, dampingFraction: 0.88), value: isPresentingNew)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     StatusBar(
