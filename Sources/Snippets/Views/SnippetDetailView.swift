@@ -8,10 +8,14 @@ struct SnippetDetailView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     let snippet: Snippet
+    /// Whether a previously-viewed snippet exists to navigate back to; drives
+    /// the back button's visibility.
+    var canGoBack: Bool = false
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onClose: () -> Void
     var onOpenSnippet: (Snippet) -> Void = { _ in }
+    var onBack: () -> Void = {}
 
     @State private var didCopy: Bool = false
     @State private var lightboxIndex: Int? = nil
@@ -84,6 +88,27 @@ struct SnippetDetailView: View {
             .padding(.top, 14)
             .padding(.trailing, 14)
             .accessibilityLabel("Close snippet")
+
+            if canGoBack {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(theme.text)
+                        .frame(width: 30, height: 30)
+                        .contentShape(Circle())
+                        .liquidGlassSurface(
+                            in: Circle(),
+                            shadowRadius: 12,
+                            shadowY: 6
+                        )
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 14)
+                .padding(.leading, 14)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                .accessibilityLabel("Back to previous snippet")
+            }
         }
 
         .sheet(isPresented: showMediaLightbox, onDismiss: { lightboxIndex = nil }) {
