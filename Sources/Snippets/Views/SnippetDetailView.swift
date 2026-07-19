@@ -58,6 +58,9 @@ struct SnippetDetailView: View {
                     }
                     codeBlock
                     metadata
+                    if !snippet.dependencies.isEmpty {
+                        connectedCode
+                    }
                     Spacer(minLength: 24)
                 }
                 .padding(.horizontal, 32)
@@ -342,6 +345,52 @@ struct SnippetDetailView: View {
                 metaPill(label: "chars", value: "\(snippet.code.count)")
                 Spacer()
             }
+        }
+    }
+
+    /// One syntax-highlighted "code window" per directly connected snippet,
+    /// shown below the metadata. Each window mirrors the source block's chrome,
+    /// scrolls its own code independently, and its header opens that snippet.
+    private var connectedCode: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SectionHeader("connected") {
+                Text("\(snippet.dependencies.count)")
+                    .font(Mono.font(size: 10, weight: .semibold))
+                    .foregroundStyle(theme.textFaint)
+            }
+            ForEach(snippet.dependencies) { dependency in
+                connectedCodeWindow(dependency)
+            }
+        }
+    }
+
+    private func connectedCodeWindow(_ dependency: Snippet) -> some View {
+        let depLanguage = SupportedLanguage(rawValue: dependency.language) ?? .unknown
+        return VStack(alignment: .leading, spacing: 8) {
+            Button {
+                onOpenSnippet(dependency)
+            } label: {
+                SectionHeader(dependency.title.isEmpty ? "untitled" : dependency.title) {
+                    LanguageBadge(language: depLanguage)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            HighlightedCodeView(
+                code: dependency.code,
+                language: depLanguage,
+                theme: theme,
+                fontSize: 13
+            )
+            .frame(height: 240)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .liquidGlassSurface(
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                tint: (Color(hex: depLanguage.accentHex) ?? theme.accent).opacity(0.08),
+                shadowRadius: 10,
+                shadowY: 5
+            )
         }
     }
 
