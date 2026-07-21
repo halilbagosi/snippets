@@ -52,10 +52,7 @@ enum PreviewParamConfigStore {
         }
         // A config records every declared param, so applying it fully
         // determines the preview rather than half-overriding the source.
-        var values = declaredValues(declared)
-        for (key, value) in current where values[key] != nil {
-            values[key] = value
-        }
+        let values = overlay(current: current, declared: declared)
         result.append(
             PreviewParamConfig(id: UUID(), name: name, values: values, isDefault: false)
         )
@@ -70,13 +67,22 @@ enum PreviewParamConfigStore {
     ) -> [PreviewParamConfig] {
         guard let index = configs.firstIndex(where: { $0.id == id }),
               !configs[index].isDefault else { return configs }
+        var result = configs
+        result[index].values = overlay(current: current, declared: declared)
+        return result
+    }
+
+    /// Declared values overlaid with the user's current overrides, keeping only
+    /// keys the code still declares. Shared by `saving` and `updating` so both
+    /// compute a config's stored values identically.
+    private static func overlay(
+        current: [String: PreviewParamValue], declared: [PreviewParam]
+    ) -> [String: PreviewParamValue] {
         var values = declaredValues(declared)
         for (key, value) in current where values[key] != nil {
             values[key] = value
         }
-        var result = configs
-        result[index].values = values
-        return result
+        return values
     }
 
     static func deleting(id: UUID, from configs: [PreviewParamConfig]) -> [PreviewParamConfig] {
