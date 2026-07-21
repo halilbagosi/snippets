@@ -8,6 +8,10 @@ struct MetalShaderPreviewView: View {
     let entry: String
     let helpers: [String]
     let theme: Theme
+    /// Tweakable `SnippetParams` fields (declaration order = buffer layout)
+    /// and their live values from the preview's parameter controls.
+    var params: [PreviewParam] = []
+    var paramValues: [String: PreviewParamValue] = [:]
 
     private var changeKey: String { (helpers + [entry]).joined(separator: "\u{0}") }
 
@@ -26,7 +30,7 @@ struct MetalShaderPreviewView: View {
                 ProgressView()
                     .controlSize(.small)
             case .ready(let pipeline):
-                ShaderRenderView(pipeline: pipeline)
+                ShaderRenderView(pipeline: pipeline, params: params, paramValues: paramValues)
             case .failed(let message):
                 ScrollView {
                     Text(message)
@@ -56,6 +60,8 @@ struct MetalShaderPreviewView: View {
 
 private struct ShaderRenderView: NSViewRepresentable {
     let pipeline: ShaderPipeline
+    var params: [PreviewParam] = []
+    var paramValues: [String: PreviewParamValue] = [:]
 
     func makeCoordinator() -> Renderer { Renderer() }
 
@@ -67,11 +73,13 @@ private struct ShaderRenderView: NSViewRepresentable {
         view.preferredFramesPerSecond = 120
         view.delegate = context.coordinator
         context.coordinator.attach(pipeline: pipeline, view: view)
+        context.coordinator.setParams(params, values: paramValues)
         return view
     }
 
     func updateNSView(_ view: MouseTrackingMTKView, context: Context) {
         context.coordinator.attach(pipeline: pipeline, view: view)
+        context.coordinator.setParams(params, values: paramValues)
     }
 
     final class Renderer: NSObject, MTKViewDelegate {
@@ -86,12 +94,21 @@ private struct ShaderRenderView: NSViewRepresentable {
         private var commandQueue: MTLCommandQueue?
         private weak var trackingView: MouseTrackingMTKView?
         private let startTime = CACurrentMediaTime()
+        /// Pre-packed `SnippetParams` buffer contents (see
+        /// `PreviewParamDetector.packMetalParams`); empty when the snippet
+        /// declares no params struct.
+        private var packedParams: [UInt8] = []
 
         func attach(pipeline: ShaderPipeline, view: MouseTrackingMTKView) {
             trackingView = view
             guard self.pipeline !== pipeline else { return }
             self.pipeline = pipeline
             commandQueue = pipeline.device.makeCommandQueue()
+        }
+
+        func setParams(_ params: [PreviewParam], values: [String: PreviewParamValue]) {
+            packedParams = params.isEmpty
+                ? [] : PreviewParamDetector.packMetalParams(params, overrides: values)
         }
 
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
@@ -111,6 +128,11 @@ private struct ShaderRenderView: NSViewRepresentable {
             uniforms.mouse = trackingView?.mouseState ?? .zero
             encoder.setRenderPipelineState(pipeline.pipelineState)
             encoder.setFragmentBytes(&uniforms, length: MemoryLayout<Uniforms>.stride, index: 0)
+            if !packedParams.isEmpty {
+                packedParams.withUnsafeBytes { buffer in
+                    encoder.setFragmentBytes(buffer.baseAddress!, length: buffer.count, index: 1)
+                }
+            }
             encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
             encoder.endEncoding()
             commandBuffer.present(drawable)

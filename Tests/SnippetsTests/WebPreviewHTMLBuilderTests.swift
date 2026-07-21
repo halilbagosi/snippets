@@ -76,13 +76,197 @@ final class WebPreviewHTMLBuilderTests: XCTestCase {
         )
     }
 
-    func test_reactDocument_withNpmImport_embedsConsoleWarning() {
+    func test_reactDocument_withNpmImport_loadsPackageFromCDN() {
         let doc = document(
             "import { motion } from \"framer-motion\";\nexport default function App() { return <p>hi</p> }",
             .react
         )
-        XCTAssertTrue(doc.contains("framer-motion"))
-        XCTAssertTrue(doc.contains("npm packages"))
+        XCTAssertTrue(doc.contains("https://esm.sh/"))
+        XCTAssertTrue(doc.contains("\"framer-motion\""))
+        XCTAssertTrue(doc.contains("script-src 'unsafe-inline' 'unsafe-eval' https://esm.sh;"))
+    }
+
+    func test_reactDocument_bareJSXHelper_becomesUsageComponentAfterEntry() {
+        let doc = WebPreviewHTMLBuilder.document(
+            linked: [
+                LinkedSource(language: .react, code: """
+                import SpecularButton from './SpecularButton';
+
+                <SpecularButton size="lg">Get Started</SpecularButton>
+                """),
+                LinkedSource(language: .react, code: """
+                const SpecularButton = ({ children }) => <button>{children}</button>;
+                export default SpecularButton;
+                """)
+            ],
+            entryFlavor: .react, appearance: appearance, runtime: runtime
+        )
+        XCTAssertTrue(doc.contains("__SnippetUsage"))
+        let entryIndex = doc.range(of: "__SnippetDefault = SpecularButton")!.lowerBound
+        let usageIndex = doc.range(of: "const __SnippetUsage")!.lowerBound
+        XCTAssertTrue(usageIndex > entryIndex, "usage wrapper must come after the entry declaration")
+    }
+
+    func test_reactDocument_declarationHelper_staysBeforeEntry() {
+        let doc = WebPreviewHTMLBuilder.document(
+            linked: [
+                LinkedSource(language: .react, code: "const Helper = () => <p>helper</p>;"),
+                LinkedSource(language: .react, code: "export default function App() { return <Helper/> }")
+            ],
+            entryFlavor: .react, appearance: appearance, runtime: runtime
+        )
+        XCTAssertFalse(doc.contains("const __SnippetUsage"))
+        let helperIndex = doc.range(of: "const Helper")!.lowerBound
+        let entryIndex = doc.range(of: "function App()")!.lowerBound
+        XCTAssertTrue(helperIndex < entryIndex)
+    }
+
+    func test_cdnImportBindings_duplicateImportsAcrossSnippetsBindOnce() {
+        let bindings = WebPreviewHTMLBuilder.cdnImportBindings(in: """
+        import { Renderer, Program } from "ogl";
+        import gsap from "gsap";
+
+        import { Renderer } from "ogl";
+        import gsap from "gsap";
+        """)
+        XCTAssertEqual(bindings.components(separatedBy: "const { Renderer, Program }").count, 2)
+        XCTAssertEqual(bindings.components(separatedBy: "const gsap").count, 2)
+        XCTAssertFalse(bindings.contains("const { Renderer } ="))
+    }
+
+    func test_reactDocument_errorReporting_includesNameAndMessage() {
+        let doc = document("export default function App() { return <p>hi</p> }", .react)
+        XCTAssertTrue(doc.contains("__snippetErrorText"))
+        XCTAssertTrue(doc.contains("e.message"))
+    }
+
+    func test_consoleShim_ignoresMutedCrossOriginScriptErrors() {
+        let doc = document("console.log('hi')", .javascript)
+        XCTAssertTrue(doc.contains("if (e.message === \"Script error.\" && !e.filename) return;"))
+    }
+
+    func test_cdnImportBindings_defaultNamespaceAndNamedClauses() {
+        let bindings = WebPreviewHTMLBuilder.cdnImportBindings(in: """
+        import gsap from "gsap";
+        import * as THREE from "three";
+        import Def, { named as alias, Renderer } from "ogl";
+        import { useState } from "react";
+        import Helper from "./Helper";
+        """)
+        XCTAssertTrue(bindings.contains("const gsap = (window.__snippetModules[\"gsap\"].default !== undefined"))
+        XCTAssertTrue(bindings.contains("const THREE = window.__snippetModules[\"three\"];"))
+        XCTAssertTrue(bindings.contains("const Def = (window.__snippetModules[\"ogl\"].default !== undefined"))
+        XCTAssertTrue(bindings.contains("const { named: alias, Renderer } = window.__snippetModules[\"ogl\"];"))
+        XCTAssertFalse(bindings.contains("react"))
+        XCTAssertFalse(bindings.contains("Helper"))
+    }
+
+    // MARK: CSS entries
+
+    func test_cssDocument_alone_usesDemoMarkup() {
+        let doc = document(".card { color: red }", .css)
+        XCTAssertTrue(doc.contains("class=\"demo\""))
+        XCTAssertTrue(doc.contains(".card { color: red }"))
+    }
+
+    func test_cssDocument_withConnectedHTML_usesThatMarkupInsteadOfDemo() {
+        let doc = WebPreviewHTMLBuilder.document(
+            linked: [
+                LinkedSource(language: .html, code: "<div class=\"card\">real markup</div>"),
+                LinkedSource(language: .css, code: ".theme { --x: 1 }"),
+                LinkedSource(language: .css, code: ".card { color: red }")
+            ],
+            entryFlavor: .css, appearance: appearance, runtime: runtime
+        )
+        XCTAssertTrue(doc.contains("real markup"))
+        XCTAssertFalse(doc.contains("class=\"demo\""))
+        XCTAssertTrue(doc.contains(".theme { --x: 1 }"))
+        XCTAssertTrue(doc.contains(".card { color: red }"))
+        // Entry CSS must come after helper CSS so it wins the cascade.
+        XCTAssertLessThan(doc.range(of: ".theme")!.lowerBound, doc.range(of: ".card {")!.lowerBound)
+    }
+
+    func test_containsMarkup_ignoresTagsInsideCommentsAndStrings() {
+        XCTAssertFalse(WebPreviewHTMLBuilder.containsMarkup(#"p::before { content: "<b>" } /* <div> */"#))
+        XCTAssertTrue(WebPreviewHTMLBuilder.containsMarkup("<div class=\"x\">hi</div>"))
+    }
+
+    func test_cssSnippetWithTagOnlyInContentString_staysCSSPreview() {
+        let doc = document(#".x::after { content: "<em>" }"#, .css)
+        XCTAssertTrue(doc.contains("class=\"demo\""), "must not be misrouted to the HTML path")
+    }
+
+    func test_htmlHelperWithLeadingImports_dropsThemFromPrependedMarkup() {
+        // A JSX usage snippet stored as HTML must not render its import
+        // lines as literal text above the preview.
+        let doc = WebPreviewHTMLBuilder.document(
+            linked: [
+                LinkedSource(language: .html, code: """
+                import Strands from './Strands';
+                import './Strands.css';
+
+                <Strands amplitude={1}></Strands>
+                """),
+                LinkedSource(language: .react, code: "export default function App() { return <p>hi</p> }")
+            ],
+            entryFlavor: .react, appearance: appearance, runtime: runtime
+        )
+        XCTAssertFalse(doc.contains("import Strands from"))
+        XCTAssertFalse(doc.contains("./Strands.css"))
+        XCTAssertTrue(doc.contains("<Strands amplitude={1}></Strands>"))
+    }
+
+    func test_strippingLeadingModuleLines_keepsScriptBlockImports() {
+        let markup = """
+        <div>real</div>
+        <script type="module">import { x } from "https://esm.sh/x";</script>
+        """
+        XCTAssertEqual(WebPreviewHTMLBuilder.strippingLeadingModuleLines(fromMarkup: markup), markup)
+    }
+
+    // MARK: Full-document HTML entries with connections
+
+    func test_fullHTMLDocumentWithConnectedCSS_injectsIntoHeadInsteadOfNesting() {
+        let doc = WebPreviewHTMLBuilder.document(
+            linked: [
+                LinkedSource(language: .css, code: ".injected { color: red }"),
+                LinkedSource(language: .html, code: "<html><head><title>t</title></head><body><p>hi</p></body></html>")
+            ],
+            entryFlavor: .html, appearance: appearance, runtime: runtime
+        )
+        XCTAssertEqual(doc.components(separatedBy: "<html").count - 1, 1, "must not nest documents")
+        XCTAssertTrue(doc.contains(".injected { color: red }"))
+        XCTAssertLessThan(doc.range(of: ".injected")!.lowerBound, doc.range(of: "</head>")!.lowerBound)
+    }
+
+    func test_fullHTMLDocumentWithConnectedScript_runsBeforeBodyClose() {
+        let doc = WebPreviewHTMLBuilder.document(
+            linked: [
+                LinkedSource(language: .javascript, code: "console.log('helper')"),
+                LinkedSource(language: .html, code: "<html><body><p>hi</p></body></html>")
+            ],
+            entryFlavor: .html, appearance: appearance, runtime: runtime
+        )
+        XCTAssertEqual(doc.components(separatedBy: "<html").count - 1, 1)
+        XCTAssertTrue(doc.contains("console.log('helper')"))
+        XCTAssertLessThan(doc.range(of: "<p>hi</p>")!.lowerBound, doc.range(of: "console.log")!.lowerBound)
+    }
+
+    func test_fullHTMLDocumentWithoutConnections_passesThroughUntouched() {
+        let code = "<html><body><p>hi</p></body></html>"
+        XCTAssertEqual(document(code, .html), code)
+    }
+
+    func test_reactDocument_withOnlyReactAndRelativeImports_hasNoCDNReference() {
+        let doc = document(
+            """
+            import { useState } from "react";
+            import Helper from "./Helper";
+            export default function App() { return <p>hi</p> }
+            """,
+            .react
+        )
+        XCTAssertFalse(doc.contains("esm.sh"))
     }
 
     // MARK: Incremental updates

@@ -446,7 +446,7 @@ struct SnippetEditorView: View {
             Text("connections run before this snippet in one shared preview:")
             Text("• reference a connection by the name it defines — import lines are ignored")
             Text("• keep a component's css as its own connected css snippet (import \"./x.css\" is dropped)")
-            Text("• npm packages (framer-motion, gsap…) can't load — only react itself is bundled")
+            Text("• npm packages (framer-motion, gsap…) load on demand from esm.sh")
             Text("• web languages link with web entries; swift with swift; glsl with glsl")
         }
         .font(Mono.font(size: 10))
@@ -464,6 +464,56 @@ struct SnippetEditorView: View {
         }
     }
 
+    private func connectionLanguage(_ snippet: Snippet) -> SupportedLanguage {
+        SupportedLanguage(rawValue: snippet.language) ?? .unknown
+    }
+
+    private func connectionContributes(_ snippet: Snippet) -> Bool {
+        SnippetLinker.canContribute(connectionLanguage(snippet), toEntry: viewModel.effectiveLanguage)
+    }
+
+    /// What each connection does in this snippet's combined preview.
+    private func connectionRole(_ snippet: Snippet) -> String {
+        let entry = viewModel.effectiveLanguage
+        let dep = connectionLanguage(snippet)
+        guard SnippetLinker.canContribute(dep, toEntry: entry) else {
+            return "won't join the preview (\(dep.rawValue.lowercased()) ↛ \(entry.rawValue.lowercased()))"
+        }
+        switch dep {
+        case .css: return entry == .css ? "layers in as extra styles" : "injected as styles"
+        case .html: return entry == .css ? "used as the preview markup" : "prepended as markup"
+        case .javascript, .typescript, .react: return "runs before this snippet"
+        case .swift: return "compiled together with this snippet"
+        case .glsl, .metal: return "concatenated into the shader"
+        default: return "included in the preview"
+        }
+    }
+
+    /// Explains, per connection, its role in the preview — and flags when a
+    /// connection looks more like the preview root than the edited snippet,
+    /// so users learn which side should own the connection.
+    private var connectionRolesInfo: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("this snippet is the preview root (\(viewModel.effectiveLanguage.rawValue.lowercased())):")
+            ForEach(viewModel.dependencies) { dependency in
+                Text("• \(dependency.title.lowercased()) — \(connectionRole(dependency))")
+            }
+            if let better = SnippetLinker.strongerEntry(
+                thanEntryOf: viewModel.effectiveLanguage, among: viewModel.dependencies
+            ) {
+                Label(
+                    "“\(better.title.lowercased())” (\(better.language.lowercased())) looks like the better preview root — consider opening it and connecting this snippet there instead",
+                    systemImage: "arrow.triangle.swap"
+                )
+                .foregroundStyle(Color.orange)
+            }
+        }
+        .font(Mono.font(size: 10))
+        .foregroundStyle(theme.textMuted)
+        .padding(.horizontal, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     /// Snippets this one depends on for combined previews (see SnippetLinker).
     private var connectionsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -476,35 +526,42 @@ struct SnippetEditorView: View {
             if !viewModel.dependencies.isEmpty {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
                     ForEach(viewModel.dependencies) { dependency in
+                        let accent = connectionContributes(dependency) ? theme.accent : Color.orange
                         Button {
                             viewModel.removeDependency(dependency)
                         } label: {
                             HStack(spacing: 6) {
-                                Image(systemName: "link")
+                                Image(systemName: connectionContributes(dependency) ? "link" : "exclamationmark.triangle")
                                     .font(Mono.font(size: 9, weight: .semibold))
                                 Text(dependency.title.lowercased())
                                     .lineLimit(1)
+                                Text(dependency.language.lowercased())
+                                    .font(Mono.font(size: 9))
+                                    .opacity(0.7)
                                 Spacer(minLength: 0)
                                 Image(systemName: "xmark")
                                     .font(Mono.font(size: 8, weight: .bold))
                             }
                             .font(Mono.font(size: 11, weight: .semibold))
-                            .foregroundStyle(theme.accent)
+                            .foregroundStyle(accent)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 8)
                             .background {
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(theme.accent.opacity(colorScheme == .dark ? 0.22 : 0.12))
+                                    .fill(accent.opacity(colorScheme == .dark ? 0.22 : 0.12))
                                     .overlay {
                                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                            .strokeBorder(theme.accent.opacity(0.4), lineWidth: 1)
+                                            .strokeBorder(accent.opacity(0.4), lineWidth: 1)
                                     }
                             }
                         }
                         .buttonStyle(.plain)
-                        .help("Remove connection")
+                        .help(connectionContributes(dependency)
+                            ? "Remove connection"
+                            : "Won't join the preview — \(dependency.language.lowercased()) can't feed a \(viewModel.effectiveLanguage.rawValue.lowercased()) preview. Click to remove.")
                     }
                 }
+                connectionRolesInfo
             }
 
             if isAddingConnection {

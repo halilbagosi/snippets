@@ -108,8 +108,12 @@ enum LanguageDetector {
 
     static func detect(code rawCode: String) -> SupportedLanguage {
         let scanPrefix = rawCode.prefix(2_048)
-        let code = String(scanPrefix).trimmingCharacters(in: .whitespacesAndNewlines)
+        var code = String(scanPrefix).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !code.isEmpty else { return .unknown }
+        // Embedded shader sources (GLSL in JS template literals, or in Swift
+        // multiline strings) would otherwise trip the shader rules and outvote
+        // the host language, so blank out those string bodies before scanning.
+        code = strippingEmbeddedStringBlocks(from: code)
 
         if let first = code.first, first == "{" || first == "[" {
             if rawCode.utf8.count > 2_048 {
@@ -135,6 +139,57 @@ enum LanguageDetector {
             }
         }
 
+        // JSX usage snippets (`<Strands amplitude={1} />`) carry capitalized
+        // component tags that no HTML document has, but hit zero react
+        // markers — without this they land on .html (closing tags trip "</")
+        // or .unknown (self-closing only) and the preview mishandles them.
+        // Only a tie-break: any confident language above still wins, so
+        // generics like `Array<String>` in typed code are unaffected.
+        if bestMatch.language == .html || bestMatch.language == .unknown,
+           containsJSXComponentTag(code) {
+            return .react
+        }
+
         return bestMatch.language
+    }
+
+    /// A PascalCase tag in tag position — start of line or after `(`/`{`/
+    /// `,`/whitespace — so `Array<String>` (identifier immediately before
+    /// `<`) and shouty legacy HTML (`<TABLE>`, all-caps, no lowercase)
+    /// never match.
+    private static func containsJSXComponentTag(_ code: String) -> Bool {
+        code.range(
+            of: #"(?m)(?:^|[\s({,])<[A-Z](?=[A-Za-z0-9]*[a-z])[A-Za-z0-9]*(?:\s|/>|>)"#,
+            options: .regularExpression
+        ) != nil
+    }
+
+    /// Removes the bodies of backtick template literals and `"""` multiline
+    /// strings. An unclosed delimiter (from the 2 KB scan truncation) strips
+    /// through to the end.
+    private static func strippingEmbeddedStringBlocks(from code: String) -> String {
+        var result = ""
+        result.reserveCapacity(code.count)
+        var remainder = Substring(code)
+        let delimiters = ["\"\"\"", "`"]
+        outer: while !remainder.isEmpty {
+            var earliest: (open: Range<Substring.Index>, delimiter: String)?
+            for delimiter in delimiters {
+                if let range = remainder.range(of: delimiter) {
+                    if earliest == nil || range.lowerBound < earliest!.open.lowerBound {
+                        earliest = (range, delimiter)
+                    }
+                }
+            }
+            guard let match = earliest else {
+                result += remainder
+                break outer
+            }
+            result += remainder[..<match.open.lowerBound]
+            let afterOpen = remainder[match.open.upperBound...]
+            guard let close = afterOpen.range(of: match.delimiter) else { break outer }
+            remainder = afterOpen[close.upperBound...]
+        }
+        return result
     }
 }

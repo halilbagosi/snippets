@@ -7,6 +7,9 @@ struct WebPreviewView: NSViewRepresentable {
     let sources: [LinkedSource]
     let flavor: WebPreviewFlavor
     let theme: Theme
+    /// Live prop overrides from the preview's parameter controls (react
+    /// flavor only). Applied by re-rendering in place — never a reload.
+    var propOverrides: [String: PreviewParamValue] = [:]
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -25,11 +28,20 @@ struct WebPreviewView: NSViewRepresentable {
             backgroundHex: theme.canvasDeep.hexString(fallback: "#0E1014"),
             textHex: theme.text.hexString(fallback: "#E6E8EC")
         )
+        let overridesChanged = context.coordinator.lastOverrides != propOverrides
+        context.coordinator.lastOverrides = propOverrides
+        let applyOverrides = {
+            webView.evaluateJavaScript(
+                WebPreviewHTMLBuilder.propsUpdateScript(overrides: propOverrides)
+            )
+        }
         switch context.coordinator.classify(sources: sources, flavor: flavor, isDark: theme.scheme == .dark) {
         case .none:
+            if overridesChanged { applyOverrides() }
             return
         case .themeOnly:
             webView.evaluateJavaScript(WebPreviewHTMLBuilder.themeUpdateScript(appearance: appearance))
+            if overridesChanged { applyOverrides() }
         case .sourceOnly:
             if let script = WebPreviewHTMLBuilder.sourceUpdateScript(linked: sources, entryFlavor: flavor) {
                 let sources = sources, flavor = flavor
@@ -43,6 +55,7 @@ struct WebPreviewView: NSViewRepresentable {
                 Self.loadFullDocument(webView, sources: sources, flavor: flavor, appearance: appearance)
             }
         case .full:
+            context.coordinator.pendingOverrides = propOverrides
             Self.loadFullDocument(webView, sources: sources, flavor: flavor, appearance: appearance)
         }
     }
@@ -70,6 +83,17 @@ struct WebPreviewView: NSViewRepresentable {
         private var lastSources: [LinkedSource]?
         private var lastFlavor: WebPreviewFlavor?
         private var lastIsDark: Bool?
+        var lastOverrides: [String: PreviewParamValue]?
+        /// Overrides to re-apply once a full document load finishes — a
+        /// reload resets `window.__snippetPropOverrides`.
+        var pendingOverrides: [String: PreviewParamValue] = [:]
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            guard !pendingOverrides.isEmpty else { return }
+            webView.evaluateJavaScript(
+                WebPreviewHTMLBuilder.propsUpdateScript(overrides: pendingOverrides)
+            )
+        }
 
         /// Classifies what changed since the last render so the view can pick
         /// the cheapest update: retint in place (`themeOnly`), re-run the user

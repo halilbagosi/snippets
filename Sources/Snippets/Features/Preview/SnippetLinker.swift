@@ -109,9 +109,24 @@ enum SnippetLinker {
         return stacks
     }
 
+    /// The connected snippet that would make a stronger preview entry than
+    /// the snippet being edited, if any — the editor surfaces it as a hint so
+    /// users connect in the direction the preview engine expects. A candidate
+    /// only qualifies when the reversed direction is actually previewable
+    /// (the current entry's language can contribute to the candidate's).
+    static func strongerEntry<S: LinkableSnippet>(
+        thanEntryOf language: SupportedLanguage, among dependencies: [S]
+    ) -> S? {
+        let best = dependencies
+            .filter { canContribute(language, toEntry: $0.linkLanguage) }
+            .min { entryAffinity($0.linkLanguage) < entryAffinity($1.linkLanguage) }
+        guard let best, entryAffinity(best.linkLanguage) < entryAffinity(language) else { return nil }
+        return best
+    }
+
     /// How suitable a language is to front a stack of mutually-connected
     /// snippets — lower is more entry-like. Support files (css) go last.
-    private static func entryAffinity(_ language: SupportedLanguage) -> Int {
+    static func entryAffinity(_ language: SupportedLanguage) -> Int {
         switch language {
         case .react: return 0
         case .typescript: return 1
@@ -128,6 +143,9 @@ enum SnippetLinker {
         switch entry {
         case .html, .react, .javascript, .typescript:
             return [.css, .javascript, .typescript, .react, .html].contains(dep)
+        case .css:
+            // A CSS entry previews against connected markup; extra CSS layers in.
+            return [.html, .css].contains(dep)
         case .glsl: return dep == .glsl
         case .metal: return dep == .metal
         case .swift: return dep == .swift

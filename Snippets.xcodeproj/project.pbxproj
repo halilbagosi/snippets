@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		002912E32D5AD77A965C6669 /* SnippetCollectionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72351DDB378B8C22EB8FD8EE /* SnippetCollectionCard.swift */; };
+		01E24B2BB3789E64F91EB040 /* PreviewParams.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06154F76A632D66D3A6AA3D2 /* PreviewParams.swift */; };
 		0F363D8ECC875EFB86FD6E5D /* ToggleFavoriteSnippetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50EB15A9268A9AE0FD8E5568 /* ToggleFavoriteSnippetIntent.swift */; };
 		1034317420206F8CAC37E289 /* LanguageBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD742F16AED07C5B6DA1EFE /* LanguageBadge.swift */; };
 		12B5E4FA5AAB903D1705EA07 /* DSGlassModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F77ABB40D51255BFD54DFA60 /* DSGlassModifier.swift */; };
@@ -94,6 +95,7 @@
 
 /* Begin PBXFileReference section */
 		01362798D5520FFC54DBDD42 /* DSGlassContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSGlassContainer.swift; sourceTree = "<group>"; };
+		06154F76A632D66D3A6AA3D2 /* PreviewParams.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreviewParams.swift; path = PreviewParams.swift; sourceTree = "<group>"; };
 		0B2656C1F0CA0F70BF32616B /* MetalDisintegrationRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalDisintegrationRenderer.swift; sourceTree = "<group>"; };
 		0B9284FC624AB4701E78C6EA /* SnippetsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsApp.swift; sourceTree = "<group>"; };
 		0C82E0C23D62D7837A6EAE83 /* DotGridBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DotGridBackground.swift; sourceTree = "<group>"; };
@@ -315,6 +317,7 @@
 				C1A147FCB1288781A8FBCC41 /* SwiftPreviewBuilder.swift */,
 				B7E34CFE83F37D8E1D4023CA /* SnippetLinker.swift */,
 				FAA046938633C6AB461C2EC3 /* Snippet+Linkable.swift */,
+				06154F76A632D66D3A6AA3D2 /* PreviewParams.swift */,
 			);
 			name = Preview;
 			path = Preview;
@@ -644,6 +647,7 @@
 				87F442BEBCC7D335262558B5 /* MetalShaderPreviewView.swift in Sources */,
 				D004495F99FF2617CA144285 /* SwiftPreviewHostView.swift in Sources */,
 				44904403A3F6403C6D88D8F8 /* FlowLayout.swift in Sources */,
+				01E24B2BB3789E64F91EB040 /* PreviewParams.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

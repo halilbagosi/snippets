@@ -46,7 +46,9 @@ enum WebPreviewHTMLBuilder {
         }
         let helpers = linked.dropLast()
         let css = helpers.filter { $0.language == .css }.map(\.code).joined(separator: "\n\n")
-        let html = helpers.filter { $0.language == .html }.map(\.code).joined(separator: "\n")
+        let html = helpers.filter { $0.language == .html }
+            .map { strippingLeadingModuleLines(fromMarkup: $0.code) }
+            .joined(separator: "\n")
         let scriptHelpers = helpers.filter { [.javascript, .typescript, .react].contains($0.language) }
         let helperScript = scriptHelpers.map(\.code).joined(separator: "\n\n")
         let helpersNeedBabel = scriptHelpers.contains { $0.language != .javascript }
@@ -59,7 +61,12 @@ enum WebPreviewHTMLBuilder {
                 helperScript: helperScript, needsBabel: helpersNeedBabel, runtime: runtime
             )
         case .css:
-            return cssDocument(code: entry.code, appearance: appearance)
+            let helperCSS = helpers.filter { $0.language == .css }.map(\.code)
+            return cssDocument(
+                code: (helperCSS + [entry.code]).joined(separator: "\n\n"),
+                markup: html,
+                appearance: appearance
+            )
         case .javascript, .typescript:
             let combined = helperScript.isEmpty ? entry.code : helperScript + "\n\n" + entry.code
             let useBabel = entryFlavor == .typescript || helpersNeedBabel
@@ -106,8 +113,28 @@ enum WebPreviewHTMLBuilder {
         runtime: ReactRuntime? = nil
     ) -> String {
         let hasExtras = !prependedHTML.isEmpty || !extraCSS.isEmpty || !helperScript.isEmpty
-        if !hasExtras, code.range(of: "<html", options: .caseInsensitive) != nil {
-            return code
+        if code.range(of: "<html", options: .caseInsensitive) != nil {
+            // Full-document passthrough. With connections the extras are
+            // injected into the document itself — wrapping a complete <html>
+            // document inside the skeleton's <body> is invalid markup that
+            // WebKit renders unpredictably.
+            guard hasExtras else { return code }
+            var doc = code
+            if !extraCSS.isEmpty {
+                doc = inserting(styleTag(extraCSS), before: "</head>", in: doc, fallbackPrefix: true)
+            }
+            if !prependedHTML.isEmpty {
+                doc = inserting(prependedHTML, afterTag: "<body", in: doc)
+            }
+            if !helperScript.isEmpty {
+                let block = executionBlock(
+                    code: helperScript,
+                    babel: needsBabel ? runtime?.babel : nil,
+                    presets: needsBabel ? typescriptPresets : nil
+                )
+                doc = inserting(block, before: "</body>", in: doc, fallbackPrefix: false)
+            }
+            return doc
         }
         var body = ""
         if !prependedHTML.isEmpty { body += prependedHTML + "\n" }
@@ -122,23 +149,63 @@ enum WebPreviewHTMLBuilder {
         return skeleton(appearance: appearance, body: body, headExtras: styleTag(extraCSS))
     }
 
+    /// Inserts `fragment` on its own line before the first (case-insensitive)
+    /// occurrence of `marker`. Malformed documents without the marker get the
+    /// fragment prepended or appended instead of losing it.
+    private static func inserting(
+        _ fragment: String, before marker: String, in document: String, fallbackPrefix: Bool
+    ) -> String {
+        guard let range = document.range(of: marker, options: .caseInsensitive) else {
+            return fallbackPrefix ? fragment + "\n" + document : document + "\n" + fragment
+        }
+        return document.replacingCharacters(in: range.lowerBound..<range.lowerBound, with: fragment + "\n")
+    }
+
+    /// Inserts `fragment` right after the closing `>` of the first tag whose
+    /// name starts with `tagPrefix` (e.g. `<body` matches `<body class=…>`).
+    /// Without the tag, the fragment is prepended.
+    private static func inserting(_ fragment: String, afterTag tagPrefix: String, in document: String) -> String {
+        guard let open = document.range(of: tagPrefix, options: .caseInsensitive),
+              let close = document.range(of: ">", options: [], range: open.upperBound..<document.endIndex) else {
+            return fragment + "\n" + document
+        }
+        return document.replacingCharacters(in: close.upperBound..<close.upperBound, with: "\n" + fragment)
+    }
+
     // MARK: - CSS
 
-    private static func cssDocument(code: String, appearance: Appearance) -> String {
-        // Snippets that carry their own markup alongside the CSS preview as HTML.
-        if code.range(of: "<[a-zA-Z]", options: .regularExpression) != nil {
+    private static func cssDocument(code: String, markup: String = "", appearance: Appearance) -> String {
+        // Snippets that carry their own markup alongside the CSS preview as
+        // HTML — but only when no connected markup exists, and only when the
+        // tag sits outside comments/strings (`content: "<b>"` is still CSS).
+        if markup.isEmpty, containsMarkup(code) {
             return htmlDocument(code: code, appearance: appearance)
         }
-        let body = """
+        let demoMarkup = """
         <div class="demo">
           <h2>Heading</h2>
           <p>Paragraph with a <a href="#">link</a> and <code>code</code>.</p>
           <button>Button</button>
           <div class="card box item">.card .box .item</div>
         </div>
+        """
+        let body = """
+        \(markup.isEmpty ? demoMarkup : markup)
         \(styleTag(code))
         """
         return skeleton(appearance: appearance, body: body)
+    }
+
+    /// Whether `code` contains an HTML tag outside CSS comments and quoted
+    /// strings. Internal so tests can pin the routing decision.
+    static func containsMarkup(_ code: String) -> Bool {
+        var scrubbed = code.replacingOccurrences(
+            of: #"/\*[\s\S]*?\*/"#, with: "", options: .regularExpression
+        )
+        scrubbed = scrubbed.replacingOccurrences(
+            of: #""[^"\n]*"|'[^'\n]*'"#, with: "", options: .regularExpression
+        )
+        return scrubbed.range(of: "<[a-zA-Z]", options: .regularExpression) != nil
     }
 
     // MARK: - JavaScript / TypeScript
@@ -188,7 +255,7 @@ enum WebPreviewHTMLBuilder {
         try {
           \(run)
         } catch (e) {
-          __snippetConsole.append("error", String(e && e.stack || e));
+          __snippetConsole.append("error", __snippetErrorText(e));
         }
         """
     }
@@ -209,7 +276,7 @@ enum WebPreviewHTMLBuilder {
         // detection uses the entry code only — helpers never become the root.
         // Stripped react imports leave hooks unbound; the UMD runtime only
         // exposes the React/ReactDOM globals. (All handled in `reactSource`.)
-        let source = reactSource(code: code, helperScript: helperScript)
+        let (source, cdnSpecifiers) = reactSource(code: code, helperScript: helperScript)
         var body = ""
         if !prependedHTML.isEmpty { body += prependedHTML + "\n" }
         body += """
@@ -220,20 +287,38 @@ enum WebPreviewHTMLBuilder {
         <script>\(runtime.babel)</script>
         <script>
         \(consoleShim)
-        \(reactProgram(source: source))
+        \(reactProgram(source: source, cdnSpecifiers: cdnSpecifiers))
         </script>
         """
-        return skeleton(appearance: appearance, body: body, headExtras: styleTag(extraCSS))
+        return skeleton(
+            appearance: appearance, body: body, headExtras: styleTag(extraCSS),
+            allowsCDNModules: !cdnSpecifiers.isEmpty
+        )
     }
 
     /// The transform+mount program for the React flavor — one source of truth
     /// shared by the initial document and `sourceUpdateScript`. The root is
     /// kept on `window` so an update can re-render without a second
     /// `createRoot` on the same container.
-    private static func reactProgram(source: String) -> String {
+    private static func reactProgram(source: String, cdnSpecifiers: [String]) -> String {
+        // npm packages resolve through esm.sh; loaded modules are cached on
+        // `window.__snippetModules` so source updates don't re-fetch. The
+        // `typeof __generation` check discards a mount whose module loads
+        // were overtaken by a newer source update (the update path declares
+        // `__generation` in its wrapping IIFE; the document path has none).
+        let loader = cdnSpecifiers.isEmpty ? "" : """
+          window.__snippetModules = window.__snippetModules || {};
+          for (const __spec of [\(cdnSpecifiers.map(jsonLiteral).joined(separator: ", "))]) {
+            if (!window.__snippetModules[__spec]) {
+              window.__snippetModules[__spec] = await import("https://esm.sh/" + __spec);
+            }
+          }
+          if (typeof __generation !== "undefined" && __generation !== window.__previewGeneration) { return; }
         """
+        return """
         const __snippetSource = \(jsonLiteral(source));
-        function __snippetMount() {
+        async function __snippetMount() {
+        \(loader)
           const out = Babel.transform(__snippetSource, {
             presets: [["react"], ["typescript", { "isTSX": true, "allExtensions": true }]],
             filename: "snippet.tsx"
@@ -242,45 +327,124 @@ enum WebPreviewHTMLBuilder {
           const component = window.__SnippetExport;
           if (!component) { throw new Error("No component found — export a default component or define one named App."); }
           window.__previewRoot = window.__previewRoot || ReactDOM.createRoot(document.getElementById("root"));
-          window.__previewRoot.render(React.createElement(component));
+          window.__snippetRender = (overrides) => {
+            if (overrides !== undefined) window.__snippetPropOverrides = overrides;
+            window.__previewRoot.render(
+              React.createElement(component, window.__snippetPropOverrides || null)
+            );
+          };
+          window.__snippetRender();
         }
-        try { __snippetMount(); } catch (e) {
-          __snippetConsole.append("error", String(e && e.stack || e));
-        }
+        __snippetMount().catch((e) => {
+          __snippetConsole.append("error", __snippetErrorText(e));
+        });
         """
     }
 
     /// The complete evaluated React source (helpers stripped and prepended,
     /// hook bindings, export capture) — shared by document and update paths.
-    private static func reactSource(code: String, helperScript: String) -> String {
-        // Surface stripped npm imports before the inevitable ReferenceError:
-        // the runtime only bundles react/react-dom, so a framer-motion/gsap
-        // import can never work — tell the user why, in the preview console.
-        let unsupported = unsupportedImports(in: helperScript + "\n" + code)
-        let importWarning = unsupported.isEmpty ? "" : """
-        __snippetConsole.append("error", \(jsonLiteral(
-            "This preview can't load npm packages: \(unsupported.joined(separator: ", ")). "
-            + "Only react/react-dom are bundled — inline the library code or add it as a connected snippet."
-        )));
-
-        """
+    private static func reactSource(code: String, helperScript: String) -> (source: String, cdnSpecifiers: [String]) {
+        // npm imports beyond the bundled react/react-dom are stripped like the
+        // rest of the module syntax, then re-bound from the CDN modules that
+        // `reactProgram` awaits into `window.__snippetModules` before eval.
+        let fullCode = helperScript + "\n" + code
+        let cdnSpecifiers = unsupportedImports(in: fullCode)
+        let bindings = cdnImportBindings(in: fullCode)
         var source = stripModuleSyntax(code, rewriteDefaultExport: true)
+        // A helper that is a bare JSX expression is a usage/demo snippet: it
+        // references the entry's component, so it must run AFTER the entry
+        // (prepending it hits the const's temporal dead zone), wrapped as a
+        // component so the element actually renders — as the mount target.
+        var usageComponent = ""
         if !helperScript.isEmpty {
-            source = stripModuleSyntax(helperScript, rewriteDefaultExport: false) + "\n\n" + source
+            let strippedHelper = stripModuleSyntax(helperScript, rewriteDefaultExport: false)
+            var trimmed = strippedHelper.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasPrefix("<") {
+                while trimmed.hasSuffix(";") { trimmed = String(trimmed.dropLast()).trimmingCharacters(in: .whitespacesAndNewlines) }
+                usageComponent = "\n\nconst __SnippetUsage = () => (<>\n\(trimmed)\n</>);"
+            } else {
+                source = strippedHelper + "\n\n" + source
+            }
         }
-        source = importWarning + """
+        source = bindings + """
         const { useState, useEffect, useRef, useMemo, useCallback, useContext,
                 useReducer, useLayoutEffect, useId, Fragment, createElement } = React;
 
         """ + source
 
         let target = reactMountTarget(in: code).map { "(typeof \($0) !== \"undefined\" ? \($0) : null)" } ?? "null"
-        source += """
+        source += usageComponent + """
 
 
-        window.__SnippetExport = (typeof __SnippetDefault !== "undefined" && __SnippetDefault) || \(target);
+        window.__SnippetExport = (typeof __SnippetUsage !== "undefined" && __SnippetUsage) || (typeof __SnippetDefault !== "undefined" && __SnippetDefault) || \(target);
         """
-        return source
+        return (source, cdnSpecifiers)
+    }
+
+    /// `const` declarations that re-create the bindings of every stripped CDN
+    /// import from the corresponding `window.__snippetModules` entry. Handles
+    /// default, namespace (`* as N`), and named (`{ a, b as c }`) clauses;
+    /// side-effect imports load but bind nothing. Prepended to the evaluated
+    /// source, so the declarations live in the same eval scope as the snippet.
+    static func cdnImportBindings(in code: String) -> String {
+        let pattern = #"(?m)^[ \t]*import\b([\s\S]*?)\bfrom[ \t]*["']([^"'\n]*)["']"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return "" }
+        let fullRange = NSRange(code.startIndex..., in: code)
+        var lines: [String] = []
+        // Connected snippets often repeat the entry's imports; a name bound
+        // once must not produce a second `const` (SyntaxError at eval).
+        var declared: Set<String> = []
+        for match in regex.matches(in: code, range: fullRange) {
+            guard let clauseRange = Range(match.range(at: 1), in: code),
+                  let specRange = Range(match.range(at: 2), in: code) else { continue }
+            let spec = String(code[specRange])
+            guard !spec.hasPrefix("."), !spec.hasPrefix("/"),
+                  spec != "react", spec != "react-dom",
+                  !spec.hasPrefix("react/"), !spec.hasPrefix("react-dom/")
+            else { continue }
+            let clause = String(code[clauseRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+            let module = "window.__snippetModules[\(jsonLiteral(spec))]"
+
+            if let namespaceName = firstMatch(#"\*\s*as\s+([A-Za-z_$][\w$]*)"#, in: clause),
+               declared.insert(namespaceName).inserted {
+                lines.append("const \(namespaceName) = \(module);")
+            }
+            if let namedBody = firstMatch(#"\{([\s\S]*?)\}"#, in: clause) {
+                let entries = namedBody.split(separator: ",").compactMap { part -> String? in
+                    let name = part.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !name.isEmpty else { return nil }
+                    let pieces = name.components(separatedBy: " as ")
+                    if pieces.count == 2 {
+                        let local = pieces[1].trimmingCharacters(in: .whitespaces)
+                        guard declared.insert(local).inserted else { return nil }
+                        return "\(pieces[0].trimmingCharacters(in: .whitespaces)): \(local)"
+                    }
+                    guard declared.insert(name).inserted else { return nil }
+                    return name
+                }
+                if !entries.isEmpty {
+                    lines.append("const { \(entries.joined(separator: ", ")) } = \(module);")
+                }
+            }
+            if let defaultName = firstMatch(#"^([A-Za-z_$][\w$]*)"#, in: clause), defaultName != "type",
+               declared.insert(defaultName).inserted {
+                lines.append("const \(defaultName) = (\(module).default !== undefined ? \(module).default : \(module));")
+            }
+        }
+        return lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n\n"
+    }
+
+    /// A JSX usage snippet saved with language HTML (capitalized component
+    /// tags historically mis-detected) reaches the preview as prepended
+    /// markup, where the browser renders its leading `import` lines as
+    /// literal text. Leading module statements can never be meaningful
+    /// markup, so drop that leading run — imports inside `<script>` blocks
+    /// further down stay untouched.
+    static func strippingLeadingModuleLines(fromMarkup html: String) -> String {
+        html.replacingOccurrences(
+            of: #"\A(?:\s*import\b[\s\S]*?["'][^"'\n]*["'][ \t]*;?)+[ \t]*\n?"#,
+            with: "", options: .regularExpression
+        )
     }
 
     /// Rewrites module syntax that Babel's script-mode transform won't accept.
@@ -377,6 +541,34 @@ enum WebPreviewHTMLBuilder {
         <pre id="console" class="snippet-console"></pre>
         <script>
         \(consoleShim)
+        // Custom uniforms drive the preview's parameter controls: overrides
+        // arrive via the same __snippetRender(overrides) hook the React
+        // flavor uses, and are applied every frame.
+        const __customUniforms = \(glslUniformsJSON(in: fragment));
+        window.__snippetRender = (overrides) => {
+          if (overrides !== undefined) window.__snippetPropOverrides = overrides;
+        };
+        function __snippetHexToRGB(hex) {
+          let d = hex.startsWith("#") ? hex.slice(1) : hex;
+          if (d.length === 3) d = d.split("").map((c) => c + c).join("");
+          const v = parseInt(d, 16);
+          return isNaN(v) ? [0, 0, 0] : [((v >> 16) & 255) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255];
+        }
+        function __applyCustomUniforms(gl) {
+          const overrides = window.__snippetPropOverrides || {};
+          for (const u of __customUniforms) {
+            if (!u.loc) continue;
+            const v = overrides[u.name] !== undefined ? overrides[u.name] : u.def;
+            if (u.type === "float") gl.uniform1f(u.loc, Number(v));
+            else if (u.type === "int") gl.uniform1i(u.loc, Math.round(Number(v)));
+            else if (u.type === "bool") gl.uniform1i(u.loc, v ? 1 : 0);
+            else if (u.type === "color") {
+              const c = __snippetHexToRGB(String(v));
+              if (u.size === 4) gl.uniform4f(u.loc, c[0], c[1], c[2], 1.0);
+              else gl.uniform3f(u.loc, c[0], c[1], c[2]);
+            }
+          }
+        }
         const __fragmentSource = \(jsonLiteral(fragment));
         const __vertexSource = ["#version 300 es", "in vec2 p;", "void main() { gl_Position = vec4(p, 0.0, 1.0); }"].join("\\n");
         const canvas = document.getElementById("glcanvas");
@@ -411,6 +603,7 @@ enum WebPreviewHTMLBuilder {
             const uTime = gl.getUniformLocation(program, "iTime");
             const uResolution = gl.getUniformLocation(program, "iResolution");
             const uMouse = gl.getUniformLocation(program, "iMouse");
+            for (const u of __customUniforms) u.loc = gl.getUniformLocation(program, u.name);
             let mouse = [0, 0, 0, 0];
             canvas.addEventListener("pointermove", (e) => {
               const r = canvas.getBoundingClientRect();
@@ -430,6 +623,7 @@ enum WebPreviewHTMLBuilder {
               if (uTime) gl.uniform1f(uTime, (performance.now() - start) / 1000);
               if (uResolution) gl.uniform2f(uResolution, w, h);
               if (uMouse) gl.uniform4f(uMouse, mouse[0], mouse[1], mouse[2], mouse[3]);
+              __applyCustomUniforms(gl);
               gl.drawArrays(gl.TRIANGLES, 0, 3);
               requestAnimationFrame(frame);
             }
@@ -447,7 +641,46 @@ enum WebPreviewHTMLBuilder {
         )
     }
 
+    /// JSON array describing the shader's tweakable uniforms for the in-page
+    /// application loop — `[{"name":…,"type":…,"size":…,"def":…}]`.
+    private static func glslUniformsJSON(in fragment: String) -> String {
+        let entries = PreviewParamDetector.glslParams(in: fragment).compactMap { param -> String? in
+            let name = jsonLiteral(param.name)
+            switch param.kind {
+            case .number(let def):
+                return #"{"name": \#(name), "type": "float", "def": \#(def)}"#
+            case .integer(let def):
+                return #"{"name": \#(name), "type": "int", "def": \#(def)}"#
+            case .boolean(let def):
+                return #"{"name": \#(name), "type": "bool", "def": \#(def)}"#
+            case .color(let hex):
+                let isVec4 = fragment.range(
+                    of: #"uniform\s+vec4\s+\#(param.name)\b"#, options: .regularExpression
+                ) != nil
+                return #"{"name": \#(name), "type": "color", "size": \#(isVec4 ? 4 : 3), "def": \#(jsonLiteral(hex))}"#
+            case .text, .choice:
+                return nil
+            }
+        }
+        return "[" + entries.joined(separator: ", ") + "]"
+    }
+
     // MARK: - Incremental updates
+
+    /// JS that re-renders the mounted React component with the given prop
+    /// overrides — the live path behind the preview's parameter controls.
+    /// No transform, no reload: just a render with merged props.
+    static func propsUpdateScript(overrides: [String: PreviewParamValue]) -> String {
+        let entries = overrides
+            .sorted { $0.key < $1.key }
+            .map { "\(jsonLiteral($0.key)): \($0.value.jsonLiteral)" }
+            .joined(separator: ", ")
+        return """
+        if (typeof window.__snippetRender === "function") {
+          window.__snippetRender({ \(entries) });
+        }
+        """
+    }
 
     /// JS that retints an already-loaded shell in place — theme flips must
     /// not re-parse the inlined runtimes.
@@ -491,7 +724,8 @@ enum WebPreviewHTMLBuilder {
                 presets: useBabel ? typescriptPresets : nil
             )
         case .react:
-            program = reactProgram(source: reactSource(code: entry.code, helperScript: helperScript))
+            let (source, cdnSpecifiers) = reactSource(code: entry.code, helperScript: helperScript)
+            program = reactProgram(source: source, cdnSpecifiers: cdnSpecifiers)
         case .html, .css, .glsl:
             return nil
         }
@@ -516,21 +750,26 @@ enum WebPreviewHTMLBuilder {
         appearance: Appearance,
         body: String,
         extraCSS: String = "",
-        headExtras: String = ""
+        headExtras: String = "",
+        allowsCDNModules: Bool = false
     ) -> String {
         // Everything the preview legitimately needs is inline: 'unsafe-inline'
         // covers the embedded runtimes and snippet code, 'unsafe-eval' the React
         // path (Babel output runs via eval). connect-src 'none' is the actual
         // security payoff — no fetch/XHR/WebSocket egress; img-src data:/blob:
         // keeps data-URI images working while blocking remote beacons.
+        // Documents with npm imports additionally allow module loads from
+        // esm.sh (script-src only — connect-src stays closed, so snippet code
+        // still can't fetch/beacon, even to esm.sh).
         // Note: full-document passthrough snippets bypass this skeleton (and its
         // CSP); the WebPreviewView navigation delegate constrains those instead.
-        """
+        let scriptSrc = "'unsafe-inline' 'unsafe-eval'" + (allowsCDNModules ? " https://esm.sh" : "")
+        return """
         <!doctype html>
         <html>
         <head>
         <meta charset="utf-8">
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src \(scriptSrc); style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
         <meta name="color-scheme" content="\(appearance.isDark ? "dark" : "light")">
         <style>
         :root { --preview-bg: \(appearance.backgroundHex); --preview-text: \(appearance.textHex); }
@@ -588,7 +827,19 @@ enum WebPreviewHTMLBuilder {
         }).join(" "));
       };
     }
-    window.addEventListener("error", (e) => __snippetConsole.append("error", e.message));
+    window.addEventListener("error", (e) => {
+      // Errors inside cross-origin (CDN module) callbacks are muted by the
+      // browser to a bare "Script error." with no location — pure noise.
+      if (e.message === "Script error." && !e.filename) return;
+      __snippetConsole.append("error", e.message);
+    });
+    // WebKit's Error.stack omits the "Name: message" head line, so a bare
+    // `e.stack` renders as an anonymous stack — always prepend the head.
+    function __snippetErrorText(e) {
+      if (!e) return String(e);
+      const head = e.name ? e.name + ": " + e.message : String(e);
+      return e.stack ? head + "\\n" + e.stack : head;
+    }
     """
 
     /// JSON string literal for safe embedding inside <script> — JSONEncoder
