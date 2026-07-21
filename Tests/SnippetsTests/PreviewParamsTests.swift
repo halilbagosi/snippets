@@ -248,4 +248,33 @@ final class PreviewParamsTests: XCTestCase {
         XCTAssertEqual(PreviewParamDetector.glslParams(in: code).map(\.name), ["amplitude"])
         XCTAssertEqual(PreviewParamDetector.glslParams(in: code), PreviewParamDetector.detectGLSL(in: code).map(\.param))
     }
+
+    func test_detectForLanguage_routesGLSLToUniformDetection() {
+        let resolution = SnippetLinker.Resolution(
+            sources: [LinkedSource(language: .glsl, code: "uniform float amplitude; // = 2.0")],
+            excluded: []
+        )
+        let detected = PreviewParamDetector.detect(for: .glsl, resolution: resolution)
+        XCTAssertEqual(detected.map(\.param.name), ["amplitude"])
+    }
+
+    func test_detectForLanguage_combinesHelperAndEntrySourcesForGLSL() {
+        let resolution = SnippetLinker.Resolution(
+            sources: [
+                LinkedSource(language: .glsl, code: "uniform float helperKnob; // = 1.0"),
+                LinkedSource(language: .glsl, code: "uniform float entryKnob; // = 2.0")
+            ],
+            excluded: []
+        )
+        let detected = PreviewParamDetector.detect(for: .glsl, resolution: resolution)
+        XCTAssertEqual(detected.map(\.param.name), ["helperKnob", "entryKnob"])
+    }
+
+    func test_detectForLanguage_returnsNothingForUnsupportedLanguage() {
+        let resolution = SnippetLinker.Resolution(
+            sources: [LinkedSource(language: .swift, code: "let x = 1")],
+            excluded: []
+        )
+        XCTAssertTrue(PreviewParamDetector.detect(for: .swift, resolution: resolution).isEmpty)
+    }
 }

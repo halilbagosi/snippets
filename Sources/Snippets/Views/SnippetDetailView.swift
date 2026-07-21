@@ -22,6 +22,7 @@ struct SnippetDetailView: View {
     @State private var showPreview: Bool = false
     /// Rendered height of the code area, so the preview can track it.
     @State private var codeAreaHeight: CGFloat = 0
+    @State private var paramOverrides: [String: PreviewParamValue] = [:]
 
     private var theme: Theme { Theme.current(colorScheme) }
 
@@ -289,9 +290,12 @@ struct SnippetDetailView: View {
             }
             Group {
                 if let resolution, language.previewKind != nil {
-                    SnippetPreviewView(resolution: resolution, language: language, theme: theme)
-                        .frame(height: previewHeight)
-                        .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                    SnippetPreviewView(
+                        resolution: resolution, language: language, theme: theme,
+                        paramOverrides: $paramOverrides
+                    )
+                    .frame(height: previewHeight)
+                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
                 } else {
                     HighlightedCodeView(
                         code: snippet.code,
@@ -319,6 +323,7 @@ struct SnippetDetailView: View {
         .onChange(of: snippet.persistentModelID) {
             showPreview = false
             codeAreaHeight = 0
+            paramOverrides = [:]
         }
     }
 

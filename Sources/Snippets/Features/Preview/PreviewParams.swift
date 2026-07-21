@@ -57,6 +57,21 @@ struct DetectedParam: Equatable {
 /// ReactBits convention. Only scalar defaults become controls; arrays,
 /// objects and function defaults are left alone.
 enum PreviewParamDetector {
+    /// Single entry point for "what params does this preview have", replacing the
+    /// per-flavor detection that was inlined in the preview view.
+    static func detect(
+        for language: SupportedLanguage, resolution: SnippetLinker.Resolution
+    ) -> [DetectedParam] {
+        let entry = resolution.sources.last?.code ?? ""
+        let combined = resolution.sources.map(\.code).joined(separator: "\n")
+        switch language.previewKind {
+        case .web(.react): return detectReact(in: entry)
+        case .web(.glsl): return detectGLSL(in: combined)
+        case .metal: return detectMetal(in: combined)
+        default: return []
+        }
+    }
+
     static func reactParams(in code: String) -> [PreviewParam] {
         detectReact(in: code).map(\.param)
     }

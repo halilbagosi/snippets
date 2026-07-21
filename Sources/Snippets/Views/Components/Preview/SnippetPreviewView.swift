@@ -8,7 +8,7 @@ struct SnippetPreviewView: View {
     let language: SupportedLanguage
     let theme: Theme
 
-    @State private var paramOverrides: [String: PreviewParamValue] = [:]
+    @Binding var paramOverrides: [String: PreviewParamValue]
 
     private var entryCode: String { resolution.sources.last?.code ?? "" }
     private var helperCodes: [String] { resolution.sources.dropLast().map(\.code) }
@@ -31,11 +31,7 @@ struct SnippetPreviewView: View {
     /// apply on the next frame.
     @ViewBuilder
     private func webPreview(flavor: WebPreviewFlavor) -> some View {
-        let params: [PreviewParam] = switch flavor {
-        case .react: PreviewParamDetector.reactParams(in: entryCode)
-        case .glsl: PreviewParamDetector.glslParams(in: resolution.sources.map(\.code).joined(separator: "\n"))
-        default: []
-        }
+        let params = PreviewParamDetector.detect(for: language, resolution: resolution).map(\.param)
         if params.isEmpty {
             WebPreviewView(sources: resolution.sources, flavor: flavor, theme: theme)
         } else {
@@ -55,9 +51,7 @@ struct SnippetPreviewView: View {
     /// bar; values are packed into fragment buffer(1) every frame.
     @ViewBuilder
     private var metalPreview: some View {
-        let params = PreviewParamDetector.metalParams(
-            in: resolution.sources.map(\.code).joined(separator: "\n")
-        )
+        let params = PreviewParamDetector.detect(for: language, resolution: resolution).map(\.param)
         if params.isEmpty {
             MetalShaderPreviewView(entry: entryCode, helpers: helperCodes, theme: theme)
         } else {
