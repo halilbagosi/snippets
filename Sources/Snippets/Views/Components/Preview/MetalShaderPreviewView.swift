@@ -146,6 +146,38 @@ private struct ShaderRenderView: NSViewRepresentable {
 final class MouseTrackingMTKView: MTKView {
     private(set) var mouseState: SIMD4<Float> = .zero
 
+    /// The display link free-runs at the display refresh rate, so it must be
+    /// stopped whenever the shader cannot actually be seen — otherwise a hidden,
+    /// minimized, or fully covered window keeps rendering at 120fps forever.
+    /// `occlusionState` folds all of those cases into one signal.
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+
+        NotificationCenter.default.removeObserver(
+            self,
+            name: NSWindow.didChangeOcclusionStateNotification,
+            object: nil
+        )
+        if let window {
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(occlusionStateChanged),
+                name: NSWindow.didChangeOcclusionStateNotification,
+                object: window
+            )
+        }
+
+        updatePausedState()
+    }
+
+    @objc private func occlusionStateChanged() {
+        updatePausedState()
+    }
+
+    private func updatePausedState() {
+        isPaused = !(window?.occlusionState.contains(.visible) ?? false)
+    }
+
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
