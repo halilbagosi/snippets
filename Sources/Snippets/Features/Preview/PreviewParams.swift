@@ -134,30 +134,11 @@ enum PreviewParamDetector {
     }
 
     static func detectGLSL(in code: String) -> [DetectedParam] {
-        var out: [DetectedParam] = []
-        var seen: Set<String> = []
-        let pattern = #"(?m)^[ \t]*uniform\s+(float|int|bool|vec3|vec4)\s+(\w+)\s*;[ \t]*(?://[ \t]*=[ \t]*(\S+))?"#
-        for match in rangedMatches(pattern, in: code) {
-            guard let typeRange = Range(match.range(at: 1), in: code),
-                  let nameRange = Range(match.range(at: 2), in: code),
-                  let wholeRange = Range(match.range, in: code) else { continue }
-            let name = String(code[nameRange])
-            guard !["iTime", "iResolution", "iMouse"].contains(name),
-                  seen.insert(name).inserted else { continue }
-
-            let annotated: String
-            let target: ParamWriteTarget
-            if let literalRange = Range(match.range(at: 3), in: code) {
-                annotated = String(code[literalRange])
-                target = .literal(literalRange)
-            } else {
-                annotated = ""
-                target = .annotation(insertAt: wholeRange.upperBound)
-            }
-            guard let kind = annotatedKind(type: String(code[typeRange]), annotated: annotated) else { continue }
-            out.append(DetectedParam(param: PreviewParam(name: name, kind: kind), target: target))
-        }
-        return out
+        detectAnnotatedFields(
+            pattern: #"(?m)^[ \t]*uniform\s+(float|int|bool|vec3|vec4)\s+(\w+)\s*;[ \t]*(?://[ \t]*=[ \t]*(\S+))?"#,
+            in: code,
+            excluding: ["iTime", "iResolution", "iMouse"]
+        )
     }
 
     /// Shared type→kind mapping for the `// = value` annotation convention used by
@@ -190,15 +171,33 @@ enum PreviewParamDetector {
         guard let structRange = code.range(
             of: #"struct\s+SnippetParams\s*\{[^}]*\}"#, options: .regularExpression
         ) else { return [] }
+        return detectAnnotatedFields(
+            pattern: #"(?m)^[ \t]*(float3|float4|float|int)\s+(\w+)\s*;[ \t]*(?://[ \t]*=[ \t]*(\S+))?"#,
+            in: code,
+            region: structRange
+        )
+    }
+
+    /// Shared match/dedupe/classify loop for the `// = value` annotation
+    /// convention: destructures `type`/`name`/`whole` from each match, skips
+    /// excluded and duplicate names, chooses `.literal` when the trailing
+    /// annotation matched or `.annotation(insertAt:)` when it didn't, and maps
+    /// the type through `annotatedKind`.
+    private static func detectAnnotatedFields(
+        pattern: String,
+        in code: String,
+        region: Range<String.Index>? = nil,
+        excluding excluded: Set<String> = []
+    ) -> [DetectedParam] {
         var out: [DetectedParam] = []
         var seen: Set<String> = []
-        let pattern = #"(?m)^[ \t]*(float3|float4|float|int)\s+(\w+)\s*;[ \t]*(?://[ \t]*=[ \t]*(\S+))?"#
-        for match in rangedMatches(pattern, in: code, region: structRange) {
+        for match in rangedMatches(pattern, in: code, region: region) {
             guard let typeRange = Range(match.range(at: 1), in: code),
                   let nameRange = Range(match.range(at: 2), in: code),
                   let wholeRange = Range(match.range, in: code) else { continue }
             let name = String(code[nameRange])
-            guard seen.insert(name).inserted else { continue }
+            guard !excluded.contains(name),
+                  seen.insert(name).inserted else { continue }
 
             let annotated: String
             let target: ParamWriteTarget
