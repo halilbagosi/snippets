@@ -194,4 +194,58 @@ final class PreviewParamsTests: XCTestCase {
         XCTAssertTrue(doc.contains("window.__snippetRender = (overrides)"))
         XCTAssertTrue(doc.contains("window.__snippetPropOverrides || null"))
     }
+
+    // MARK: Write targets
+
+    func test_detectGLSL_reportsLiteralRangeOfAnnotatedDefault() {
+        let code = "uniform float amplitude; // = 1.5\n"
+        let detected = PreviewParamDetector.detectGLSL(in: code)
+        XCTAssertEqual(detected.count, 1)
+        guard case .literal(let range) = detected[0].target else {
+            return XCTFail("expected .literal target, got \(detected[0].target)")
+        }
+        XCTAssertEqual(String(code[range]), "1.5")
+    }
+
+    func test_detectGLSL_reportsInsertionPointWhenAnnotationMissing() {
+        let code = "uniform float amplitude;\n"
+        let detected = PreviewParamDetector.detectGLSL(in: code)
+        XCTAssertEqual(detected.count, 1)
+        guard case .annotation(let index) = detected[0].target else {
+            return XCTFail("expected .annotation target, got \(detected[0].target)")
+        }
+        XCTAssertEqual(String(code[code.startIndex..<index]), "uniform float amplitude;")
+    }
+
+    func test_detectMetal_rangesAreValidInFullSource() {
+        let code = """
+        struct SnippetParams {
+            float speed; // = 2.0
+        };
+        """
+        let detected = PreviewParamDetector.detectMetal(in: code)
+        XCTAssertEqual(detected.count, 1)
+        guard case .literal(let range) = detected[0].target else {
+            return XCTFail("expected .literal target")
+        }
+        XCTAssertEqual(String(code[range]), "2.0")
+    }
+
+    func test_detectReact_reportsLiteralRangeIncludingQuotes() {
+        let code = ##"const App = ({ amplitude = 1.4, tint = "#ff94b8" }) => <p/>; export default App;"##
+        let detected = PreviewParamDetector.detectReact(in: code)
+        XCTAssertEqual(detected.map(\.param.name), ["amplitude", "tint"])
+        guard case .literal(let numberRange) = detected[0].target,
+              case .literal(let stringRange) = detected[1].target else {
+            return XCTFail("expected .literal targets")
+        }
+        XCTAssertEqual(String(code[numberRange]), "1.4")
+        XCTAssertEqual(String(code[stringRange]), "\"#ff94b8\"")
+    }
+
+    func test_legacyParamAPIs_stillReturnSameParams() {
+        let code = "uniform float amplitude; // = 1.5\n"
+        XCTAssertEqual(PreviewParamDetector.glslParams(in: code).map(\.name), ["amplitude"])
+        XCTAssertEqual(PreviewParamDetector.glslParams(in: code), PreviewParamDetector.detectGLSL(in: code).map(\.param))
+    }
 }

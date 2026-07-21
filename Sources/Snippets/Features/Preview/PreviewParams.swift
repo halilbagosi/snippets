@@ -38,38 +38,62 @@ enum PreviewParamValue: Equatable {
     }
 }
 
+/// Where a parameter's default value lives in the source, so a config can be
+/// written back surgically. Declarations without a `// = value` annotation have
+/// no literal to replace, so they record an insertion point instead.
+enum ParamWriteTarget: Equatable {
+    case literal(Range<String.Index>)
+    case annotation(insertAt: String.Index)
+}
+
+/// A detected parameter together with the source location of its default.
+struct DetectedParam: Equatable {
+    let param: PreviewParam
+    let target: ParamWriteTarget
+}
+
 /// Extracts default-valued props from a React entry component's destructured
 /// signature — `({ amplitude = 1, glow = true, tint = "#ff94b8" })` — the
 /// ReactBits convention. Only scalar defaults become controls; arrays,
 /// objects and function defaults are left alone.
 enum PreviewParamDetector {
     static func reactParams(in code: String) -> [PreviewParam] {
-        guard let signature = componentSignature(in: code) else { return [] }
-        var params: [PreviewParam] = []
+        detectReact(in: code).map(\.param)
+    }
+
+    static func detectReact(in code: String) -> [DetectedParam] {
+        guard let signature = componentSignatureRange(in: code) else { return [] }
+        var out: [DetectedParam] = []
         var seen: Set<String> = []
-        let entryPattern = #"([A-Za-z_$][\w$]*)\s*=\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|-?\d+(?:\.\d+)?|true|false)\s*[,}]"#
-        for match in allMatches(entryPattern, in: signature, groups: 2) {
-            let name = match[0]
-            let literal = match[1]
+        let pattern = #"([A-Za-z_$][\w$]*)\s*=\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|-?\d+(?:\.\d+)?|true|false)\s*[,}]"#
+        for match in rangedMatches(pattern, in: code, region: signature) {
+            guard let nameRange = Range(match.range(at: 1), in: code),
+                  let literalRange = Range(match.range(at: 2), in: code) else { continue }
+            let name = String(code[nameRange])
+            let literal = String(code[literalRange])
             guard seen.insert(name).inserted else { continue }
+
+            let kind: PreviewParam.Kind
             if literal == "true" || literal == "false" {
-                params.append(PreviewParam(name: name, kind: .boolean(default: literal == "true")))
+                kind = .boolean(default: literal == "true")
             } else if literal.hasPrefix("\"") || literal.hasPrefix("'") {
                 let value = String(literal.dropFirst().dropLast())
                 if value.range(of: #"^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?$"#, options: .regularExpression) != nil {
-                    params.append(PreviewParam(name: name, kind: .color(defaultHex: value)))
+                    kind = .color(defaultHex: value)
                 } else if value.count <= 60, !value.contains("\\") {
                     let options = stringOptions(for: name, default: value, in: code)
-                    params.append(PreviewParam(
-                        name: name,
-                        kind: options.count > 1 ? .choice(default: value, options: options) : .text(default: value)
-                    ))
+                    kind = options.count > 1 ? .choice(default: value, options: options) : .text(default: value)
+                } else {
+                    continue
                 }
             } else if let number = Double(literal) {
-                params.append(PreviewParam(name: name, kind: .number(default: number)))
+                kind = .number(default: number)
+            } else {
+                continue
             }
+            out.append(DetectedParam(param: PreviewParam(name: name, kind: kind), target: .literal(literalRange)))
         }
-        return params
+        return out
     }
 
     /// The finite set of values a string prop can take, inferred from the
@@ -106,30 +130,51 @@ enum PreviewParamDetector {
     /// `// = true`); without one, floats/ints default to 0 and colors to
     /// black — exactly what an untouched uniform renders as.
     static func glslParams(in code: String) -> [PreviewParam] {
-        var params: [PreviewParam] = []
+        detectGLSL(in: code).map(\.param)
+    }
+
+    static func detectGLSL(in code: String) -> [DetectedParam] {
+        var out: [DetectedParam] = []
         var seen: Set<String> = []
         let pattern = #"(?m)^[ \t]*uniform\s+(float|int|bool|vec3|vec4)\s+(\w+)\s*;[ \t]*(?://[ \t]*=[ \t]*(\S+))?"#
-        for match in allMatches(pattern, in: code, groups: 3, allowMissingTrailing: true) {
-            let type = match[0]
-            let name = match[1]
-            let annotated = match.count > 2 ? match[2] : ""
+        for match in rangedMatches(pattern, in: code) {
+            guard let typeRange = Range(match.range(at: 1), in: code),
+                  let nameRange = Range(match.range(at: 2), in: code),
+                  let wholeRange = Range(match.range, in: code) else { continue }
+            let name = String(code[nameRange])
             guard !["iTime", "iResolution", "iMouse"].contains(name),
                   seen.insert(name).inserted else { continue }
-            switch type {
-            case "float":
-                params.append(PreviewParam(name: name, kind: .number(default: Double(annotated) ?? 0)))
-            case "int":
-                params.append(PreviewParam(name: name, kind: .integer(default: Int(annotated) ?? 0)))
-            case "bool":
-                params.append(PreviewParam(name: name, kind: .boolean(default: annotated == "true")))
-            case "vec3", "vec4":
-                let fallback = annotated.hasPrefix("#") ? annotated : "#000000"
-                params.append(PreviewParam(name: name, kind: .color(defaultHex: fallback)))
-            default:
-                break
+
+            let annotated: String
+            let target: ParamWriteTarget
+            if let literalRange = Range(match.range(at: 3), in: code) {
+                annotated = String(code[literalRange])
+                target = .literal(literalRange)
+            } else {
+                annotated = ""
+                target = .annotation(insertAt: wholeRange.upperBound)
             }
+            guard let kind = annotatedKind(type: String(code[typeRange]), annotated: annotated) else { continue }
+            out.append(DetectedParam(param: PreviewParam(name: name, kind: kind), target: target))
         }
-        return params
+        return out
+    }
+
+    /// Shared type→kind mapping for the `// = value` annotation convention used by
+    /// both GLSL uniforms and Metal `SnippetParams` fields.
+    private static func annotatedKind(type: String, annotated: String) -> PreviewParam.Kind? {
+        switch type {
+        case "float":
+            return .number(default: Double(annotated) ?? 0)
+        case "int":
+            return .integer(default: Int(annotated) ?? 0)
+        case "bool":
+            return .boolean(default: annotated == "true")
+        case "vec3", "vec4", "float3", "float4":
+            return .color(defaultHex: annotated.hasPrefix("#") ? annotated : "#000000")
+        default:
+            return nil
+        }
     }
 
     // MARK: - Metal
@@ -138,29 +183,36 @@ enum PreviewParamDetector {
     /// the renderer at fragment buffer(1). Same `// = default` convention as
     /// GLSL. Field order is declaration order — it defines the buffer layout.
     static func metalParams(in code: String) -> [PreviewParam] {
+        detectMetal(in: code).map(\.param)
+    }
+
+    static func detectMetal(in code: String) -> [DetectedParam] {
         guard let structRange = code.range(
             of: #"struct\s+SnippetParams\s*\{[^}]*\}"#, options: .regularExpression
         ) else { return [] }
-        let body = String(code[structRange])
-        var params: [PreviewParam] = []
+        var out: [DetectedParam] = []
+        var seen: Set<String> = []
         let pattern = #"(?m)^[ \t]*(float3|float4|float|int)\s+(\w+)\s*;[ \t]*(?://[ \t]*=[ \t]*(\S+))?"#
-        for match in allMatches(pattern, in: body, groups: 3, allowMissingTrailing: true) {
-            let type = match[0]
-            let name = match[1]
-            let annotated = match.count > 2 ? match[2] : ""
-            switch type {
-            case "float":
-                params.append(PreviewParam(name: name, kind: .number(default: Double(annotated) ?? 0)))
-            case "int":
-                params.append(PreviewParam(name: name, kind: .integer(default: Int(annotated) ?? 0)))
-            case "float3", "float4":
-                let fallback = annotated.hasPrefix("#") ? annotated : "#000000"
-                params.append(PreviewParam(name: name, kind: .color(defaultHex: fallback)))
-            default:
-                break
+        for match in rangedMatches(pattern, in: code, region: structRange) {
+            guard let typeRange = Range(match.range(at: 1), in: code),
+                  let nameRange = Range(match.range(at: 2), in: code),
+                  let wholeRange = Range(match.range, in: code) else { continue }
+            let name = String(code[nameRange])
+            guard seen.insert(name).inserted else { continue }
+
+            let annotated: String
+            let target: ParamWriteTarget
+            if let literalRange = Range(match.range(at: 3), in: code) {
+                annotated = String(code[literalRange])
+                target = .literal(literalRange)
+            } else {
+                annotated = ""
+                target = .annotation(insertAt: wholeRange.upperBound)
             }
+            guard let kind = annotatedKind(type: String(code[typeRange]), annotated: annotated) else { continue }
+            out.append(DetectedParam(param: PreviewParam(name: name, kind: kind), target: target))
         }
-        return params
+        return out
     }
 
     /// Packs current values into the exact byte layout MSL gives
@@ -219,11 +271,11 @@ enum PreviewParamDetector {
         )
     }
 
-    /// The `{ … }` destructuring pattern of the mount component's first
-    /// argument. Searches the default-exported / conventional component the
-    /// same way the mount-target detection does: `function X({…})` or
-    /// `X = ({…})` arrow forms.
-    private static func componentSignature(in code: String) -> String? {
+    /// Range of the `{ … }` destructuring pattern of the mount component's first
+    /// argument, in `code`'s own index space. Searches the default-exported /
+    /// conventional component the same way the mount-target detection does:
+    /// `function X({…})` or `X = ({…})` arrow forms.
+    private static func componentSignatureRange(in code: String) -> Range<String.Index>? {
         let target = WebPreviewHTMLBuilder.reactMountTarget(in: code)
         let patterns: [String]
         if let target {
@@ -244,7 +296,7 @@ enum PreviewParamDetector {
             // The regex ends at the opening `{` of the destructuring pattern.
             let braceIndex = code.index(before: match.upperBound)
             if let end = balancedBraceEnd(in: code, from: braceIndex) {
-                return String(code[braceIndex..<end])
+                return braceIndex..<end
             }
         }
         return nil
@@ -263,6 +315,17 @@ enum PreviewParamDetector {
             index = code.index(after: index)
         }
         return nil
+    }
+
+    /// Regex matches with their capture ranges intact, restricted to `region`
+    /// (defaults to the whole string). Matching always runs against the full
+    /// source so every returned range is valid in the caller's original string.
+    private static func rangedMatches(
+        _ pattern: String, in text: String, region: Range<String.Index>? = nil
+    ) -> [NSTextCheckingResult] {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let range = NSRange(region ?? text.startIndex..<text.endIndex, in: text)
+        return regex.matches(in: text, range: range)
     }
 
     /// With `allowMissingTrailing`, unmatched optional trailing groups are
