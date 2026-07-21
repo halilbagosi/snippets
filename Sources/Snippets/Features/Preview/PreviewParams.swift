@@ -18,7 +18,7 @@ struct PreviewParam: Equatable, Identifiable {
     var id: String { name }
 }
 
-enum PreviewParamValue: Equatable {
+enum PreviewParamValue: Equatable, Codable {
     case number(Double)
     case boolean(Bool)
     case string(String)

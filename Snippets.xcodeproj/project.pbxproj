@@ -19,6 +19,7 @@
 		23BC99AF3722159BED37DB79 /* SectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6A7ABD6C5C29369D4E765CB /* SectionHeader.swift */; };
 		2460C134FCE44B1078188ADB /* SnippetCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE6D5D60A49D9012A433BB0B /* SnippetCard.swift */; };
 		2667C24E86F4DABA8C7C683B /* DSColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510695A55C05140A55A38353 /* DSColor.swift */; };
+		289248BE94D0A03E55D70606 /* PreviewParamConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFF94F2684CC6A5A953CAF64 /* PreviewParamConfig.swift */; };
 		2A2BBE7653270548A8B5B6EE /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 527137D235CE709BA5106BD6 /* ContentView.swift */; };
 		2B3D7F2BDCDD2556A2A7431B /* MediaManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = C002CC5D0BE4C24D08C08D7E /* MediaManaging.swift */; };
 		2B9F6EC9F2798F37F16C9CEB /* ViewSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53F647721774252E892243AA /* ViewSnapshot.swift */; };
@@ -159,6 +160,7 @@
 		BAC94E55FF41B69407AB0406 /* DSShadow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSShadow.swift; sourceTree = "<group>"; };
 		BD11467A40DD47264EDFEACA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		BD6AB4D23DA0BD9897EF31D0 /* SnippetCollectionEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetCollectionEntity.swift; sourceTree = "<group>"; };
+		BFF94F2684CC6A5A953CAF64 /* PreviewParamConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreviewParamConfig.swift; path = PreviewParamConfig.swift; sourceTree = "<group>"; };
 		C002CC5D0BE4C24D08C08D7E /* MediaManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManaging.swift; sourceTree = "<group>"; };
 		C124BF442FF9B12E008B595C /* Snippets-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Snippets-Info.plist"; sourceTree = SOURCE_ROOT; };
 		C124BF512FFA5675008B595C /* SnippetsIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = SnippetsIcon.icon; sourceTree = "<group>"; };
@@ -321,6 +323,7 @@
 				FAA046938633C6AB461C2EC3 /* Snippet+Linkable.swift */,
 				06154F76A632D66D3A6AA3D2 /* PreviewParams.swift */,
 				DFFB472B9949D1BFCD930D2B /* PreviewParamWriter.swift */,
+				BFF94F2684CC6A5A953CAF64 /* PreviewParamConfig.swift */,
 			);
 			name = Preview;
 			path = Preview;
@@ -652,6 +655,7 @@
 				44904403A3F6403C6D88D8F8 /* FlowLayout.swift in Sources */,
 				01E24B2BB3789E64F91EB040 /* PreviewParams.swift in Sources */,
 				D48543C395C387CFBB52BDBB /* PreviewParamWriter.swift in Sources */,
+				289248BE94D0A03E55D70606 /* PreviewParamConfig.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
