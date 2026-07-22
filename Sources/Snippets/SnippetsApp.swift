@@ -78,6 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        ColorPanelCenterer.shared.install()
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(50))
             NSApp.activate(ignoringOtherApps: true)

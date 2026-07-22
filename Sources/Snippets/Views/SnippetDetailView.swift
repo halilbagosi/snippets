@@ -269,6 +269,12 @@ struct SnippetDetailView: View {
     private var codeBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
             let resolution = showPreview ? SnippetLinker.resolve(entry: snippet) : nil
+            // Once configurations exist the dropdown stays available in source
+            // view too, so switching between them doesn't require flipping to
+            // the preview first — which needs a resolution the preview-only
+            // binding above doesn't provide.
+            let configResolution = resolution
+                ?? (snippet.paramConfigs.isEmpty ? nil : SnippetLinker.resolve(entry: snippet))
             HStack(spacing: 8) {
                 SectionHeader(showPreview ? "preview" : "source")
                 if let resolution, !resolution.excluded.isEmpty {
@@ -277,17 +283,18 @@ struct SnippetDetailView: View {
                         .foregroundStyle(theme.textMuted)
                 }
                 Spacer(minLength: 16)
-                if let resolution, showPreview,
-                   !PreviewParamDetector.detect(for: language, resolution: resolution).isEmpty {
+                if let configResolution,
+                   !snippet.paramConfigs.isEmpty
+                    || !PreviewParamDetector.detect(for: language, resolution: configResolution).isEmpty {
                     PreviewConfigControl(
                         configs: snippet.paramConfigs,
                         activeID: snippet.activeParamConfigID,
                         isDirty: !paramOverrides.isEmpty,
                         accent: Color(hex: language.accentHex) ?? theme.accent,
                         theme: theme,
-                        onSave: { saveConfig(named: $0, resolution: resolution) },
-                        onUpdate: { updateConfig(id: $0, resolution: resolution) },
-                        onSelect: { selectConfig(id: $0, resolution: resolution) },
+                        onSave: { saveConfig(named: $0, resolution: configResolution) },
+                        onUpdate: { updateConfig(id: $0, resolution: configResolution) },
+                        onSelect: { selectConfig(id: $0, resolution: configResolution) },
                         onDelete: { deleteConfig(id: $0) }
                     )
                 }

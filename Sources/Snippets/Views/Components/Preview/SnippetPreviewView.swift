@@ -74,61 +74,115 @@ struct PreviewParamControls: View {
     @Binding var overrides: [String: PreviewParamValue]
     let theme: Theme
 
+    @State private var isExpanded = true
+
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 16) {
-                ForEach(params) { param in
-                    control(for: param)
+        VStack(alignment: .leading, spacing: 0) {
+            header
+            if isExpanded {
+                // An adaptive grid wraps to as many rows as it needs, so every
+                // parameter is visible at once — a horizontal strip hid all but
+                // the first few behind a scroll.
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 190), spacing: 16, alignment: .topLeading)],
+                    alignment: .leading,
+                    spacing: 12
+                ) {
+                    ForEach(params) { param in
+                        control(for: param)
+                    }
                 }
-                if !overrides.isEmpty {
-                    Button("reset") { overrides = [:] }
-                        .buttonStyle(.plain)
-                        .font(Mono.font(size: 10, weight: .semibold))
-                        .foregroundStyle(theme.accent)
-                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 10)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
         }
         .background(theme.surface.opacity(0.6))
+    }
+
+    private var header: some View {
+        HStack(spacing: 6) {
+            Button {
+                withAnimation(.snappy(duration: 0.18)) { isExpanded.toggle() }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.right")
+                        .font(Mono.font(size: 9, weight: .semibold))
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    Text("parameters")
+                        .font(Mono.font(size: 10, weight: .semibold))
+                    Text("\(params.count)")
+                        .font(Mono.font(size: 10))
+                        .foregroundStyle(theme.textMuted.opacity(0.7))
+                }
+                .foregroundStyle(theme.textMuted)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 8)
+
+            if !overrides.isEmpty {
+                Button("reset") { overrides = [:] }
+                    .buttonStyle(.plain)
+                    .font(Mono.font(size: 10, weight: .semibold))
+                    .foregroundStyle(theme.accent)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    /// One grid cell: name above, control below, so every cell is the same
+    /// shape regardless of which control it holds.
+    private func cell<Content: View>(
+        _ name: String, @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            label(name)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
     private func control(for param: PreviewParam) -> some View {
         switch param.kind {
         case .number(let fallback):
-            HStack(spacing: 6) {
-                label(param.name)
-                Slider(value: numberBinding(param.name, fallback: fallback), in: sliderRange(around: fallback))
-                    .controlSize(.mini)
-                    .frame(width: 90)
-                Text(formatted(numberBinding(param.name, fallback: fallback).wrappedValue))
-                    .font(Mono.font(size: 10))
-                    .foregroundStyle(theme.textMuted)
-                    .frame(minWidth: 30, alignment: .leading)
+            cell(param.name) {
+                HStack(spacing: 6) {
+                    Slider(value: numberBinding(param.name, fallback: fallback), in: sliderRange(around: fallback))
+                        .controlSize(.mini)
+                    Text(formatted(numberBinding(param.name, fallback: fallback).wrappedValue))
+                        .font(Mono.font(size: 10))
+                        .foregroundStyle(theme.textMuted)
+                        .frame(minWidth: 34, alignment: .trailing)
+                }
             }
         case .integer(let fallback):
-            HStack(spacing: 6) {
-                label(param.name)
-                Slider(
-                    value: numberBinding(param.name, fallback: Double(fallback)),
-                    in: sliderRange(around: Double(max(fallback, 1))),
-                    step: 1
-                )
-                .controlSize(.mini)
-                .frame(width: 90)
-                Text(String(Int(numberBinding(param.name, fallback: Double(fallback)).wrappedValue.rounded())))
-                    .font(Mono.font(size: 10))
-                    .foregroundStyle(theme.textMuted)
-                    .frame(minWidth: 30, alignment: .leading)
+            cell(param.name) {
+                HStack(spacing: 6) {
+                    Slider(
+                        value: numberBinding(param.name, fallback: Double(fallback)),
+                        in: sliderRange(around: Double(max(fallback, 1))),
+                        step: 1
+                    )
+                    .controlSize(.mini)
+                    Text(String(Int(numberBinding(param.name, fallback: Double(fallback)).wrappedValue.rounded())))
+                        .font(Mono.font(size: 10))
+                        .foregroundStyle(theme.textMuted)
+                        .frame(minWidth: 34, alignment: .trailing)
+                }
             }
         case .boolean(let fallback):
-            Toggle(isOn: booleanBinding(param.name, fallback: fallback)) { label(param.name) }
-                .toggleStyle(.switch)
-                .controlSize(.mini)
+            cell(param.name) {
+                Toggle("", isOn: booleanBinding(param.name, fallback: fallback))
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         case .choice(let fallback, let options):
-            HStack(spacing: 6) {
-                label(param.name)
+            cell(param.name) {
                 Picker("", selection: textBinding(param.name, fallback: fallback)) {
                     ForEach(options, id: \.self) { option in
                         Text(option).tag(option)
@@ -138,21 +192,21 @@ struct PreviewParamControls: View {
                 .labelsHidden()
                 .controlSize(.small)
                 .font(Mono.font(size: 10))
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         case .color(let fallback):
-            HStack(spacing: 6) {
-                label(param.name)
+            cell(param.name) {
                 ColorPicker("", selection: colorBinding(param.name, fallbackHex: fallback), supportsOpacity: false)
                     .labelsHidden()
                     .controlSize(.small)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         case .text(let fallback):
-            HStack(spacing: 6) {
-                label(param.name)
+            cell(param.name) {
                 TextField("", text: textBinding(param.name, fallback: fallback))
                     .textFieldStyle(.roundedBorder)
                     .font(Mono.font(size: 10))
-                    .frame(width: 110)
+                    .frame(maxWidth: .infinity)
             }
         }
     }

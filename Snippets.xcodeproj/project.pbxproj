@@ -94,6 +94,7 @@
 		EBC24B86BF8A8F5BA787EEA2 /* SnippetLinker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E34CFE83F37D8E1D4023CA /* SnippetLinker.swift */; };
 		F2D69E38FFD282172D3E3E2E /* OpenSnippetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BA65E851EB41731B3949F97 /* OpenSnippetIntent.swift */; };
 		F5959339759E376F7863731D /* SnippetGalleryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C656C885257DE5CAA7598C /* SnippetGalleryViewModel.swift */; };
+		F6E64CBF8C0BB58AA4AAC952 /* ColorPanelCenterer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E354289B46DE4F38455950B /* ColorPanelCenterer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -143,6 +144,7 @@
 		92AB91DFDD3B0645519C5B24 /* SnippetEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetEditorViewModel.swift; sourceTree = "<group>"; };
 		93008995B81756F2952B4E33 /* NewSnippetIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSnippetIntent.swift; sourceTree = "<group>"; };
 		941B4888889E0A24B1E11498 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FlowLayout.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
+		9E354289B46DE4F38455950B /* ColorPanelCenterer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ColorPanelCenterer.swift; path = ColorPanelCenterer.swift; sourceTree = "<group>"; };
 		9E4F3F66542C3CBC2A55DA1E /* DisintegrationShaders.metal.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = DisintegrationShaders.metal.txt; sourceTree = "<group>"; };
 		9F7660C09B90A40CD33676C8 /* react.production.min.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = react.production.min.js; sourceTree = "<group>"; };
 		A29E430CBE6D1CCAF9D1B5B9 /* SnippetPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SnippetPreviewView.swift; path = SnippetPreviewView.swift; sourceTree = "<group>"; };
@@ -339,6 +341,7 @@
 				FDCE1D4586F0F153EC14552A /* MediaManager.swift */,
 				AE3C15B51B300315B4C9C82D /* SyntaxHighlighter.swift */,
 				BD11467A40DD47264EDFEACA /* Theme.swift */,
+				9E354289B46DE4F38455950B /* ColorPanelCenterer.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -660,6 +663,7 @@
 				D48543C395C387CFBB52BDBB /* PreviewParamWriter.swift in Sources */,
 				289248BE94D0A03E55D70606 /* PreviewParamConfig.swift in Sources */,
 				6E2A43ECAC9C0E5D05506755 /* PreviewConfigControl.swift in Sources */,
+				F6E64CBF8C0BB58AA4AAC952 /* ColorPanelCenterer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
