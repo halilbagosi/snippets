@@ -342,10 +342,34 @@ struct SnippetDetailView: View {
                 shadowRadius: 10,
                 shadowY: 5
             )
+
+            // Parameter controls are their own collapsible panel below the
+            // preview, not stacked inside its fixed-height frame — so expanding
+            // them grows this column downward instead of shrinking the preview.
+            if let resolution, showPreview, language.previewKind != nil {
+                let params = detectedParams(resolution).map(\.param)
+                if !params.isEmpty {
+                    PreviewParamControls(params: params, overrides: $paramOverrides, theme: theme)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .liquidGlassSurface(
+                            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                            tint: (Color(hex: language.accentHex) ?? theme.accent).opacity(0.08),
+                            shadowRadius: 6,
+                            shadowY: 3
+                        )
+                        .transition(.opacity)
+                }
+            }
         }
         .onChange(of: snippet.persistentModelID) {
             showPreview = false
             codeAreaHeight = 0
+            paramOverrides = [:]
+        }
+        // Editing the source (or applying a config, which rewrites it) drops
+        // stale overrides; dragging a slider changes overrides only, not the
+        // code, so it never triggers this and dirty state survives.
+        .onChange(of: snippet.code) {
             paramOverrides = [:]
         }
     }

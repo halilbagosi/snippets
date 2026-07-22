@@ -26,45 +26,30 @@ struct SnippetPreviewView: View {
         }
     }
 
-    /// Previews with detectable parameters get a control bar: React props
-    /// re-render the component in place (ReactBits-style); GLSL uniforms
-    /// apply on the next frame.
+    /// Just the live preview surface. The parameter controls that drive
+    /// `paramOverrides` live in a separate panel below this one (see
+    /// `SnippetDetailView.paramControlsPanel`), so expanding them grows the
+    /// column downward instead of squeezing the preview inside a fixed frame.
+    /// Overrides still flow in here to render live: empty when the snippet has
+    /// no params, which renders identically to passing none.
     @ViewBuilder
     private func webPreview(flavor: WebPreviewFlavor) -> some View {
-        let params = PreviewParamDetector.detect(for: language, resolution: resolution).map(\.param)
-        if params.isEmpty {
-            WebPreviewView(sources: resolution.sources, flavor: flavor, theme: theme)
-        } else {
-            VStack(spacing: 0) {
-                WebPreviewView(
-                    sources: resolution.sources, flavor: flavor, theme: theme,
-                    propOverrides: paramOverrides
-                )
-                Divider()
-                PreviewParamControls(params: params, overrides: $paramOverrides, theme: theme)
-            }
-            .onChange(of: entryCode) { paramOverrides = [:] }
-        }
+        WebPreviewView(
+            sources: resolution.sources, flavor: flavor, theme: theme,
+            propOverrides: paramOverrides
+        )
     }
 
-    /// Metal previews with a `SnippetParams` struct get the same control
-    /// bar; values are packed into fragment buffer(1) every frame.
+    /// Metal previews pack `paramOverrides` into fragment buffer(1) every
+    /// frame; `params` defines the buffer layout and is empty for shaders
+    /// without a `SnippetParams` struct.
     @ViewBuilder
     private var metalPreview: some View {
         let params = PreviewParamDetector.detect(for: language, resolution: resolution).map(\.param)
-        if params.isEmpty {
-            MetalShaderPreviewView(entry: entryCode, helpers: helperCodes, theme: theme)
-        } else {
-            VStack(spacing: 0) {
-                MetalShaderPreviewView(
-                    entry: entryCode, helpers: helperCodes, theme: theme,
-                    params: params, paramValues: paramOverrides
-                )
-                Divider()
-                PreviewParamControls(params: params, overrides: $paramOverrides, theme: theme)
-            }
-            .onChange(of: entryCode) { paramOverrides = [:] }
-        }
+        MetalShaderPreviewView(
+            entry: entryCode, helpers: helperCodes, theme: theme,
+            params: params, paramValues: paramOverrides
+        )
     }
 }
 
@@ -74,7 +59,7 @@ struct PreviewParamControls: View {
     @Binding var overrides: [String: PreviewParamValue]
     let theme: Theme
 
-    @State private var isExpanded = true
+    @State private var isExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
