@@ -28,15 +28,23 @@ final class ColorPanelCenterer: NSObject {
 
     @objc private func windowDidBecomeKey(_ notification: Notification) {
         guard let panel = notification.object as? NSColorPanel else { return }
-        center(panel)
+        // AppKit restores the panel's autosaved frame right after it becomes
+        // key, so centering synchronously here loses the race. Deferring to the
+        // next runloop tick runs the reposition after that restore wins.
+        DispatchQueue.main.async { [weak self] in
+            self?.center(panel)
+        }
     }
 
     private func center(_ panel: NSColorPanel) {
-        // The color panel is itself key by this point, so `mainWindow` is the
-        // document window behind it; fall back to any visible ordinary window,
-        // then to the screen, so the panel is never left off in a corner.
+        // A sheet (the snippet detail modal) is not a main window, so prefer the
+        // key/main window and fall back to the largest visible ordinary window,
+        // which is the document window the sheet is attached to.
         let host = NSApp.mainWindow
-            ?? NSApp.windows.first { $0.isVisible && !($0 is NSPanel) && $0.canBecomeMain }
+            ?? NSApp.keyWindow.flatMap { $0 is NSPanel ? nil : $0 }
+            ?? NSApp.windows
+                .filter { $0.isVisible && !($0 is NSPanel) }
+                .max { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }
         guard let hostFrame = host?.frame else {
             panel.center()
             return
