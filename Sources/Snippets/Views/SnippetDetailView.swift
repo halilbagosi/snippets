@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import AVKit
 #if canImport(AppKit)
 import AppKit
@@ -6,6 +7,7 @@ import AppKit
 
 struct SnippetDetailView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.modelContext) private var modelContext
 
     let snippet: Snippet
     /// Whether a previously-viewed snippet exists to navigate back to; drives
@@ -275,6 +277,20 @@ struct SnippetDetailView: View {
                         .foregroundStyle(theme.textMuted)
                 }
                 Spacer(minLength: 16)
+                if let resolution, showPreview,
+                   !PreviewParamDetector.detect(for: language, resolution: resolution).isEmpty {
+                    PreviewConfigControl(
+                        configs: snippet.paramConfigs,
+                        activeID: snippet.activeParamConfigID,
+                        isDirty: !paramOverrides.isEmpty,
+                        accent: Color(hex: language.accentHex) ?? theme.accent,
+                        theme: theme,
+                        onSave: { saveConfig(named: $0, resolution: resolution) },
+                        onUpdate: { updateConfig(id: $0, resolution: resolution) },
+                        onSelect: { selectConfig(id: $0, resolution: resolution) },
+                        onDelete: { deleteConfig(id: $0) }
+                    )
+                }
                 if language.previewKind != nil {
                     FilterTag(
                         label: showPreview ? "code" : "preview",
@@ -324,6 +340,60 @@ struct SnippetDetailView: View {
             showPreview = false
             codeAreaHeight = 0
             paramOverrides = [:]
+        }
+    }
+
+    /// Params the previewed source currently declares.
+    private func detectedParams(_ resolution: SnippetLinker.Resolution) -> [DetectedParam] {
+        PreviewParamDetector.detect(for: language, resolution: resolution)
+    }
+
+    /// Rewrites the snippet's source so it declares `values`, then clears the
+    /// live overrides — the code now *is* the config, so nothing is overridden.
+    private func applyValues(
+        _ values: [String: PreviewParamValue], resolution: SnippetLinker.Resolution
+    ) {
+        let detected = detectedParams(resolution)
+        snippet.code = PreviewParamWriter.apply(values, to: snippet.code, params: detected)
+        snippet.updatedAt = .now
+        paramOverrides = [:]
+    }
+
+    private func saveConfig(named name: String, resolution: SnippetLinker.Resolution) {
+        let declared = detectedParams(resolution).map(\.param)
+        snippet.paramConfigs = PreviewParamConfigStore.saving(
+            current: paramOverrides, declared: declared, named: name, into: snippet.paramConfigs
+        )
+        if let saved = snippet.paramConfigs.last {
+            snippet.activeParamConfigID = saved.id
+            applyValues(saved.values, resolution: resolution)
+        }
+    }
+
+    private func updateConfig(id: UUID, resolution: SnippetLinker.Resolution) {
+        let declared = detectedParams(resolution).map(\.param)
+        snippet.paramConfigs = PreviewParamConfigStore.updating(
+            id: id, to: paramOverrides, declared: declared, in: snippet.paramConfigs
+        )
+        if let updated = snippet.paramConfigs.first(where: { $0.id == id }) {
+            applyValues(updated.values, resolution: resolution)
+        }
+    }
+
+    private func selectConfig(id: UUID, resolution: SnippetLinker.Resolution) {
+        guard let config = snippet.paramConfigs.first(where: { $0.id == id }) else { return }
+        snippet.activeParamConfigID = id
+        let declared = detectedParams(resolution).map(\.param)
+        applyValues(
+            PreviewParamConfigStore.resolvedValues(for: config, declared: declared),
+            resolution: resolution
+        )
+    }
+
+    private func deleteConfig(id: UUID) {
+        snippet.paramConfigs = PreviewParamConfigStore.deleting(id: id, from: snippet.paramConfigs)
+        if snippet.activeParamConfigID == id {
+            snippet.activeParamConfigID = snippet.paramConfigs.first(where: \.isDefault)?.id
         }
     }
 
