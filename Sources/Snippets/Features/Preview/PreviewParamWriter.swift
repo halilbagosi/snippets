@@ -46,16 +46,50 @@ enum PreviewParamWriter {
         case .boolean(let flag):
             return flag ? "true" : "false"
         case .string(let string):
-            guard let quote = existing.first, quote == "\"" || quote == "'" else { return string }
-            return "\(quote)\(string)\(quote)"
+            guard let quote = existing.first, quote == "\"" || quote == "'" else {
+                return singleLine(string)
+            }
+            return "\(quote)\(escaped(string, delimitedBy: quote))\(quote)"
         }
+    }
+
+    /// Escapes a value for embedding in a source string literal delimited by
+    /// `quote`. Text params are edited through a free-form field, so a value
+    /// can contain the very delimiter it is written back inside; emitting it
+    /// raw produces invalid source, and — because the parameter is then no
+    /// longer detectable — hides the controls that could repair it.
+    ///
+    /// Backslash must be escaped first, or it would double-escape the
+    /// sequences introduced below.
+    private static func escaped(_ value: String, delimitedBy quote: Character) -> String {
+        var out = ""
+        for character in value {
+            switch character {
+            case "\\": out += #"\\"#
+            case quote: out += "\\\(quote)"
+            case "\n": out += #"\n"#
+            case "\r": out += #"\r"#
+            case "\t": out += #"\t"#
+            default: out.append(character)
+            }
+        }
+        return out
+    }
+
+    /// A `// = value` annotation has no delimiter to escape, but a newline
+    /// would swallow the rest of the declaration into the comment.
+    private static func singleLine(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\r\n", with: " ")
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\r", with: " ")
     }
 
     private static func bareText(_ value: PreviewParamValue) -> String {
         switch value {
         case .number(let number): return numberText(number)
         case .boolean(let flag): return flag ? "true" : "false"
-        case .string(let string): return string
+        case .string(let string): return singleLine(string)
         }
     }
 

@@ -92,10 +92,13 @@ enum PreviewParamDetector {
             if literal == "true" || literal == "false" {
                 kind = .boolean(default: literal == "true")
             } else if literal.hasPrefix("\"") || literal.hasPrefix("'") {
-                let value = String(literal.dropFirst().dropLast())
+                // Escape sequences are decoded so the control shows the real
+                // string; `PreviewParamWriter` re-escapes on the way back, so a
+                // value containing the delimiter survives a full round trip.
+                let value = unescapedLiteralBody(literal)
                 if value.range(of: #"^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?$"#, options: .regularExpression) != nil {
                     kind = .color(defaultHex: value)
-                } else if value.count <= 60, !value.contains("\\") {
+                } else if value.count <= 60 {
                     let options = stringOptions(for: name, default: value, in: code)
                     kind = options.count > 1 ? .choice(default: value, options: options) : .text(default: value)
                 } else {
@@ -340,6 +343,28 @@ enum PreviewParamDetector {
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
         let range = NSRange(region ?? text.startIndex..<text.endIndex, in: text)
         return regex.matches(in: text, range: range)
+    }
+
+    /// Strips a JS string literal's surrounding quotes and decodes the escape
+    /// sequences `PreviewParamWriter` emits, so the detected default is the
+    /// value the user actually sees. Unknown escapes keep their escaped
+    /// character (`\d` → `d`), matching JavaScript.
+    private static func unescapedLiteralBody(_ literal: String) -> String {
+        var out = ""
+        var iterator = literal.dropFirst().dropLast().makeIterator()
+        while let character = iterator.next() {
+            guard character == "\\", let escapedCharacter = iterator.next() else {
+                out.append(character)
+                continue
+            }
+            switch escapedCharacter {
+            case "n": out.append("\n")
+            case "r": out.append("\r")
+            case "t": out.append("\t")
+            default: out.append(escapedCharacter)
+            }
+        }
+        return out
     }
 
     /// With `allowMissingTrailing`, unmatched optional trailing groups are
