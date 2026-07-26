@@ -1,18 +1,26 @@
 import AppKit
 
-/// Centers the shared color panel over the app's window.
+/// Centers the shared color panel over the app's window each time it opens.
 ///
 /// Every SwiftUI `ColorPicker` in the app opens the one shared
 /// `NSColorPanel`, and AppKit restores whatever frame that panel was last
-/// left at — persisted in `NSWindow Frame NSColorPanel`. In practice it
-/// reopens in the bottom-left corner of the screen, nowhere near the swatch
-/// that opened it. Repositioning it as it becomes key puts it where the
-/// user is looking instead.
+/// left at — persisted as `NSWindow Frame NSColorPanel`, in practice the
+/// bottom-left corner of the screen, nowhere near the swatch that opened it.
+///
+/// The hook is `didUpdateNotification` rather than the more obvious
+/// `didBecomeKeyNotification`: `NSColorPanel` is an `NSPanel`, and a panel
+/// only takes key when it actually needs input, so opening one frequently
+/// posts no key notification at all. `didUpdate` fires for visible windows
+/// on the event-loop cycle, which is after AppKit has restored the
+/// autosaved frame — so repositioning here also wins that race.
 @MainActor
 final class ColorPanelCenterer: NSObject {
     static let shared = ColorPanelCenterer()
 
     private var isInstalled = false
+    /// Centering happens once per presentation, so the user stays free to
+    /// drag the panel wherever they like while it is open.
+    private var hasCenteredThisPresentation = false
 
     /// Idempotent, so it is safe to call from every app launch path.
     func install() {
@@ -20,26 +28,36 @@ final class ColorPanelCenterer: NSObject {
         isInstalled = true
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(windowDidBecomeKey(_:)),
-            name: NSWindow.didBecomeKeyNotification,
+            selector: #selector(windowDidUpdate(_:)),
+            name: NSWindow.didUpdateNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowWillClose(_:)),
+            name: NSWindow.willCloseNotification,
             object: nil
         )
     }
 
-    @objc private func windowDidBecomeKey(_ notification: Notification) {
-        guard let panel = notification.object as? NSColorPanel else { return }
-        // AppKit restores the panel's autosaved frame right after it becomes
-        // key, so centering synchronously here loses the race. Deferring to the
-        // next runloop tick runs the reposition after that restore wins.
-        DispatchQueue.main.async { [weak self] in
-            self?.center(panel)
-        }
+    @objc private func windowDidUpdate(_ notification: Notification) {
+        guard let panel = notification.object as? NSColorPanel,
+              panel.isVisible,
+              !hasCenteredThisPresentation else { return }
+        hasCenteredThisPresentation = true
+        center(panel)
+    }
+
+    /// Closing arms the next presentation to be centered again.
+    @objc private func windowWillClose(_ notification: Notification) {
+        guard notification.object is NSColorPanel else { return }
+        hasCenteredThisPresentation = false
     }
 
     private func center(_ panel: NSColorPanel) {
-        // A sheet (the snippet detail modal) is not a main window, so prefer the
-        // key/main window and fall back to the largest visible ordinary window,
-        // which is the document window the sheet is attached to.
+        // A sheet (the snippet detail modal) is not a main window, so prefer
+        // the key/main window and fall back to the largest visible ordinary
+        // window, which is the document window a sheet is attached to.
         let host = NSApp.mainWindow
             ?? NSApp.keyWindow.flatMap { $0 is NSPanel ? nil : $0 }
             ?? NSApp.windows
