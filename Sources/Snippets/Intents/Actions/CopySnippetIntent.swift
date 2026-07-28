@@ -30,10 +30,7 @@ struct CopySnippetIntent: AppIntent {
         guard let model = try SnippetStore.snippet(uuid: snippetID, in: context) else {
             throw SnippetIntentError.snippetNotFound
         }
-        // Mirror in-app copy: bump copyCount (feeds "Frequently Used"); leave
-        // updatedAt untouched so the gallery order doesn't shift.
-        model.copyCount += 1
-        try? context.save()
+        SnippetStore.recordCopy(model, in: context)
         return model
     }
 }
