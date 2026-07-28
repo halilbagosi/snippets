@@ -133,6 +133,8 @@
 		A1B2C3D40001QUICKRESULTS /* QuickCopyResults.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002QUICKRESULTS /* QuickCopyResults.swift */; };
 		A1B2C3D40001QUICKSELECT /* QuickCopySelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002QUICKSELECT /* QuickCopySelection.swift */; };
 		A1B2C3D40001TQUICKSELECT /* QuickCopySelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002TQUICKSELECT /* QuickCopySelectionTests.swift */; };
+		A1B2C3D40001QUICKVM /* QuickCopyViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002QUICKVM /* QuickCopyViewModel.swift */; };
+		A1B2C3D40001TQUICKVM /* QuickCopyViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002TQUICKVM /* QuickCopyViewModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -265,6 +267,8 @@
 		A1B2C3D40002QUICKRESULTS /* QuickCopyResults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopyResults.swift; path = QuickCopyResults.swift; sourceTree = "<group>"; };
 		A1B2C3D40002QUICKSELECT /* QuickCopySelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopySelection.swift; path = QuickCopySelection.swift; sourceTree = "<group>"; };
 		A1B2C3D40002TQUICKSELECT /* QuickCopySelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopySelectionTests.swift; path = QuickCopySelectionTests.swift; sourceTree = "<group>"; };
+		A1B2C3D40002QUICKVM /* QuickCopyViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopyViewModel.swift; path = QuickCopyViewModel.swift; sourceTree = "<group>"; };
+		A1B2C3D40002TQUICKVM /* QuickCopyViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopyViewModelTests.swift; path = QuickCopyViewModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXContainerItemProxy section */
@@ -289,6 +293,7 @@
 		5E57E5700000000000000003 /* SnippetsTests */ = {
 			isa = PBXGroup;
 			children = (
+				A1B2C3D40002TQUICKVM /* QuickCopyViewModelTests.swift */,
 				A1B2C3D40002TQUICKSELECT /* QuickCopySelectionTests.swift */,
 				5E57E5700000000000000100 /* AppearanceSettingsTests.swift */,
 				5E57E5700000000000000101 /* CollectionMoveTreeTests.swift */,
@@ -650,6 +655,7 @@
 		A1B2C3D4364B5CA722DD5D13 /* QuickCopy */ = {
 			isa = PBXGroup;
 			children = (
+				A1B2C3D40002QUICKVM /* QuickCopyViewModel.swift */,
 				A1B2C3D40002QUICKSELECT /* QuickCopySelection.swift */,
 				A1B2C3D40002QUICKRESULTS /* QuickCopyResults.swift */,
 				A1B2C3D40002QUICKSCOPE /* QuickCopyScope.swift */,
@@ -777,6 +783,7 @@
 				5E57E570000000000000020E /* SnippetGalleryViewModelTests.swift in Sources */,
 				5E57E570000000000000020F /* SnippetIntentLogicTests.swift in Sources */,
 				5E57E5700000000000000210 /* SnippetLinkerTests.swift in Sources */,
+				A1B2C3D40001TQUICKVM /* QuickCopyViewModelTests.swift in Sources */,
 				A1B2C3D40001TQUICKSELECT /* QuickCopySelectionTests.swift in Sources */,
 				5E57E5700000000000000230 /* QuickCopyResultsTests.swift in Sources */,
 				5E57E5700000000000000211 /* SnippetQueryFilterTests.swift in Sources */,
@@ -867,6 +874,7 @@
 				C98F41AE96957AE96871BC9E /* ShaderPipeline.swift in Sources */,
 				CB7D4731B1A3464B16D3758C /* SwiftPreviewHarness.swift in Sources */,
 				A1B2C3D40001PREVIEWTRUST /* PreviewTrust.swift in Sources */,
+				A1B2C3D40001QUICKVM /* QuickCopyViewModel.swift in Sources */,
 				A1B2C3D40001QUICKSELECT /* QuickCopySelection.swift in Sources */,
 				A1B2C3D40001QUICKRESULTS /* QuickCopyResults.swift in Sources */,
 				A1B2C3D40001QUICKSCOPE /* QuickCopyScope.swift in Sources */,
