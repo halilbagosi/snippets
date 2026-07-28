@@ -63,6 +63,20 @@ public extension DSToken {
         /// so it should not take as long as the arrival did.
         public static let toastOut: Animation = .easeOut(duration: 0.18)
 
+        // MARK: - Status item panels
+        //
+        // `overlay` is modal-scale (response 0.4); the budget at the top of
+        // this file puts small popovers at 125–200ms. Damping is 1.0 — no
+        // gesture momentum precedes a click on the menu bar, and a menu that
+        // bounces after a plain click reads as unserious.
+
+        /// Menu bar and status item panels arriving.
+        public static let popover: Animation = .spring(response: 0.22, dampingFraction: 1.0)
+
+        /// …and leaving. Like ``toastOut``, dismissal gets out of the way
+        /// faster than the arrival took.
+        public static let popoverOut: Animation = .easeOut(duration: 0.13)
+
         // MARK: - Interruptible
         //
         // `interactiveSpring` carries velocity when it is retargeted mid-flight,

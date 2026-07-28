@@ -139,6 +139,8 @@
 		A1B2C3D40001TCODESHAPE /* CodeShapeHeuristicsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002TCODESHAPE /* CodeShapeHeuristicsTests.swift */; };
 		A1B2C3D40001CLIPCAPTURE /* ClipboardCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002CLIPCAPTURE /* ClipboardCapture.swift */; };
 		A1B2C3D40001TCLIPCAPTURE /* ClipboardCaptureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002TCLIPCAPTURE /* ClipboardCaptureTests.swift */; };
+		A1B2C3D40001QUICKROW /* QuickCopyRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002QUICKROW /* QuickCopyRow.swift */; };
+		A1B2C3D40001QUICKPANEL /* QuickCopyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002QUICKPANEL /* QuickCopyPanel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -277,6 +279,8 @@
 		A1B2C3D40002TCODESHAPE /* CodeShapeHeuristicsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CodeShapeHeuristicsTests.swift; path = CodeShapeHeuristicsTests.swift; sourceTree = "<group>"; };
 		A1B2C3D40002CLIPCAPTURE /* ClipboardCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClipboardCapture.swift; path = ClipboardCapture.swift; sourceTree = "<group>"; };
 		A1B2C3D40002TCLIPCAPTURE /* ClipboardCaptureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClipboardCaptureTests.swift; path = ClipboardCaptureTests.swift; sourceTree = "<group>"; };
+		A1B2C3D40002QUICKROW /* QuickCopyRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopyRow.swift; path = QuickCopyRow.swift; sourceTree = "<group>"; };
+		A1B2C3D40002QUICKPANEL /* QuickCopyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopyPanel.swift; path = QuickCopyPanel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXContainerItemProxy section */
@@ -576,6 +580,7 @@
 		B5991E14D22A43A53A83D5F4 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A1B2C3D40003VIEWSQUICKCOPY /* QuickCopy */,
 				527137D235CE709BA5106BD6 /* ContentView.swift */,
 				B3AFA46BF758F60544FD944C /* SnippetDetailView.swift */,
 				59B7E708E9A71A8D278A41B3 /* SnippetEditorView.swift */,
@@ -681,6 +686,15 @@
 				A1B2C3D40002CODESHAPE /* CodeShapeHeuristics.swift */,
 			);
 			path = QuickCapture;
+			sourceTree = "<group>";
+		};
+		A1B2C3D40003VIEWSQUICKCOPY /* QuickCopy */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D40002QUICKPANEL /* QuickCopyPanel.swift */,
+				A1B2C3D40002QUICKROW /* QuickCopyRow.swift */,
+			);
+			path = QuickCopy;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -896,6 +910,8 @@
 				C98F41AE96957AE96871BC9E /* ShaderPipeline.swift in Sources */,
 				CB7D4731B1A3464B16D3758C /* SwiftPreviewHarness.swift in Sources */,
 				A1B2C3D40001PREVIEWTRUST /* PreviewTrust.swift in Sources */,
+				A1B2C3D40001QUICKPANEL /* QuickCopyPanel.swift in Sources */,
+				A1B2C3D40001QUICKROW /* QuickCopyRow.swift in Sources */,
 				A1B2C3D40001CLIPCAPTURE /* ClipboardCapture.swift in Sources */,
 				A1B2C3D40001CODESHAPE /* CodeShapeHeuristics.swift in Sources */,
 				A1B2C3D40001QUICKVM /* QuickCopyViewModel.swift in Sources */,
