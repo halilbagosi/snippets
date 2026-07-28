@@ -141,6 +141,7 @@
 		A1B2C3D40001TCLIPCAPTURE /* ClipboardCaptureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002TCLIPCAPTURE /* ClipboardCaptureTests.swift */; };
 		A1B2C3D40001QUICKROW /* QuickCopyRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002QUICKROW /* QuickCopyRow.swift */; };
 		A1B2C3D40001QUICKPANEL /* QuickCopyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002QUICKPANEL /* QuickCopyPanel.swift */; };
+		A1B2C3D40001MENUBAR /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002MENUBAR /* MenuBarController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -281,6 +282,7 @@
 		A1B2C3D40002TCLIPCAPTURE /* ClipboardCaptureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClipboardCaptureTests.swift; path = ClipboardCaptureTests.swift; sourceTree = "<group>"; };
 		A1B2C3D40002QUICKROW /* QuickCopyRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopyRow.swift; path = QuickCopyRow.swift; sourceTree = "<group>"; };
 		A1B2C3D40002QUICKPANEL /* QuickCopyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopyPanel.swift; path = QuickCopyPanel.swift; sourceTree = "<group>"; };
+		A1B2C3D40002MENUBAR /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MenuBarController.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXContainerItemProxy section */
@@ -488,6 +490,7 @@
 		4CAABA42AB1C2E75A4F7BEAD /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				A1B2C3D40002MENUBAR /* MenuBarController.swift */,
 				6C86D0794EADE7F8B51B1BAF /* Clipboard.swift */,
 				45DB595C53F53F1E91521AED /* LanguageDetector.swift */,
 				45DB595C53F53F1E91521AEE /* LanguageDetectorRules.swift */,
@@ -910,6 +913,7 @@
 				C98F41AE96957AE96871BC9E /* ShaderPipeline.swift in Sources */,
 				CB7D4731B1A3464B16D3758C /* SwiftPreviewHarness.swift in Sources */,
 				A1B2C3D40001PREVIEWTRUST /* PreviewTrust.swift in Sources */,
+				A1B2C3D40001MENUBAR /* MenuBarController.swift in Sources */,
 				A1B2C3D40001QUICKPANEL /* QuickCopyPanel.swift in Sources */,
 				A1B2C3D40001QUICKROW /* QuickCopyRow.swift in Sources */,
 				A1B2C3D40001CLIPCAPTURE /* ClipboardCapture.swift in Sources */,
