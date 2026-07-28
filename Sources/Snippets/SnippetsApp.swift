@@ -80,6 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         ColorPanelCenterer.shared.install()
         MenuBarController.shared.install()
+        ClipboardMonitor.shared.start()
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(50))
             NSApp.activate(ignoringOtherApps: true)

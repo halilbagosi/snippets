@@ -25,6 +25,8 @@ struct QuickCopyPanel: View {
     /// Passed the snippet to reveal, or nil for a plain "open the app".
     let onOpenMainWindow: (Snippet?) -> Void
     let onQuit: () -> Void
+    /// Called when the user accepts a capture; hands the code to the editor.
+    let onSaveCapture: (ClipboardCapture.Candidate) -> Void
 
     @State private var hasEntered = false
 
@@ -38,6 +40,18 @@ struct QuickCopyPanel: View {
         VStack(spacing: 0) {
             searchField
             scopePicker
+            if let capture = model.pendingCapture {
+                CaptureBanner(
+                    candidate: capture,
+                    onSave: {
+                        model.pendingCapture = nil
+                        onSaveCapture(capture)
+                        onDismiss()
+                    },
+                    onDismiss: { model.pendingCapture = nil }
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
             Divider().opacity(0.5)
             results
             Divider().opacity(0.5)
@@ -55,6 +69,18 @@ struct QuickCopyPanel: View {
             withAnimation(reduceMotion ? DSToken.Motion.popoverOut : DSToken.Motion.popover) {
                 hasEntered = true
             }
+        }
+        // The banner grows in place and pushes the list down — `reveal` is
+        // exactly that use case.
+        .animation(reduceMotion ? nil : DSToken.Motion.reveal, value: model.pendingCapture)
+        .task(id: model.pendingCapture) {
+            // A capture is a moment, not an inbox: if it is not acted on it
+            // goes, so opening the panel later never shows a stale banner.
+            guard model.pendingCapture != nil else { return }
+            try? await Task.sleep(for: .seconds(6))
+            guard !Task.isCancelled else { return }
+            model.pendingCapture = nil
+            onDismiss()
         }
         .onKeyPress(.upArrow) { model.move(by: -1); return .handled }
         .onKeyPress(.downArrow) { model.move(by: 1); return .handled }

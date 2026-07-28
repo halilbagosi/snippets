@@ -171,6 +171,7 @@ struct AppearanceView: View {
     private var behaviorCard: some View {
         @Bindable var settings = appearanceSettings
         @Bindable var trust = previewTrust
+        @Bindable var capture = ClipboardMonitor.shared
 
         return glassCard {
             sectionLabel("Behavior")
@@ -216,6 +217,17 @@ struct AppearanceView: View {
                 title: "Run Previews Automatically",
                 caption: "Off, a preview waits for Run instead of executing when you open a snippet",
                 isOn: $trust.autoRunPreviews
+            )
+
+            Divider().opacity(0.5)
+
+            // The caption is the user's only notice that the app reads the
+            // clipboard, so it says so plainly.
+            behaviorRow(
+                icon: "doc.on.clipboard",
+                title: "Offer to Save Copied Code",
+                caption: "Watch the clipboard and offer to save code you copy elsewhere",
+                isOn: $capture.isEnabled
             )
         }
     }

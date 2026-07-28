@@ -167,7 +167,11 @@ final class MenuBarController: NSObject, NSWindowDelegate {
                     AppIntentNavigator.shared.pendingOpenSnippetUUID = uuid
                 }
             },
-            onQuit: { NSApp.terminate(nil) }
+            onQuit: { NSApp.terminate(nil) },
+            onSaveCapture: { candidate in
+                MainWindowOpener.activate()
+                CaptureDraft.shared.pending = candidate
+            }
         )
         // The panel lives outside the scene graph, so it inherits nothing from
         // the WindowGroup's `.modelContainer`.
