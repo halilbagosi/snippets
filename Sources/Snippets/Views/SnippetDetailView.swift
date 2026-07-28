@@ -331,6 +331,7 @@ struct SnippetDetailView: View {
                     SnippetPreviewView(
                         resolution: resolution, language: language, theme: theme,
                         params: detected.map(\.param),
+                        snippetID: snippet.uuid,
                         paramOverrides: $paramOverrides
                     )
                     .frame(height: previewHeight)

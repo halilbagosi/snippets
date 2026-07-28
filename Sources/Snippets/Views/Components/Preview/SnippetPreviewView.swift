@@ -11,8 +11,14 @@ struct SnippetPreviewView: View {
     /// view. Deriving them here instead would re-run the detector on every
     /// override change — i.e. every frame of a slider drag.
     let params: [PreviewParam]
+    /// Identifies the snippet for trust decisions (run approval, CDN grants).
+    /// Nil only for snippets predating the uuid backfill, which are treated as
+    /// ungranted — the conservative direction.
+    var snippetID: UUID? = nil
 
     @Binding var paramOverrides: [String: PreviewParamValue]
+
+    @Environment(PreviewTrust.self) private var trust
 
     private var entryCode: String { resolution.sources.last?.code ?? "" }
     private var helperCodes: [String] { resolution.sources.dropLast().map(\.code) }
@@ -20,14 +26,88 @@ struct SnippetPreviewView: View {
     var body: some View {
         switch language.previewKind {
         case .web(let flavor):
-            webPreview(flavor: flavor)
+            gated { webPreview(flavor: flavor) }
         case .metal:
-            metalPreview
+            gated { metalPreview }
         case .swiftUI:
+            // The Swift flavor keeps its own Run gate unconditionally: it
+            // compiles and loads native code into this process, so it is the
+            // one engine that must stay explicit even with auto-run enabled.
             SwiftPreviewHostView(entry: entryCode, helpers: helperCodes, theme: theme)
         case nil:
             PreviewUnavailableView(message: "No live preview for \(language.rawValue).", theme: theme)
         }
+    }
+
+    /// Wraps a preview engine in the consent layer: nothing executes until
+    /// auto-run is on or the user has pressed Run for this snippet.
+    @ViewBuilder
+    private func gated<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        if trust.mayRun(snippetID) {
+            VStack(spacing: 0) {
+                if !pendingCDNSpecifiers.isEmpty { cdnBanner }
+                content()
+            }
+        } else {
+            runPrompt
+        }
+    }
+
+    private var runPrompt: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "play.circle")
+                .font(.system(size: 30, weight: .light))
+                .foregroundStyle(theme.accent)
+            Text("Runs this snippet's code to render the preview.")
+                .font(Mono.font(size: 11))
+                .foregroundStyle(theme.textMuted)
+            FilterTag(label: "run", icon: "play.fill", accent: theme.accent, isSelected: true) {
+                trust.approveRun(snippetID)
+            }
+            Text("Always run previews automatically in Settings → Preferences.")
+                .font(Mono.font(size: 10))
+                .foregroundStyle(theme.textMuted.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(DSToken.Spacing.md)
+    }
+
+    /// npm packages this snippet wants from esm.sh, if it has not been granted
+    /// them. Non-empty only for React entries — no other flavor resolves npm
+    /// specifiers, so no other flavor can prompt.
+    private var pendingCDNSpecifiers: [String] {
+        guard case .web(let flavor) = language.previewKind, flavor == .react,
+              !trust.allowsCDNModules(snippetID) else { return [] }
+        return WebPreviewHTMLBuilder.cdnSpecifiers(
+            linked: resolution.sources, entryFlavor: flavor
+        )
+    }
+
+    /// The one place a preview can ask to reach the network. Deliberately a
+    /// visible bar rather than a silent capability: allowing it both runs
+    /// third-party code and opens the only channel by which snippet code can
+    /// send anything out.
+    private var cdnBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "network")
+                .font(Mono.font(size: 10, weight: .semibold))
+            Text("Imports \(pendingCDNSpecifiers.joined(separator: ", ")) from esm.sh")
+                .font(Mono.font(size: 10))
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: 8)
+            Button("allow") {
+                trust.setCDNModulesAllowed(true, for: snippetID)
+            }
+            .buttonStyle(.plain)
+            .font(Mono.font(size: 10, weight: .semibold))
+            .foregroundStyle(theme.accent)
+        }
+        .foregroundStyle(theme.textMuted)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity)
+        .background(theme.surface.opacity(0.6))
     }
 
     /// Just the live preview surface. The parameter controls that drive
@@ -40,7 +120,8 @@ struct SnippetPreviewView: View {
     private func webPreview(flavor: WebPreviewFlavor) -> some View {
         WebPreviewView(
             sources: resolution.sources, flavor: flavor, theme: theme,
-            propOverrides: paramOverrides
+            propOverrides: paramOverrides,
+            policy: trust.policy(for: snippetID)
         )
     }
 

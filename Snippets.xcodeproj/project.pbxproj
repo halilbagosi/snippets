@@ -30,6 +30,8 @@
 		5E57E5700000000000000214 /* SwiftPreviewHarnessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000114 /* SwiftPreviewHarnessTests.swift */; };
 		5E57E5700000000000000215 /* TrashLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000115 /* TrashLifecycleTests.swift */; };
 		5E57E5700000000000000216 /* UUIDBackfillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000116 /* UUIDBackfillTests.swift */; };
+		5E57E5700000000000000B16 /* PreviewTrustTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000A16 /* PreviewTrustTests.swift */; };
+		5E57E5700000000000000916 /* MediaFileNameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000816 /* MediaFileNameTests.swift */; };
 		5E57E5700000000000000217 /* WebPreviewHTMLBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000117 /* WebPreviewHTMLBuilderTests.swift */; };
 		002912E32D5AD77A965C6669 /* SnippetCollectionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72351DDB378B8C22EB8FD8EE /* SnippetCollectionCard.swift */; };
 		01E24B2BB3789E64F91EB040 /* PreviewParams.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06154F76A632D66D3A6AA3D2 /* PreviewParams.swift */; };
@@ -109,6 +111,7 @@
 		C6C3F6B866BAD5A697725954 /* CollectionMoveTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B312587778E5F792F91D4E8 /* CollectionMoveTree.swift */; };
 		C98F41AE96957AE96871BC9E /* ShaderPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4BA448BBE813C0F4A7135E4 /* ShaderPipeline.swift */; };
 		CB7D4731B1A3464B16D3758C /* SwiftPreviewHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703E43A09D4FE56C62360BAC /* SwiftPreviewHarness.swift */; };
+		A1B2C3D40001PREVIEWTRUST /* PreviewTrust.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002PREVIEWTRUST /* PreviewTrust.swift */; };
 		CEFBD8DCF49611190B9FEAB9 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD11467A40DD47264EDFEACA /* Theme.swift */; };
 		D004495F99FF2617CA144285 /* SwiftPreviewHostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 291E443B908EFCB0A828218D /* SwiftPreviewHostView.swift */; };
 		D0ADA8F0EE1B3C708048AA88 /* SnippetsAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE3D0EA66FC02B4904B45BB /* SnippetsAppShortcuts.swift */; };
@@ -151,6 +154,8 @@
 		5E57E5700000000000000114 /* SwiftPreviewHarnessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftPreviewHarnessTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000115 /* TrashLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashLifecycleTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000116 /* UUIDBackfillTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UUIDBackfillTests.swift; sourceTree = "<group>"; };
+		5E57E5700000000000000A16 /* PreviewTrustTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreviewTrustTests.swift; path = PreviewTrustTests.swift; sourceTree = "<group>"; };
+		5E57E5700000000000000816 /* MediaFileNameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MediaFileNameTests.swift; path = MediaFileNameTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000117 /* WebPreviewHTMLBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebPreviewHTMLBuilderTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000002 /* SnippetsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SnippetsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		01362798D5520FFC54DBDD42 /* DSGlassContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSGlassContainer.swift; sourceTree = "<group>"; };
@@ -189,6 +194,7 @@
 		6C86D0794EADE7F8B51B1BAF /* Clipboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipboard.swift; sourceTree = "<group>"; };
 		6CE2410E27F5506076DCBF84 /* AppearanceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettings.swift; sourceTree = "<group>"; };
 		703E43A09D4FE56C62360BAC /* SwiftPreviewHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SwiftPreviewHarness.swift; path = SwiftPreviewHarness.swift; sourceTree = "<group>"; };
+		A1B2C3D40002PREVIEWTRUST /* PreviewTrust.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreviewTrust.swift; path = PreviewTrust.swift; sourceTree = "<group>"; };
 		7097C669FB160D74155C104F /* AppIntentNavigator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntentNavigator.swift; sourceTree = "<group>"; };
 		72351DDB378B8C22EB8FD8EE /* SnippetCollectionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetCollectionCard.swift; sourceTree = "<group>"; };
 		74C656C885257DE5CAA7598C /* SnippetGalleryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetGalleryViewModel.swift; sourceTree = "<group>"; };
@@ -296,6 +302,8 @@
 				5E57E5700000000000000114 /* SwiftPreviewHarnessTests.swift */,
 				5E57E5700000000000000115 /* TrashLifecycleTests.swift */,
 				5E57E5700000000000000116 /* UUIDBackfillTests.swift */,
+				5E57E5700000000000000A16 /* PreviewTrustTests.swift */,
+				5E57E5700000000000000816 /* MediaFileNameTests.swift */,
 				5E57E5700000000000000117 /* WebPreviewHTMLBuilderTests.swift */,
 			);
 			name = SnippetsTests;
@@ -434,6 +442,7 @@
 				260E4CFC84DAC135CA1F2EA9 /* MetalShaderSource.swift */,
 				A4BA448BBE813C0F4A7135E4 /* ShaderPipeline.swift */,
 				703E43A09D4FE56C62360BAC /* SwiftPreviewHarness.swift */,
+				A1B2C3D40002PREVIEWTRUST /* PreviewTrust.swift */,
 				C1A147FCB1288781A8FBCC41 /* SwiftPreviewBuilder.swift */,
 				B7E34CFE83F37D8E1D4023CA /* SnippetLinker.swift */,
 				FAA046938633C6AB461C2EC3 /* Snippet+Linkable.swift */,
@@ -751,6 +760,8 @@
 				5E57E5700000000000000214 /* SwiftPreviewHarnessTests.swift in Sources */,
 				5E57E5700000000000000215 /* TrashLifecycleTests.swift in Sources */,
 				5E57E5700000000000000216 /* UUIDBackfillTests.swift in Sources */,
+				5E57E5700000000000000B16 /* PreviewTrustTests.swift in Sources */,
+				5E57E5700000000000000916 /* MediaFileNameTests.swift in Sources */,
 				5E57E5700000000000000217 /* WebPreviewHTMLBuilderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -830,6 +841,7 @@
 				C2F540A8BBC33FF1D14F9199 /* MetalShaderSource.swift in Sources */,
 				C98F41AE96957AE96871BC9E /* ShaderPipeline.swift in Sources */,
 				CB7D4731B1A3464B16D3758C /* SwiftPreviewHarness.swift in Sources */,
+				A1B2C3D40001PREVIEWTRUST /* PreviewTrust.swift in Sources */,
 				86474F60B44AF311DE427561 /* SwiftPreviewBuilder.swift in Sources */,
 				EBC24B86BF8A8F5BA787EEA2 /* SnippetLinker.swift in Sources */,
 				602347E3AE1728CF6E97232F /* Snippet+Linkable.swift in Sources */,

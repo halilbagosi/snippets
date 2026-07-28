@@ -1,5 +1,8 @@
 import AppKit
+import CryptoKit
 import Foundation
+import OSLog
+import Security
 
 /// Locates the Swift toolchain. Previews degrade to an "Xcode required"
 /// state when unavailable.
@@ -44,6 +47,120 @@ enum SwiftToolchain {
     }()
 
     static var isAvailable: Bool { swiftcURL != nil }
+}
+
+/// Authenticates the compiled-preview cache.
+///
+/// `SwiftPreviewBuilder` reuses a cached dylib whenever one exists at the
+/// content-hash path, and `dlopen` on that path loads whatever is there into
+/// this process — which is unsandboxed, with the hardened runtime off. The
+/// cache lives under `~/Library/Caches`, so anything else running as this user
+/// can drop a file at a predictable name and be loaded, inheriting every TCC
+/// grant the app holds. That presumes the attacker already has user-level
+/// execution, so this is a persistence step rather than a way in; it is also
+/// a cheap one to remove.
+///
+/// Each artifact is therefore tagged with an HMAC over its bytes, keyed by a
+/// per-install secret in the Keychain, and the tag is checked before load. The
+/// key placement is the point: a secret sitting next to the artifact would be
+/// rewritable by the same attacker who rewrote the artifact, whereas a Keychain
+/// item is reachable only through this app's own signed identity.
+///
+/// A missing or wrong tag is treated as a poisoned cache — the artifact is
+/// discarded and rebuilt from source, so a failure here costs a recompile
+/// rather than a broken feature.
+enum SwiftPreviewCacheIntegrity {
+    private static let logger = Logger(subsystem: "Snippets", category: "PreviewCache")
+    private static let service = "com.snippets.SwiftPreviewCache"
+    private static let account = "artifact-hmac-key"
+
+    /// Per-install HMAC key, created on first use.
+    ///
+    /// `ThisDeviceOnly` keeps it out of Keychain backups and off other Macs:
+    /// the key authenticates *this* machine's build cache, and a copy
+    /// travelling to another install would only widen what it vouches for.
+    private static let key: SymmetricKey? = {
+        if let existing = loadKey() { return existing }
+        let fresh = SymmetricKey(size: .bits256)
+        return storeKey(fresh) ? fresh : nil
+    }()
+
+    private static func loadKey() -> SymmetricKey? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
+              let data = item as? Data else { return nil }
+        return SymmetricKey(data: data)
+    }
+
+    private static func storeKey(_ key: SymmetricKey) -> Bool {
+        let data = key.withUnsafeBytes { Data($0) }
+        let attributes: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
+        SecItemDelete(attributes as CFDictionary)
+        let status = SecItemAdd(attributes as CFDictionary, nil)
+        if status != errSecSuccess {
+            logger.error("Could not store preview-cache key: \(status, privacy: .public)")
+        }
+        return status == errSecSuccess
+    }
+
+    private static func tagURL(for artifact: URL) -> URL {
+        artifact.appendingPathExtension("tag")
+    }
+
+    private static func tag(for data: Data, key: SymmetricKey) -> Data {
+        Data(HMAC<SHA256>.authenticationCode(for: data, using: key))
+    }
+
+    /// Writes the authentication tag for a freshly built artifact.
+    static func sign(_ artifact: URL) {
+        guard let key, let data = try? Data(contentsOf: artifact) else { return }
+        try? tag(for: data, key: key).write(to: tagURL(for: artifact), options: .atomic)
+    }
+
+    /// Whether `artifact` is exactly what this install built.
+    ///
+    /// Without a key (Keychain unavailable) this returns false, which routes
+    /// every load through a rebuild: slower, never less safe.
+    static func isTrusted(_ artifact: URL) -> Bool {
+        guard let key,
+              let expected = try? Data(contentsOf: tagURL(for: artifact)),
+              let data = try? Data(contentsOf: artifact) else { return false }
+        return HMAC<SHA256>.isValidAuthenticationCode(
+            expected, authenticating: data, using: key
+        )
+    }
+
+    /// Removes an artifact and its tag together, so a later build cannot find
+    /// a tag vouching for bytes that are no longer there.
+    static func discard(_ artifact: URL) {
+        try? FileManager.default.removeItem(at: artifact)
+        try? FileManager.default.removeItem(at: tagURL(for: artifact))
+    }
+
+    /// Whether the cache path is a plain file this user owns, rather than a
+    /// symlink pointing somewhere more interesting. Checked before the HMAC
+    /// because `dlopen` follows links and the tag would authenticate the
+    /// link's target, not the path being asked for.
+    static func isPlainOwnedFile(_ url: URL) -> Bool {
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let type = attributes[.type] as? FileAttributeType,
+              type == .typeRegular else { return false }
+        let owner = attributes[.ownerAccountID] as? NSNumber
+        return owner?.uint32Value == getuid()
+    }
 }
 
 /// Compiles SwiftUI snippets to dylibs and loads them in-process.
@@ -93,7 +210,16 @@ actor SwiftPreviewBuilder {
         let harness = try SwiftPreviewHarness.make(entry: entry, helpers: helpers)
         let dylibURL = cacheDirectory.appendingPathComponent("\(harness.hash).dylib")
 
-        let usedCache = FileManager.default.fileExists(atPath: dylibURL.path)
+        // A cache hit counts only if the artifact is one this install built and
+        // nothing has touched since. Anything else — no tag, wrong tag, a
+        // symlink where a file should be — is discarded and rebuilt rather
+        // than loaded, because `dlopen` is not a step you get to take back.
+        var usedCache = FileManager.default.fileExists(atPath: dylibURL.path)
+        if usedCache, !(SwiftPreviewCacheIntegrity.isPlainOwnedFile(dylibURL)
+                        && SwiftPreviewCacheIntegrity.isTrusted(dylibURL)) {
+            SwiftPreviewCacheIntegrity.discard(dylibURL)
+            usedCache = false
+        }
         if !usedCache {
             try compileToCache(swiftc: swiftc, harness: harness, dylibURL: dylibURL)
         }
@@ -102,7 +228,7 @@ actor SwiftPreviewBuilder {
         if handle == nil, usedCache {
             // Poisoned cache (e.g. a truncated dylib left by a crash
             // mid-write): drop the artifact and rebuild once.
-            try? FileManager.default.removeItem(at: dylibURL)
+            SwiftPreviewCacheIntegrity.discard(dylibURL)
             try compileToCache(swiftc: swiftc, harness: harness, dylibURL: dylibURL)
             handle = dlopen(dylibURL.path, RTLD_NOW)
         }
@@ -124,7 +250,15 @@ actor SwiftPreviewBuilder {
     /// atomically promotes it to `dylibURL` — a crash mid-compile can never
     /// leave a truncated dylib at the final path.
     private func compileToCache(swiftc: URL, harness: SwiftPreviewHarness.Harness, dylibURL: URL) throws {
-        try FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+        // 0700 so the compiled artifacts are not readable or, more to the
+        // point, writable by other accounts on the machine. The parent Caches
+        // directory is already user-scoped; this narrows the window a shared or
+        // misconfigured home directory would otherwise leave open.
+        try FileManager.default.createDirectory(
+            at: cacheDirectory,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
         let sourceURL = cacheDirectory.appendingPathComponent("\(harness.hash).swift")
         try harness.source.write(to: sourceURL, atomically: true, encoding: .utf8)
         let tempURL = cacheDirectory
@@ -136,6 +270,9 @@ actor SwiftPreviewBuilder {
             throw error
         }
         try Self.promoteArtifact(at: tempURL, to: dylibURL)
+        // Tagged after promotion, so the tag only ever vouches for bytes that
+        // reached the final path.
+        SwiftPreviewCacheIntegrity.sign(dylibURL)
     }
 
     /// Moves a freshly-built artifact into its final cache location. If the

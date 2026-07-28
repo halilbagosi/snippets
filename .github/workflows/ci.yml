@@ -12,6 +12,26 @@ on:
   pull_request:
 
 jobs:
+  # The vendored preview runtimes are inlined into every generated preview and
+  # run with 'unsafe-inline'/'unsafe-eval' alongside snippet code, so a silent
+  # change to one is a change to what executes in every preview. VENDOR.md is
+  # the provenance record; this job is what keeps it honest.
+  vendored-runtimes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify vendored runtime checksums
+        working-directory: Sources/Snippets/Resources/WebPreview
+        run: |
+          # VENDOR.md is the source of truth; pull the digest lines straight
+          # out of it so the doc cannot drift from the check. Matched by shape
+          # rather than by fence position, which survives the doc gaining or
+          # losing surrounding code blocks.
+          grep -E '^[0-9a-f]{64}  [A-Za-z0-9._-]+$' VENDOR.md > /tmp/vendor.sha256
+          test -s /tmp/vendor.sha256 || { echo "No checksums parsed from VENDOR.md"; exit 1; }
+          echo "Verifying $(wc -l < /tmp/vendor.sha256) file(s):"
+          shasum -a 256 -c /tmp/vendor.sha256
+
   swift-tests:
     runs-on: macos-26
     steps:

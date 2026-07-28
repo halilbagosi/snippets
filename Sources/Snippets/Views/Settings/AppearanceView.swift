@@ -4,6 +4,7 @@ import SwiftUI
 /// Controls colour scheme, focused mode, hover effects, and theme accent colour.
 struct AppearanceView: View {
     @Environment(AppearanceSettings.self) private var appearanceSettings
+    @Environment(PreviewTrust.self) private var previewTrust
     @Environment(\.colorScheme) private var colorScheme
 
     private var theme: Theme { Theme.current(colorScheme) }
@@ -169,6 +170,7 @@ struct AppearanceView: View {
 
     private var behaviorCard: some View {
         @Bindable var settings = appearanceSettings
+        @Bindable var trust = previewTrust
 
         return glassCard {
             sectionLabel("Behavior")
@@ -205,6 +207,15 @@ struct AppearanceView: View {
                 title: "Collection Deletion Behavior",
                 caption: "What to delete when deleting a collection",
                 selection: $settings.collectionDeletionBehavior
+            )
+
+            Divider().opacity(0.5)
+
+            behaviorRow(
+                icon: "play.rectangle",
+                title: "Run Previews Automatically",
+                caption: "Off, a preview waits for Run instead of executing when you open a snippet",
+                isOn: $trust.autoRunPreviews
             )
         }
     }

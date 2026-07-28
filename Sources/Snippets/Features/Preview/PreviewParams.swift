@@ -634,8 +634,18 @@ enum PreviewParamDetector {
             }
         }
         pad(to: maxAlignment)
+        // `setFragmentBytes` copies into the command encoder's small inline
+        // argument area, which tops out at 4 KB; handing it more is a Metal API
+        // violation, not a soft failure. The layout is derived from the
+        // shader's own `SnippetParams` struct so a real shader cannot get near
+        // this, but the detector reads untrusted source and a pathological
+        // struct (thousands of fields) would otherwise take the app down.
+        guard bytes.count <= maxInlineBufferBytes else { return [] }
         return bytes
     }
+
+    /// Metal's documented ceiling for `setFragmentBytes`.
+    static let maxInlineBufferBytes = 4096
 
     static func rgbComponents(ofHex hex: String) -> (Float, Float, Float) {
         var digits = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
