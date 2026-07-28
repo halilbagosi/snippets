@@ -7,6 +7,7 @@ import SwiftData
 
 struct SnippetCard: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppearanceSettings.self) private var appearanceSettings
     let snippet: Snippet
     var isSelected: Bool = false
@@ -28,7 +29,6 @@ struct SnippetCard: View {
     @State private var isHovered: Bool = false
     @State private var hoverLocation: CGPoint = .zero
     @State private var cardSize: CGSize = .zero
-    @State private var didAppear: Bool = false
     @State private var isShowingActionDialog: Bool = false
 
     private var language: SupportedLanguage {
@@ -58,14 +58,14 @@ struct SnippetCard: View {
     private func performCopy() {
         Clipboard.copy(snippet.code)
         snippet.copyCount += 1
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withAnimation(DSToken.Motion.toggle) {
             didCopy = true
         }
         copyResetTask?.cancel()
         copyResetTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 1_400_000_000)
             if !Task.isCancelled {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                withAnimation(DSToken.Motion.toggle) {
                     didCopy = false
                 }
             }
@@ -178,6 +178,9 @@ struct SnippetCard: View {
         let theme = Theme.current(colorScheme)
         let languageAccent = theme.accentColor(for: language).saturation(10)
         let effectiveIsHovered = (isSelectionMode || appearanceSettings.disableHoverEffects) ? false : isHovered
+        // Reduce Motion keeps the hover glow and accent tint — those are pure
+        // opacity — but drops the parallax tilt, shift and scale.
+        let isTilting = effectiveIsHovered && !reduceMotion
         let mediaItems = snippet.mediaItems.sorted { $0.addedAt < $1.addedAt }
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
@@ -255,7 +258,6 @@ struct SnippetCard: View {
                     .allowsHitTesting(false)
                 }
             }
-            .opacity(didAppear ? 1 : 0)
             .padding(.horizontal, 12)
             .padding(.top, 8)
 
@@ -271,7 +273,7 @@ struct SnippetCard: View {
                 }
                 copyButton(theme: theme, languageAccent: languageAccent)
                 Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    withAnimation(DSToken.Motion.toggle) {
                         snippet.isFavorite.toggle()
                     }
                 } label: {
@@ -344,7 +346,7 @@ struct SnippetCard: View {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(languageAccent.opacity(colorScheme == .dark ? 0.13 : 0.09))
                         .opacity(isHovered ? 1 : 0)
-                        .animation(.easeOut(duration: 0.12), value: isHovered)
+                        .animation(DSToken.Motion.hover, value: isHovered)
                 }
                 .overlay {
                     if effectiveIsHovered {
@@ -385,28 +387,21 @@ struct SnippetCard: View {
         }
         .frame(maxWidth: .infinity)
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .scaleEffect(isHovered ? 1.005 : 1.0)
+        .scaleEffect(isTilting ? 1.01 : 1.0)
         .rotation3DEffect(
-            .degrees(effectiveIsHovered ? -Double(hoverVector.dy) * 1.5 : 0),
+            .degrees(isTilting ? -Double(hoverVector.dy) * 1.5 : 0),
             axis: (x: 1, y: 0, z: 0),
             perspective: 0.72
         )
         .rotation3DEffect(
-            .degrees(effectiveIsHovered ? Double(hoverVector.dx) * 2.0 : 0),
+            .degrees(isTilting ? Double(hoverVector.dx) * 2.0 : 0),
             axis: (x: 0, y: 1, z: 0),
             perspective: 0.72
         )
         .offset(
-            x: effectiveIsHovered ? hoverVector.dx * 1.5 : 0,
-            y: effectiveIsHovered ? hoverVector.dy * 1.0 : 0
+            x: isTilting ? hoverVector.dx * 1.5 : 0,
+            y: isTilting ? hoverVector.dy * 1.0 : 0
         )
-        .opacity(didAppear ? 1 : 0)
-        .offset(y: didAppear ? 0 : 10)
-        .onAppear {
-            withAnimation(.spring(response: 0.42, dampingFraction: 0.84)) {
-                didAppear = true
-            }
-        }
         .onContinuousHover { phase in
             guard !isSelectionMode else { return }
             switch phase {
@@ -416,19 +411,22 @@ struct SnippetCard: View {
                     y: min(max(location.y, 0), max(cardSize.height, 1))
                 )
                 if !isHovered {
-                    withAnimation(.easeOut(duration: 0.16)) {
+                    withAnimation(DSToken.Motion.hover) {
                         isHovered = true
                     }
                 }
             case .ended:
-                withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
+                withAnimation(DSToken.Motion.hover) {
                     isHovered = false
                     hoverLocation = hoverCenter
                 }
             }
         }
-        .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isHovered)
-        .animation(.interactiveSpring(response: 0.24, dampingFraction: 0.74), value: hoverLocation)
+        // No `.animation(_:value: isHovered)` here on purpose: it would shadow
+        // the transactions above and flatten the deliberate asymmetry — the
+        // card lifts fast on hover-in (easeOut 0.16) and settles back on a
+        // softer spring when the pointer leaves.
+        .animation(DSToken.Motion.tilt, value: hoverLocation)
         .trashDoubleTap(inTrash: inTrashView) {
             isShowingActionDialog = true
         }

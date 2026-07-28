@@ -78,6 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        ColorPanelCenterer.shared.install()
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(50))
             NSApp.activate(ignoringOtherApps: true)
@@ -107,13 +108,16 @@ struct SnippetsApp: App {
     #endif
     @State private var environment = AppEnvironment()
     @State private var appearanceSettings = AppearanceSettings()
+    @State private var previewTrust = PreviewTrust()
 
     var body: some Scene {
         WindowGroup {
             if #available(macOS 15.0, *) {
                 ContentView()
+                    .previewTrustPrompt()
                     .environment(environment)
                     .environment(appearanceSettings)
+                    .environment(previewTrust)
                     .environment(AppIntentNavigator.shared)
                 // Appearance preference is applied via NSApp.appearance in
                 // AppearanceSettings: preferredColorScheme would pin a per-window
@@ -130,8 +134,10 @@ struct SnippetsApp: App {
                     .task { SnippetsApp.backfillUUIDs() }
             } else {
                 ContentView()
+                    .previewTrustPrompt()
                     .environment(environment)
                     .environment(appearanceSettings)
+                    .environment(previewTrust)
                     .environment(AppIntentNavigator.shared)
                 // Appearance preference is applied via NSApp.appearance in
                 // AppearanceSettings: preferredColorScheme would pin a per-window
@@ -160,6 +166,7 @@ struct SnippetsApp: App {
         Settings {
             SettingsView()
                 .environment(appearanceSettings)
+                .environment(previewTrust)
         }
         #endif
     }

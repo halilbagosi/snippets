@@ -82,59 +82,367 @@ enum SupportedLanguage: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
+/// Guesses a snippet's language from its source alone.
+///
+/// Detection is weighted evidence, not a first-match scan: every language
+/// scores its own markers over the same sanitized text and the highest score
+/// wins. That matters because real snippets are mixtures — an HTML document
+/// carries a `<script>`, a React component carries type annotations, a Metal
+/// shader is also valid C++ — and the language that owns the *file* is the one
+/// with the most distinctive evidence, not the one whose rule ran first.
 enum LanguageDetector {
-    private struct Rule {
-        let language: SupportedLanguage
-        let markers: [String]
-        let minimumMatches: Int
-    }
 
-    private static let rules: [Rule] = [
-        Rule(language: .glsl, markers: ["#version", "gl_Position", "gl_FragColor", "uniform ", "varying ", "void main()"], minimumMatches: 1),
-        Rule(language: .metal, markers: ["#include <metal_stdlib>", "fragment ", "vertex ", "kernel ", "using namespace metal"], minimumMatches: 1),
-        Rule(language: .hlsl, markers: ["SV_Position", "cbuffer ", "Texture2D", ": SV_TARGET"], minimumMatches: 1),
-        Rule(language: .swift, markers: ["import SwiftUI", "import Foundation", "@State", "@main", "struct ", "var body: some View", "func ", "guard "], minimumMatches: 2),
-        Rule(language: .kotlin, markers: ["fun ", "val ", "data class", "companion object", "package "], minimumMatches: 2),
-        Rule(language: .rust, markers: ["fn ", "let mut", "impl ", "use std::", "->", "pub fn"], minimumMatches: 2),
-        Rule(language: .go, markers: ["package ", "import \"", "fmt.", "func ", ":= "], minimumMatches: 2),
-        Rule(language: .python, markers: ["def ", "import ", "print(", "if __name__", "self.", "lambda "], minimumMatches: 2),
-        Rule(language: .typescript, markers: [": string", ": number", "interface ", "export type", "as const"], minimumMatches: 1),
-        Rule(language: .react, markers: ["import React", "useState", "useEffect", "JSX.Element", "</>", "ReactDOM", "from 'react'", "from \"react\""], minimumMatches: 2),
-        Rule(language: .javascript, markers: ["const ", "function ", "console.log", "() =>", "require(", "module.exports"], minimumMatches: 2),
-        Rule(language: .css, markers: ["margin:", "padding:", "font-size:", "display:", "color:", "background:"], minimumMatches: 2),
-        Rule(language: .html, markers: ["<!DOCTYPE", "<html", "<div", "<body", "</"], minimumMatches: 1),
-        Rule(language: .cpp, markers: ["#include", "std::", "cout <<", "int main(", "namespace "], minimumMatches: 2)
-    ]
+    /// How much source is examined. Long enough to see past a license header,
+    /// a wall of imports, or a leading comment block, short enough to stay
+    /// inside a frame: detection reruns on every keystroke in the editor, and
+    /// cost is linear in this window (~1 ms per kilobyte scanned).
+    private static let scanLimit = 8_192
+
+    /// Quoted strings longer than this many bytes are treated as payload
+    /// (prose, an embedded shader, a data blob) and blanked before scoring.
+    /// Shorter ones survive, so `from 'react'` and `class="hero"` still count.
+    private static let inlineStringLimit = 40
+
+    /// Minimum score to claim a language — one `.decisive` marker, or a few
+    /// corroborating weaker ones. Below it, nothing is claimed.
+    private static let minimumConfidence = 3.0
+
+    /// Evidence needed for a family override to fire (see `resolve`).
+    private static let overrideConfidence = 6.0
+
+    // MARK: - Entry point
 
     static func detect(code rawCode: String) -> SupportedLanguage {
-        let scanPrefix = rawCode.prefix(2_048)
-        let code = String(scanPrefix).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !code.isEmpty else { return .unknown }
+        detect(code: rawCode, unwrappingFences: true)
+    }
 
-        if let first = code.first, first == "{" || first == "[" {
-            if rawCode.utf8.count > 2_048 {
-                return .json
-            }
-            if (try? JSONSerialization.jsonObject(with: Data(code.utf8))) != nil {
-                return .json
-            }
+    private static func detect(code rawCode: String, unwrappingFences: Bool) -> SupportedLanguage {
+        let trimmed = rawCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return .unknown }
+
+        // A pasted markdown block already states its language; believe it.
+        if unwrappingFences, let fence = fencedBlock(in: trimmed) {
+            if let declared = fence.language { return declared }
+            return detect(code: fence.body, unwrappingFences: false)
         }
 
-        var bestMatch: (language: SupportedLanguage, score: Int) = (.unknown, 0)
-        for rule in rules {
-            var hits = 0
-            let confidentMatchCount = max(rule.minimumMatches, 3)
-            for marker in rule.markers where code.contains(marker) {
-                hits += 1
-                if hits >= confidentMatchCount {
-                    return rule.language
+        if isJSON(trimmed) { return .json }
+
+        let clean = sanitized(String(trimmed.prefix(scanLimit)))
+        return resolve(scores(for: clean))
+    }
+
+    // MARK: - Scoring
+
+    /// One regex plus how much a match is worth, and how many matches keep
+    /// counting — the cap stops a repetitive file from letting a single weak
+    /// marker outweigh genuinely distinctive evidence.
+    struct Marker {
+        let regex: NSRegularExpression
+        let weight: Double
+        let cap: Int
+    }
+
+    struct Profile {
+        let language: SupportedLanguage
+        let markers: [Marker]
+        let penalties: [Marker]
+
+        init(language: SupportedLanguage, markers: [Marker?], penalties: [Marker?] = []) {
+            self.language = language
+            self.markers = markers.compactMap { $0 }
+            self.penalties = penalties.compactMap { $0 }
+        }
+    }
+
+    static func marker(_ pattern: String, _ weight: Double, cap: Int = 1) -> Marker? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.anchorsMatchLines]) else {
+            assertionFailure("LanguageDetector: invalid marker pattern \(pattern)")
+            return nil
+        }
+        return Marker(regex: regex, weight: weight, cap: cap)
+    }
+
+    private static func scores(for text: String) -> [(language: SupportedLanguage, score: Double)] {
+        // Every marker re-bridges the subject string to NSString. Handing the
+        // regexes a String that is *already* backed by NSString storage makes
+        // each of those bridges a retain instead of a full UTF-16 copy — with
+        // this many markers that is the difference between a few milliseconds
+        // and a dropped frame, since detection reruns on every keystroke.
+        let storage = text as NSString
+        let subject = storage as String
+        let range = NSRange(location: 0, length: storage.length)
+
+        return profiles.map { profile in
+            let positive = profile.markers.reduce(0.0) { $0 + value(of: $1, in: subject, range: range) }
+            let negative = profile.penalties.reduce(0.0) { $0 + value(of: $1, in: subject, range: range) }
+            return (profile.language, positive - negative)
+        }
+    }
+
+    private static func value(of marker: Marker, in text: String, range: NSRange) -> Double {
+        var hits = 0
+        marker.regex.enumerateMatches(in: text, options: [], range: range) { _, _, stop in
+            hits += 1
+            if hits >= marker.cap { stop.pointee = true }
+        }
+        return Double(hits) * marker.weight
+    }
+
+    // MARK: - Resolution
+
+    private static func resolve(_ scores: [(language: SupportedLanguage, score: Double)]) -> SupportedLanguage {
+        func score(_ language: SupportedLanguage) -> Double {
+            scores.first { $0.language == language }?.score ?? 0
+        }
+
+        var winner = SupportedLanguage.unknown
+        var best = -Double.infinity
+        for entry in scores where entry.score >= minimumConfidence {
+            let ties = entry.score == best && priority(entry.language) < priority(winner)
+            if entry.score > best || ties {
+                winner = entry.language
+                best = entry.score
+            }
+        }
+        guard winner != .unknown else { return .unknown }
+
+        // Family overrides. Within a family the members share almost all of
+        // their syntax, so the specialised dialect wins whenever it has real
+        // evidence of its own — even if the shared base scored higher on
+        // sheer volume of common markers.
+        if [.javascript, .typescript].contains(winner), score(.react) >= overrideConfidence {
+            return .react
+        }
+        // Markup gets a higher bar: a hand-written page that merely mentions a
+        // hook in a script tag is still a page, so React has to out-score the
+        // markup outright rather than just clear the override threshold.
+        if winner == .html, score(.react) >= max(overrideConfidence, score(.html)) {
+            return .react
+        }
+        if winner == .javascript, score(.typescript) >= overrideConfidence {
+            return .typescript
+        }
+        if winner == .cpp {
+            // Metal and HLSL are C++ dialects; GLSL borrows its declarations.
+            let shaders = [SupportedLanguage.metal, .hlsl, .glsl].map { ($0, score($0)) }
+            if let strongest = shaders.max(by: { $0.1 < $1.1 }), strongest.1 >= overrideConfidence {
+                return strongest.0
+            }
+        }
+        return winner
+    }
+
+    /// Tie-break order, most specific first: when two languages score exactly
+    /// the same, the narrower one is the better guess.
+    private static func priority(_ language: SupportedLanguage) -> Int {
+        switch language {
+        case .json: return 0
+        case .metal: return 1
+        case .hlsl: return 2
+        case .glsl: return 3
+        case .react: return 4
+        case .swift: return 5
+        case .kotlin: return 6
+        case .rust: return 7
+        case .go: return 8
+        case .python: return 9
+        case .typescript: return 10
+        case .cpp: return 11
+        case .css: return 12
+        case .html: return 13
+        case .javascript: return 14
+        case .unknown: return .max
+        }
+    }
+
+    // MARK: - JSON
+
+    /// JSON is decided by parsing, not by markers — the shape of the data says
+    /// nothing about the language, only its validity does. A second attempt
+    /// covers JSONC/JSON5-style files with comments or trailing commas.
+    private static func isJSON(_ trimmed: String) -> Bool {
+        guard let first = trimmed.first, first == "{" || first == "[" else { return false }
+        if (try? JSONSerialization.jsonObject(with: Data(trimmed.utf8))) != nil { return true }
+
+        guard trimmed.utf8.count <= 262_144 else { return false }
+        let relaxed = sanitized(trimmed).replacingOccurrences(
+            of: #",(\s*[}\]])"#, with: "$1", options: .regularExpression
+        )
+        return (try? JSONSerialization.jsonObject(with: Data(relaxed.utf8))) != nil
+    }
+
+    // MARK: - Markdown fences
+
+    /// A snippet pasted as a single ```-fenced block, with the fence's info
+    /// string resolved to a language when it names one we support.
+    private static func fencedBlock(in trimmed: String) -> (language: SupportedLanguage?, body: String)? {
+        let marks: [Character] = ["`", "~"]
+        guard let opener = trimmed.first, marks.contains(opener),
+              trimmed.hasPrefix(String(repeating: opener, count: 3))
+        else { return nil }
+
+        var lines = trimmed.components(separatedBy: .newlines)
+        let info = lines
+            .removeFirst()
+            .drop { $0 == opener }
+            .trimmingCharacters(in: .whitespaces)
+            .lowercased()
+            .prefix { $0.isLetter || $0.isNumber || $0 == "+" || $0 == "#" }
+
+        if let last = lines.last, last.trimmingCharacters(in: .whitespaces).allSatisfy({ $0 == opener }),
+           !last.isEmpty {
+            lines.removeLast()
+        }
+        return (language(forFenceInfo: String(info)), lines.joined(separator: "\n"))
+    }
+
+    private static func language(forFenceInfo info: String) -> SupportedLanguage? {
+        switch info {
+        case "html", "htm", "xml", "svg", "vue": return .html
+        case "css", "scss", "sass", "less", "postcss": return .css
+        case "js", "javascript", "mjs", "cjs", "node": return .javascript
+        case "ts", "typescript", "mts", "cts": return .typescript
+        case "jsx", "tsx", "react": return .react
+        case "json", "json5", "jsonc": return .json
+        case "swift": return .swift
+        case "py", "python", "python3": return .python
+        case "go", "golang": return .go
+        case "rs", "rust": return .rust
+        case "kt", "kts", "kotlin": return .kotlin
+        case "glsl", "frag", "vert", "fragment", "vertex", "shader": return .glsl
+        case "metal", "msl": return .metal
+        case "hlsl", "fx", "cg", "shaderlab": return .hlsl
+        case "c", "cpp", "c++", "cc", "cxx", "h", "hpp", "objc": return .cpp
+        default: return nil
+        }
+    }
+
+    // MARK: - Sanitizing
+
+    /// Strips the parts of a file that lie about its language: comments (which
+    /// often quote *other* languages) and long string bodies (embedded
+    /// shaders, HTML blobs, prose). Short strings survive so that import
+    /// specifiers like `from 'react'` and attributes like `class="x"` still
+    /// count as evidence.
+    ///
+    /// One pass handles both, because they nest: `//` inside a string is not a
+    /// comment, and a quote inside a comment does not open a string.
+    ///
+    /// Works on UTF-8 bytes rather than characters — every delimiter it looks
+    /// for is ASCII, and no byte of a multi-byte scalar can be mistaken for
+    /// one, so non-ASCII source passes through untouched at a fraction of the
+    /// cost of building grapheme clusters.
+    private static func sanitized(_ source: String) -> String {
+        let bytes = Array(source.utf8)
+        var result: [UInt8] = []
+        result.reserveCapacity(bytes.count)
+        var index = 0
+
+        while index < bytes.count {
+            let byte = bytes[index]
+
+            if byte == .quote || byte == .apostrophe {
+                // Triple-quoted block (Swift/Python): drop the body wholesale.
+                if index + 2 < bytes.count, bytes[index + 1] == byte, bytes[index + 2] == byte {
+                    result.append(contentsOf: [byte, byte])
+                    index = endOfTriple(bytes, from: index + 3, quote: byte)
+                    continue
+                }
+                if let string = readString(bytes, from: index, quote: byte) {
+                    result.append(contentsOf: string.bytes)
+                    index = string.end
+                    continue
+                }
+                // Unterminated: an apostrophe in prose, or a Rust lifetime.
+                result.append(byte)
+                index += 1
+                continue
+            }
+
+            if byte == .backtick {
+                result.append(contentsOf: [UInt8.backtick, .backtick])
+                index = endOfTemplate(bytes, from: index + 1)
+                continue
+            }
+
+            if byte == .slash, index + 1 < bytes.count {
+                if bytes[index + 1] == .slash {
+                    while index < bytes.count, bytes[index] != .newline { index += 1 }
+                    continue
+                }
+                if bytes[index + 1] == .star {
+                    index += 2
+                    while index + 1 < bytes.count,
+                          !(bytes[index] == .star && bytes[index + 1] == .slash) {
+                        index += 1
+                    }
+                    index = min(index + 2, bytes.count)
+                    result.append(.space)
+                    continue
                 }
             }
-            if hits >= rule.minimumMatches && hits > bestMatch.score {
-                bestMatch = (rule.language, hits)
-            }
-        }
 
-        return bestMatch.language
+            result.append(byte)
+            index += 1
+        }
+        return String(decoding: result, as: UTF8.self)
     }
+
+    private static func endOfTriple(_ bytes: [UInt8], from start: Int, quote: UInt8) -> Int {
+        var index = start
+        while index + 2 < bytes.count {
+            if bytes[index] == quote, bytes[index + 1] == quote, bytes[index + 2] == quote {
+                return index + 3
+            }
+            index += 1
+        }
+        return bytes.count
+    }
+
+    private static func endOfTemplate(_ bytes: [UInt8], from start: Int) -> Int {
+        var index = start
+        while index < bytes.count {
+            if bytes[index] == .backslash { index += 2; continue }
+            if bytes[index] == .backtick { return index + 1 }
+            index += 1
+        }
+        return bytes.count
+    }
+
+    /// Reads a single-line quoted string. Returns `nil` when it never closes
+    /// on its line, which means the quote was not a string delimiter at all.
+    private static func readString(
+        _ bytes: [UInt8], from start: Int, quote: UInt8
+    ) -> (bytes: [UInt8], end: Int)? {
+        var index = start + 1
+        var body: [UInt8] = []
+        while index < bytes.count {
+            let byte = bytes[index]
+            if byte == .newline { return nil }
+            if byte == .backslash {
+                body.append(contentsOf: [UInt8.space, .space])
+                index += 2
+                continue
+            }
+            if byte == quote {
+                let kept = body.count > inlineStringLimit ? [] : body
+                return ([quote] + kept + [quote], index + 1)
+            }
+            body.append(byte)
+            index += 1
+        }
+        return nil
+    }
+}
+
+private extension UInt8 {
+    static let quote: UInt8 = 0x22
+    static let apostrophe: UInt8 = 0x27
+    static let backtick: UInt8 = 0x60
+    static let slash: UInt8 = 0x2F
+    static let star: UInt8 = 0x2A
+    static let backslash: UInt8 = 0x5C
+    static let newline: UInt8 = 0x0A
+    static let space: UInt8 = 0x20
 }

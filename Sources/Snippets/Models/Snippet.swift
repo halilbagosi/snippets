@@ -15,6 +15,11 @@ final class Snippet {
     var deletedAt: Date?
     var uuid: UUID?
 
+    /// Saved preview parameter configurations. Both properties carry defaults
+    /// so existing rows migrate without intervention.
+    var paramConfigs: [PreviewParamConfig] = []
+    var activeParamConfigID: UUID?
+
     @Relationship(deleteRule: .cascade, inverse: \MediaItem.snippet)
     var mediaItems: [MediaItem]
 

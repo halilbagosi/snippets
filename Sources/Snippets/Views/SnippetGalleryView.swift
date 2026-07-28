@@ -6,6 +6,7 @@ import AppKit
 
 struct SnippetGalleryView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppearanceSettings.self) private var appearanceSettings
 
     let snippets: [Snippet]
@@ -25,6 +26,9 @@ struct SnippetGalleryView: View {
     var onCreateCollection: (() -> Void)? = nil
     var onNew: (() -> Void)? = nil
     var onBack: (() -> Void)? = nil
+    /// Shared with `topBar`'s `GlassEffectContainer` so the back button's glass
+    /// is a named member of it rather than an anonymous one.
+    @Namespace private var topBarGlass
     var onClearSelection: (() -> Void)? = nil
     var onEditCollection: ((SnippetCollection) -> Void)? = nil
     var onDeleteCollection: ((SnippetCollection) -> Void)? = nil
@@ -49,6 +53,8 @@ struct SnippetGalleryView: View {
 
     @FocusState private var searchFocused: Bool
     @State private var viewModel = SnippetGalleryViewModel()
+    /// Flipped once when the gallery appears, so cards play their staggered
+    /// entrance exactly once rather than on every scroll.
     @State private var hasAnimatedCards = false
     @State private var isCollectionsSectionExpanded = true
     @State private var isSnippetsSectionExpanded = true
@@ -69,14 +75,6 @@ struct SnippetGalleryView: View {
     // cards stay a touch wider, matching the ratio they had before.
     private let columns = [GridItem(.adaptive(minimum: 340, maximum: 440), spacing: 20)]
     private let subcollectionColumns = [GridItem(.adaptive(minimum: 360, maximum: 470), spacing: 16)]
-    /// Deleted cards fade out with the same opacity transition used when
-    /// collapsing gallery sections.
-    private var cardRemovalAnimation: Animation {
-        .interactiveSpring(response: 0.42, dampingFraction: 0.9, blendDuration: 0.12)
-    }
-    private var sectionCollapseAnimation: Animation {
-        .interactiveSpring(response: 0.34, dampingFraction: 0.96, blendDuration: 0.08)
-    }
     /// Changes whenever the Snippets strip (or the empty state that replaces it)
     /// appears or disappears, so the section itself fades in/out with the same
     /// opacity transition the cards use — e.g. when the last snippet is deleted.
@@ -158,9 +156,15 @@ struct SnippetGalleryView: View {
         
         return min(contentHeight, collectionFilterMaxListHeight)
     }
+    /// Position only on the way in. Fading glass is what splits the surface:
+    /// SwiftUI ramps the rim and shadow smoothly, but the system resolves the
+    /// material in its own pass, so the outline is visible for a beat before
+    /// the texture fills it. Sliding moves the resolved glass instead of
+    /// building it up, and `glassEffectID` keeps the container morphing it as
+    /// one member. Removal can still fade — there is nothing left to arrive.
     private var backButtonTransition: AnyTransition {
         .asymmetric(
-            insertion: .move(edge: .trailing).combined(with: .opacity),
+            insertion: .move(edge: .trailing),
             removal: .opacity
         )
     }
@@ -185,7 +189,7 @@ struct SnippetGalleryView: View {
                                         actionIcon: "plus",
                                         action: onCreateCollection,
                                         isExpanded: $isCollectionsSectionExpanded,
-                                        animation: sectionCollapseAnimation
+                                        animation: DSToken.Motion.collapse
                                     ) {
                                         subcollectionGrid(searchResultCollections)
                                     }
@@ -200,7 +204,7 @@ struct SnippetGalleryView: View {
                                             icon: "square.stack.3d.up",
                                             tint: theme.textMuted,
                                             isExpanded: $isSnippetsSectionExpanded,
-                                            animation: sectionCollapseAnimation
+                                            animation: DSToken.Motion.collapse
                                         ) {
                                             snippetGrid(viewModel.ordered(searchResultSnippets))
                                         }
@@ -217,7 +221,7 @@ struct SnippetGalleryView: View {
                                         actionIcon: "plus",
                                         action: onCreateCollection,
                                         isExpanded: $isCollectionsSectionExpanded,
-                                        animation: sectionCollapseAnimation
+                                        animation: DSToken.Motion.collapse
                                     ) {
                                         subcollectionGrid(subcollections)
                                     }
@@ -234,7 +238,7 @@ struct SnippetGalleryView: View {
                                             icon: "square.stack.3d.up",
                                             tint: theme.textMuted,
                                             isExpanded: $isSnippetsSectionExpanded,
-                                            animation: sectionCollapseAnimation
+                                            animation: DSToken.Motion.collapse
                                         ) {
                                             snippetGrid(viewModel.ordered(snippets))
                                         }
@@ -247,7 +251,7 @@ struct SnippetGalleryView: View {
                         .padding(.top, 16)
                         .padding(.bottom, isTrashMode ? 24 : 112)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .animation(cardRemovalAnimation, value: snippetsSectionVisibilityKey)
+                        .animation(DSToken.Motion.gridReflow, value: snippetsSectionVisibilityKey)
                 }
             }
             .scrollIndicators(.never)
@@ -269,10 +273,7 @@ struct SnippetGalleryView: View {
             }
         }
         .onAppear {
-            hasAnimatedCards = false
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.84)) {
-                hasAnimatedCards = true
-            }
+            hasAnimatedCards = true
             #if canImport(AppKit)
             guard keyEventMonitor == nil else { return }
             keyEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
@@ -320,7 +321,7 @@ struct SnippetGalleryView: View {
             #endif
             pressedResetTask?.cancel()
         }
-        .animation(.spring(response: 0.34, dampingFraction: 0.9), value: showMoveSheet)
+        .animation(DSToken.Motion.overlay, value: showMoveSheet)
     }
 
     private var selectedSnippetsForMove: [Snippet] {
@@ -389,7 +390,7 @@ struct SnippetGalleryView: View {
                 itemCount: selectedSnippets.count + selectedCollections.count,
                 onMove: { collection in
                     onMoveSelection?(selectedSnippets, selectedCollections, collection)
-                    withAnimation {
+                    withAnimation(DSToken.Motion.toggle) {
                         viewModel.clearSelectionAndExitSelectMode()
                     }
                     showMoveSheet = false
@@ -398,13 +399,18 @@ struct SnippetGalleryView: View {
             )
             .frame(width: cardWidth, height: cardHeight)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .transition(
-                .asymmetric(
-                    insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)),
-                    removal: .opacity.combined(with: .scale(scale: 0.97, anchor: .center))
-                )
-            )
+            .transition(moveSheetTransition)
         }
+    }
+
+    /// Centred sheet, so scaling from the centre is correct. Reduce Motion
+    /// keeps the fade and drops the scale.
+    private var moveSheetTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)),
+            removal: .opacity.combined(with: .scale(scale: 0.97, anchor: .center))
+        )
     }
 
     private var theme: Theme {
@@ -413,8 +419,8 @@ struct SnippetGalleryView: View {
     }
 
     /// Deletion just removes the card from the grid; the grid's identity-keyed
-    /// animation plays the card's `.transition(.opacity)`, matching the fade
-    /// used when a section is collapsed.
+    /// animation plays the card's collapse transition, matching what a section
+    /// collapse does.
     private func requestDelete(_ snippet: Snippet) {
         onDelete?(snippet) {}
     }
@@ -428,6 +434,7 @@ struct SnippetGalleryView: View {
         return DSGlassContainer(spacing: 18) {
             LazyVGrid(columns: subcollectionColumns, spacing: 14) {
                 ForEach(Array(ordered.enumerated()), id: \.element.persistentModelID) { index, collection in
+                    CollapsingSectionItem(index: index, count: ordered.count, hasEntered: hasAnimatedCards) {
                     ZStack {
                         SnippetCollectionCard(
                             collection: collection,
@@ -436,7 +443,7 @@ struct SnippetGalleryView: View {
                             isSelectionMode: viewModel.isSelectMode,
                             onOpen: {
                                 if viewModel.isSelectMode {
-                                    withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
+                                    withAnimation(DSToken.Motion.toggle) {
                                         viewModel.toggleSelection(for: collection)
                                     }
                                 } else {
@@ -473,17 +480,10 @@ struct SnippetGalleryView: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .opacity(hasAnimatedCards ? 1 : 0)
-                    .offset(y: hasAnimatedCards ? 0 : 6)
-                    .transition(.opacity)
-                    .animation(
-                        .spring(response: 0.32, dampingFraction: 0.94)
-                            .delay(min(Double(index) * 0.02, 0.12)),
-                        value: hasAnimatedCards
-                    )
+                    }
                 }
             }
-            .animation(cardRemovalAnimation, value: collectionIdentityKey(for: ordered))
+            .animation(DSToken.Motion.gridReflow, value: collectionIdentityKey(for: ordered))
             .padding(.horizontal, 18)
             .padding(.top, 18)
             .padding(.bottom, 16)
@@ -520,14 +520,15 @@ struct SnippetGalleryView: View {
         let items = stackDisplayItems(source)
         return LazyVGrid(columns: columns, spacing: 18) {
             ForEach(Array(items.enumerated()), id: \.element.snippet.persistentModelID) { index, item in
-                snippetCell(
-                    item.snippet,
-                    index: index,
-                    linkedCount: item.connectedCount,
-                    isStackExpanded: expandedStacks.contains(item.snippet.persistentModelID),
-                    onToggleStack: { toggleStack(item.snippet.persistentModelID) },
-                    isConnected: item.isConnected
-                )
+                CollapsingSectionItem(index: index, count: items.count, hasEntered: hasAnimatedCards) {
+                    snippetCell(
+                        item.snippet,
+                        index: index,
+                        linkedCount: item.connectedCount,
+                        isStackExpanded: expandedStacks.contains(item.snippet.persistentModelID),
+                        onToggleStack: { toggleStack(item.snippet.persistentModelID) },
+                        isConnected: item.isConnected
+                    )
                     .overlay {
                         // Revealed stack members read as part of the group via
                         // a subtle accent ring instead of shapes behind the
@@ -538,9 +539,10 @@ struct SnippetGalleryView: View {
                                 .allowsHitTesting(false)
                         }
                     }
+                }
             }
         }
-        .animation(cardRemovalAnimation, value: snippetIdentityKey(for: source))
+        .animation(DSToken.Motion.gridReflow, value: snippetIdentityKey(for: source))
         .padding(.horizontal, 18)
         .padding(.top, 18)
         .padding(.bottom, 18)
@@ -585,16 +587,10 @@ struct SnippetGalleryView: View {
                 .frame(maxWidth: .infinity)
                     .scaleEffect(pressedSnippetID == snippet.persistentModelID ? 0.97 : 1.0)
                     .opacity(pressedSnippetID == snippet.persistentModelID ? 0.92 : 1.0)
-                    .opacity(hasAnimatedCards ? 1 : 0)
-                    .offset(y: hasAnimatedCards ? 0 : 8)
-                    .transition(.opacity)
                     .zIndex(pressedSnippetID == snippet.persistentModelID ? 2 : 0)
-                    .animation(
-                        .spring(response: 0.34, dampingFraction: 0.92)
-                            .delay(min(Double(index) * 0.02, 0.12)),
-                        value: hasAnimatedCards
-                    )
-                    .animation(.spring(response: 0.22, dampingFraction: 0.75), value: pressedSnippetID)
+                    // No `.animation(_:value: pressedSnippetID)` here: it would
+                    // shadow the tap handler's transactions and flatten the
+                    // press/release asymmetry into one symmetric spring.
                     .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .contextMenu {
                         if isTrashMode {
@@ -633,7 +629,7 @@ struct SnippetGalleryView: View {
                     }
                     .onTapGesture {
                         if viewModel.isSelectMode {
-                            withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
+                            withAnimation(DSToken.Motion.toggle) {
                                 viewModel.toggleSelection(for: snippet)
                             }
                             return
@@ -641,14 +637,14 @@ struct SnippetGalleryView: View {
                         
                         onSelect(snippet)
                         
-                        withAnimation(.easeOut(duration: 0.11)) {
+                        withAnimation(DSToken.Motion.press) {
                             pressedSnippetID = snippet.persistentModelID
                         }
                         pressedResetTask?.cancel()
                         pressedResetTask = Task { @MainActor in
                             try? await Task.sleep(nanoseconds: 150_000_000)
                             guard !Task.isCancelled else { return }
-                            withAnimation(.easeOut(duration: 0.14)) {
+                            withAnimation(DSToken.Motion.release) {
                                 pressedSnippetID = nil
                             }
                         }
@@ -656,7 +652,7 @@ struct SnippetGalleryView: View {
     }
 
     private func toggleStack(_ entryID: PersistentIdentifier) {
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+        withAnimation(DSToken.Motion.reveal) {
             if expandedStacks.contains(entryID) {
                 expandedStacks.remove(entryID)
             } else {
@@ -720,7 +716,7 @@ struct SnippetGalleryView: View {
                     icon: language.symbolName,
                     tint: accent,
                     isExpanded: isExpanded,
-                    animation: sectionCollapseAnimation
+                    animation: DSToken.Motion.collapse
                 ) {
                     VStack(alignment: .leading, spacing: 0) {
                         if !langCollections.isEmpty {
@@ -775,28 +771,16 @@ struct SnippetGalleryView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 10) {
                     if let onBack {
-                        Button(action: onBack) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(theme.text)
-                                .frame(width: 32, height: 32)
-                                .liquidGlassSurface(
-                                    in: RoundedRectangle(cornerRadius: 8, style: .continuous),
-                                    interactive: true,
-                                    borderOpacity: colorScheme == .dark ? 0.18 : 0.36,
-                                    shadowRadius: 5,
-                                    shadowY: 2
-                                )
-                                .compositingGroup()
-                                // Horizontal padding only: vertical padding would
-                                // make the back button taller than the search bar,
-                                // growing the row and shifting the filter tags down
-                                // when a collection is open.
-                                .padding(.horizontal, DSToken.Spacing.xs)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .contentShape(Rectangle())
+                        BackButton(
+                            action: onBack,
+                            accessibilityLabel: "Back to all snippets",
+                            glassNamespace: topBarGlass
+                        )
+                        // Horizontal padding only: vertical padding would
+                        // make the back button taller than the search bar,
+                        // growing the row and shifting the filter tags down
+                        // when a collection is open.
+                        .padding(.horizontal, DSToken.Spacing.xs)
                         .transition(backButtonTransition)
                     }
 
@@ -810,7 +794,7 @@ struct SnippetGalleryView: View {
                             accent: viewModel.isSelectMode ? theme.accent : theme.textMuted,
                             isSelected: viewModel.isSelectMode
                         ) {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            withAnimation(DSToken.Motion.toggle) {
                                 viewModel.toggleSelectMode()
                             }
                         }
@@ -823,7 +807,7 @@ struct SnippetGalleryView: View {
                                 accent: theme.textMuted,
                                 isSelected: isAllSelected
                             ) {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                withAnimation(DSToken.Motion.toggle) {
                                     if isAllSelected {
                                         viewModel.clearSelectionAndExitSelectMode()
                                         viewModel.isSelectMode = true
@@ -848,7 +832,7 @@ struct SnippetGalleryView: View {
                                     let toRestoreCollections = viewModel.selectedCollections(from: subcollections)
                                     for snip in toRestoreSnippets { onRestore?(snip) }
                                     for coll in toRestoreCollections { onRestoreCollection?(coll) }
-                                    withAnimation {
+                                    withAnimation(DSToken.Motion.toggle) {
                                         viewModel.clearSelectionAndExitSelectMode()
                                     }
                                 }
@@ -892,7 +876,7 @@ struct SnippetGalleryView: View {
                                     }
                                     for coll in toDeleteCollections { onDeleteCollection?(coll) }
                                 }
-                                withAnimation {
+                                withAnimation(DSToken.Motion.toggle) {
                                     viewModel.clearSelectionAndExitSelectMode()
                                 }
                             }
@@ -908,7 +892,7 @@ struct SnippetGalleryView: View {
                                 accent: theme.textMuted,
                                 isSelected: false
                             ) {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                withAnimation(DSToken.Motion.toggle) {
                                     viewModel.isOldestToNewest.toggle()
                                 }
                             }
@@ -936,7 +920,7 @@ struct SnippetGalleryView: View {
                                     accent: Color(red: 1.0, green: 0.80, blue: 0.20),
                                     isSelected: showFavoritesOnly
                                 ) {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    withAnimation(DSToken.Motion.toggle) {
                                         showFavoritesOnly.toggle()
                                     }
                                 }
@@ -945,9 +929,9 @@ struct SnippetGalleryView: View {
                         }
                     }
                 }
-                .animation(.spring(response: 0.45, dampingFraction: 0.85), value: onBack != nil)
-                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isSelectMode)
-                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isOldestToNewest)
+                .animation(DSToken.Motion.reveal, value: onBack != nil)
+                .animation(DSToken.Motion.toggle, value: viewModel.isSelectMode)
+                .animation(DSToken.Motion.toggle, value: viewModel.isOldestToNewest)
                 if !availableLanguages.isEmpty {
                     filterBar
                 }
@@ -1028,8 +1012,8 @@ struct SnippetGalleryView: View {
         }
         .frame(width: collectionFilterPopoverWidth)
         .fixedSize(horizontal: false, vertical: true)
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isFilterSelected)
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: collectionFilterMatches.count)
+        .animation(DSToken.Motion.toggle, value: isFilterSelected)
+        .animation(DSToken.Motion.toggle, value: collectionFilterMatches.count)
         .onDisappear {
             collectionFilterSearchText = ""
         }
@@ -1264,7 +1248,7 @@ struct SnippetGalleryView: View {
                         selectedFillAccent: theme.accent.blended(with: .black, ratio: 0.1),
                         isSelected: selectedLanguages.isEmpty
                     ) {
-                        withAnimation(.snappy) {
+                        withAnimation(DSToken.Motion.selection) {
                             selectedLanguages.removeAll()
                         }
                     }
@@ -1284,7 +1268,7 @@ struct SnippetGalleryView: View {
                             selectedFillAccent: selectedAccent,
                             isSelected: selectedLanguages.contains(language)
                         ) {
-                            withAnimation(.snappy) {
+                            withAnimation(DSToken.Motion.selection) {
                                 if selectedLanguages.contains(language) {
                                     selectedLanguages.remove(language)
                                 } else {
@@ -1356,8 +1340,11 @@ struct SnippetGalleryView: View {
             .buttonStyle(.plain)
             .keyboardShortcut("n", modifiers: .command)
             .disabled(showMoveSheet)
-            .scaleEffect(fabHovered ? 1.05 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: fabHovered)
+            // Hover is high-frequency: a small, well-damped lift reads as
+            // responsive. The old 0.6 damping overshot and wobbled, which is
+            // the wrong personality for the rest of the glass chrome.
+            .scaleEffect(fabHovered && !reduceMotion ? 1.03 : 1.0)
+            .animation(DSToken.Motion.hover, value: fabHovered)
             .onHover { fabHovered = $0 }
         }
     }

@@ -685,8 +685,11 @@ private struct SidebarMatchedSelectionModifier: ViewModifier {
             }
             .padding(.horizontal, horizontalInset)
             .padding(.vertical, verticalInset)
-            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isSelected)
-            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isActive)
+            // Sidebar rows are selected constantly, including by arrow key.
+            // A spring here leaves a trail of half-faded rows while you
+            // navigate, so the selection fill just snaps with a short fade.
+            .animation(DSToken.Motion.selection, value: isSelected)
+            .animation(DSToken.Motion.selection, value: isActive)
     }
 
     private var fillOpacity: Double {

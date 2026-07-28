@@ -64,4 +64,76 @@ final class SwiftPreviewBuilderTests: XCTestCase {
         let recovered = try Data(contentsOf: dylibURL)
         XCTAssertNotEqual(recovered, Data("not a dylib".utf8))
     }
+
+    // MARK: Cache integrity
+
+    func test_untaggedArtifact_isNotTrusted() throws {
+        let directory = try makeTempDirectory()
+        let artifact = directory.appendingPathComponent("untagged.dylib")
+        try Data("anything".utf8).write(to: artifact)
+        XCTAssertFalse(SwiftPreviewCacheIntegrity.isTrusted(artifact))
+    }
+
+    func test_signedArtifact_isTrusted() throws {
+        let directory = try makeTempDirectory()
+        let artifact = directory.appendingPathComponent("signed.dylib")
+        try Data("compiled bytes".utf8).write(to: artifact)
+        SwiftPreviewCacheIntegrity.sign(artifact)
+        XCTAssertTrue(SwiftPreviewCacheIntegrity.isTrusted(artifact))
+    }
+
+    /// The case the tag exists for: another process swaps the cached artifact
+    /// for its own dylib, keeping the filename the content hash predicts.
+    func test_tamperedArtifact_isNotTrusted() throws {
+        let directory = try makeTempDirectory()
+        let artifact = directory.appendingPathComponent("swapped.dylib")
+        try Data("compiled bytes".utf8).write(to: artifact)
+        SwiftPreviewCacheIntegrity.sign(artifact)
+
+        try Data("attacker bytes".utf8).write(to: artifact)
+
+        XCTAssertFalse(SwiftPreviewCacheIntegrity.isTrusted(artifact))
+    }
+
+    /// A tag lifted from one artifact must not vouch for another.
+    func test_transplantedTag_isNotTrusted() throws {
+        let directory = try makeTempDirectory()
+        let genuine = directory.appendingPathComponent("genuine.dylib")
+        let forged = directory.appendingPathComponent("forged.dylib")
+        try Data("compiled bytes".utf8).write(to: genuine)
+        SwiftPreviewCacheIntegrity.sign(genuine)
+        try Data("attacker bytes".utf8).write(to: forged)
+        try FileManager.default.copyItem(
+            at: genuine.appendingPathExtension("tag"),
+            to: forged.appendingPathExtension("tag")
+        )
+        XCTAssertFalse(SwiftPreviewCacheIntegrity.isTrusted(forged))
+    }
+
+    /// `dlopen` follows symlinks, so the path being loaded has to be a real
+    /// file before its tag means anything.
+    func test_symlinkedArtifact_isRejectedBeforeTagCheck() throws {
+        let directory = try makeTempDirectory()
+        let target = directory.appendingPathComponent("elsewhere.dylib")
+        let link = directory.appendingPathComponent("link.dylib")
+        try Data("compiled bytes".utf8).write(to: target)
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
+
+        XCTAssertTrue(SwiftPreviewCacheIntegrity.isPlainOwnedFile(target))
+        XCTAssertFalse(SwiftPreviewCacheIntegrity.isPlainOwnedFile(link))
+    }
+
+    func test_discard_removesArtifactAndTagTogether() throws {
+        let directory = try makeTempDirectory()
+        let artifact = directory.appendingPathComponent("stale.dylib")
+        try Data("compiled bytes".utf8).write(to: artifact)
+        SwiftPreviewCacheIntegrity.sign(artifact)
+
+        SwiftPreviewCacheIntegrity.discard(artifact)
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: artifact.path))
+        XCTAssertFalse(
+            FileManager.default.fileExists(atPath: artifact.appendingPathExtension("tag").path)
+        )
+    }
 }

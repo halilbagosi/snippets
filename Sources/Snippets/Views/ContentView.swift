@@ -7,6 +7,7 @@ import AppKit
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppearanceSettings.self) private var appearanceSettings
     @Environment(AppIntentNavigator.self) private var navigator
 
@@ -97,12 +98,36 @@ struct ContentView: View {
     }
     @State private var pendingBulkDelete: PendingBulkDelete?
 
-    private struct Toast {
+    private struct Toast: Equatable {
+        /// Distinguishes consecutive toasts so replacing a live one cross-fades
+        /// the message instead of teleporting the text inside a static pill.
+        let id = UUID()
         let message: String
         let showsUndo: Bool
     }
     @State private var activeToast: Toast?
     @State private var toastHideTask: Task<Void, Never>? = nil
+
+
+    /// Overlay editors and the detail card appear centred, so scaling from the
+    /// centre is right here. Reduce Motion drops the scale and keeps the fade,
+    /// which still explains that a layer arrived.
+    private var modalTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)),
+            removal: .opacity.combined(with: .scale(scale: 0.97, anchor: .center))
+        )
+    }
+
+    /// Reduce Motion strips the upward slide; the fade alone still reads.
+    private var toastTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: .move(edge: .bottom).combined(with: .opacity),
+            removal: .opacity
+        )
+    }
 
     private struct DeletedMediaSnapshot {
         let fileName: String
@@ -503,7 +528,7 @@ struct ContentView: View {
                             availableCollections: collections,
                             subcollections: gallerySubcollections,
                             onSelect: { snippet in
-                                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                withAnimation(DSToken.Motion.overlay) {
                                     selectedSnippetID = snippet.persistentModelID
                                     if let colID = selectedCollectionID {
                                         sidebarSelectionContext = .collection(colID)
@@ -513,7 +538,7 @@ struct ContentView: View {
                                 }
                             },
                             onSelectCollection: { collection in
-                                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                withAnimation(DSToken.Motion.overlay) {
                                     selectedSearchCollections.removeAll()
                                     selectedSnippetID = nil
                                     selectedCollectionID = collection.persistentModelID
@@ -531,7 +556,7 @@ struct ContentView: View {
                                 navigateBackFromCollection()
                             } : nil,
                             onClearSelection: {
-                                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                withAnimation(DSToken.Motion.overlay) {
                                     selectedSearchCollections.removeAll()
                                     showUncategorizedOnly = false
                                     if selectedCollectionID == nil {
@@ -564,7 +589,7 @@ struct ContentView: View {
                             .opacity(colorScheme == .dark ? 0.34 : 0.22)
                             .ignoresSafeArea()
                             .onTapGesture {
-                                withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                withAnimation(DSToken.Motion.overlay) {
                                     selectedSnippetID = nil
                                 }
                             }
@@ -580,18 +605,18 @@ struct ContentView: View {
                             } onDelete: {
                                 delete(snippet)
                             } onClose: {
-                                withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                withAnimation(DSToken.Motion.overlay) {
                                     selectedSnippetID = nil
                                 }
                             } onOpenSnippet: { dependency in
-                                withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                withAnimation(DSToken.Motion.overlay) {
                                     if let current = selectedSnippetID {
                                         snippetHistory.append(current)
                                     }
                                     selectedSnippetID = dependency.persistentModelID
                                 }
                             } onBack: {
-                                withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                withAnimation(DSToken.Motion.overlay) {
                                     if let previous = snippetHistory.popLast() {
                                         selectedSnippetID = previous
                                     }
@@ -609,12 +634,7 @@ struct ContentView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                             .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .transition(
-                                .asymmetric(
-                                    insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)),
-                                    removal: .opacity.combined(with: .scale(scale: 0.97, anchor: .center))
-                                )
-                            )
+                            .transition(modalTransition)
                         }
                         .zIndex(2)
                     }
@@ -637,14 +657,14 @@ struct ContentView: View {
                                 availableCollections: collections,
                                 availableSnippets: snippets,
                                 onRequestDismiss: {
-                                    withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                    withAnimation(DSToken.Motion.overlay) {
                                         isPresentingNew = false
                                     }
                                 },
                                 onSave: { newSnippet in
                                     modelContext.insert(newSnippet)
                                     saveOrToast(modelContext)
-                                    withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                    withAnimation(DSToken.Motion.overlay) {
                                         isPresentingNew = false
                                     }
                                 }
@@ -661,12 +681,7 @@ struct ContentView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                             .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .transition(
-                                .asymmetric(
-                                    insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)),
-                                    removal:   .opacity.combined(with: .scale(scale: 0.97, anchor: .center))
-                                )
-                            )
+                            .transition(modalTransition)
                         }
                         .zIndex(4)
                     }
@@ -679,7 +694,7 @@ struct ContentView: View {
                                     .foregroundStyle(theme.text)
                                 if toast.showsUndo {
                                     Button("Undo") {
-                                        withAnimation {
+                                        withAnimation(DSToken.Motion.toastOut) {
                                             _ = undoLast()
                                             activeToast = nil
                                         }
@@ -689,16 +704,28 @@ struct ContentView: View {
                                     .buttonStyle(.plain)
                                 }
                             }
+                            // Keyed on the toast's identity so a message that
+                            // replaces a live toast cross-fades in place rather
+                            // than swapping text inside a motionless pill.
+                            // Order matters: `.transition` has to sit inside the
+                            // `.id` so it travels with the view being swapped,
+                            // and `.animation` outside it to drive that swap.
+                            .transition(.opacity)
+                            .id(toast.id)
+                            .animation(DSToken.Motion.toastIn, value: toast.id)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
                             .liquidGlassSurface(in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                             .padding(.bottom, 60)
                         }
                         .zIndex(100)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        // Asymmetric on purpose: the toast rises into view, but
+                        // dismissal is the system getting out of the way, so it
+                        // fades rather than sliding back down.
+                        .transition(toastTransition)
                     }
                 }
-                .animation(.spring(response: 0.4, dampingFraction: 0.88), value: selectedSnippetID)
+                .animation(DSToken.Motion.overlay, value: selectedSnippetID)
                 // Closing the detail overlay (X, tap-outside, delete) ends the
                 // navigation session, so drop any accumulated back history.
                 .onChange(of: selectedSnippetID) { _, newValue in
@@ -706,7 +733,7 @@ struct ContentView: View {
                         snippetHistory.removeAll()
                     }
                 }
-                .animation(.spring(response: 0.4, dampingFraction: 0.88), value: isPresentingNew)
+                .animation(DSToken.Motion.overlay, value: isPresentingNew)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     StatusBar(
                         segments: currentStatusSegments,
@@ -750,7 +777,7 @@ struct ContentView: View {
         .onChange(of: navigator.pendingOpenSnippetUUID) { _, newValue in
             guard let uuid = newValue else { return }
             if let match = snippets.first(where: { $0.uuid == uuid }) {
-                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                withAnimation(DSToken.Motion.overlay) {
                     searchText = ""
                     selectedCollectionID = nil
                     sidebarSelectionContext = .allSnippets
@@ -937,7 +964,7 @@ struct ContentView: View {
     /// clearing any open detail and the pending flag.
     private func presentNewSnippetFromIntent() {
         newSnippetPreselectedCollectionID = nil
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+        withAnimation(DSToken.Motion.overlay) {
             selectedSnippetID = nil
             isPresentingNew = true
         }
@@ -948,7 +975,7 @@ struct ContentView: View {
         guard let id = selectedCollectionID else { return }
         let parentID = parentCollectionID(for: id)
 
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+        withAnimation(DSToken.Motion.overlay) {
             searchText = ""
             selectedSnippetID = nil
             selectedSearchCollections.removeAll()
@@ -1111,7 +1138,7 @@ struct ContentView: View {
     }
 
     private func showToast(_ message: String, showsUndo: Bool = false) {
-        withAnimation { activeToast = Toast(message: message, showsUndo: showsUndo) }
+        withAnimation(DSToken.Motion.toastIn) { activeToast = Toast(message: message, showsUndo: showsUndo) }
         hideToastAfterDelay()
     }
 
@@ -1412,7 +1439,7 @@ struct ContentView: View {
         toastHideTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 4_000_000_000)
             guard !Task.isCancelled else { return }
-            withAnimation { activeToast = nil }
+            withAnimation(DSToken.Motion.toastOut) { activeToast = nil }
         }
     }
 

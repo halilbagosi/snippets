@@ -1,6 +1,10 @@
 # Snippets — build and test invariants
 
-Native macOS app (SwiftUI + SwiftData). Platform: **macOS 26+** (`Package.swift` declares `.macOS(.v26)` — Liquid Glass APIs / modern SDK stamp).
+Native macOS app (SwiftUI + SwiftData). Platform: **macOS 26+** (Liquid Glass APIs / modern SDK stamp).
+
+`Snippets.xcodeproj` is the **only** build system. There is no `Package.swift` —
+`swift build` / `swift test` do not work here, and adding a package manifest
+back would re-create two diverging file lists.
 
 ## Toolchain
 
@@ -13,22 +17,24 @@ export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
 ## Build
 
 ```sh
-DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer swift build --build-path /tmp/snippets-build
+DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' build
 ```
-
-Keep build artifacts out of the repo: use `--build-path /tmp/snippets-build` (build) and `/tmp/snippets-test-build` (test).
 
 ## Test
 
-Tests run only via `swift test` (SPM), not the Xcode scheme:
+305 XCTest cases in the `SnippetsTests` target, hosted by the app (so a run launches `Snippets.app` briefly):
 
 ```sh
-DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer swift test --build-path /tmp/snippets-test-build
+DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' test
 ```
 
-## Dual build system
+## Registering files
 
-SwiftPM (`Package.swift`) auto-discovers sources; `Snippets.xcodeproj` enumerates them manually. Any new/removed/moved file under `Sources/` must also be registered in `Snippets.xcodeproj/project.pbxproj`. (Test files under `Tests/` need no registration.)
+The project enumerates its files explicitly — it does not use synchronized
+folders. Any new/removed/moved file must be registered in
+`Snippets.xcodeproj/project.pbxproj`: under `Sources/` in the `Snippets`
+target, under `Tests/SnippetsTests/` in the `SnippetsTests` target. A file
+that only exists on disk is silently not compiled.
 
 ## Layout
 

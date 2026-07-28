@@ -59,7 +59,6 @@ struct AboutView: View {
             shadowRadius: 12,
             shadowY: 6
         )
-        .frame(minHeight: 440)
     }
 
     private var appIcon: some View {
