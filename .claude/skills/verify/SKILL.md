@@ -5,15 +5,13 @@ description: Build, launch, and drive the Snippets macOS app to verify changes a
 
 # Verifying Snippets changes
 
-## Two build systems — new files must be registered in BOTH
-This repo builds via SPM (`Package.swift`, globs `Sources/` automatically)
-AND a hand-managed `Snippets.xcodeproj` with explicit per-file references
-(NOT filesystem-synchronized groups). A new `.swift` file compiles under
-`swift build`/`swift test` but is INVISIBLE to Xcode until added to the
-`Snippets` target — so the app build breaks while tests stay green.
-**After adding/moving/removing any source file, run the xcodebuild gate
-below, not just `swift test`.** To register files (no Ruby xcodeproj gem
-on system Ruby; use Python `mod-pbxproj`):
+## One build system — every new file must be registered
+`Snippets.xcodeproj` is the only build system (no `Package.swift`; `swift
+build`/`swift test` do not work here). It uses explicit per-file references,
+NOT filesystem-synchronized groups, so a new `.swift` file on disk is silently
+not compiled until it is added to a target: `Sources/` → `Snippets`,
+`Tests/SnippetsTests/` → `SnippetsTests`. To register files (no Ruby xcodeproj
+gem on system Ruby; use Python `mod-pbxproj`):
 ```bash
 python3 -m pip install --user pbxproj
 # XcodeProject.load(...); get_or_create_group('Preview', path='Preview', parent=<group>)
@@ -24,24 +22,38 @@ python3 -m pip install --user pbxproj
 mod-pbxproj's save() sets the file executable; restore with
 `git update-index --chmod=-x Snippets.xcodeproj/project.pbxproj`.
 
-## Xcodebuild gate (the real app-build check)
-```bash
-export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
-xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' build \
-  2>&1 | grep -iE "error:|BUILD SUCCEEDED|BUILD FAILED|cannot be found"
-```
-
-## Build & launch
+## Build & test gate
 ```bash
 export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer   # CLT lacks SwiftData macros
-swift build
-.build/debug/Snippets > /tmp/snippets-app.log 2>&1 &   # plain executable launch works
+xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' build \
+  2>&1 | grep -iE "error:|BUILD SUCCEEDED|BUILD FAILED|cannot be found"
+xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' test \
+  2>&1 | tail -5    # 305 tests; hosted by the app, so Snippets.app launches during the run
 ```
-Tests: `swift test` only (never xcodebuild test).
+
+## Launch
+```bash
+open -a "$(xcodebuild -project Snippets.xcodeproj -scheme Snippets -showBuildSettings 2>/dev/null \
+  | awk '/ BUILT_PRODUCTS_DIR/{d=$3} /  FULL_PRODUCT_NAME/{n=$3} END{print d"/"n}')"
+```
+Launch the built `.app` (not a bare binary) — the bundle is what gives the app
+its icon, Info.plist and App Intents.
+
+**Two instances ruin AX measurements.** `tell process "Snippets"` picks the
+first match, so if Xcode is also running the app you may be measuring the other
+build. Check with `pgrep -lf Snippets` and address a specific one by pid:
+`repeat with p in (every process whose name is "Snippets") ... if (unix id of p) is <pid>`.
 
 ## Driving the UI
-- No Screen Recording permission for `screencapture` — pixels are unavailable. Use
-  AX via System Events (`osascript`); Terminal already has Accessibility permission.
+- `screencapture -x -R x,y,w,h out.png` works (Screen Recording is granted as of
+  2026-07-28) — but it captures the SCREEN, so raise the target window first
+  (`perform action "AXRaise"`), or you photograph whatever is on top of it.
+  For pixel measurements without PIL: `sips -s format bmp`, then parse the BMP
+  (24-bit, bottom-up rows) in plain Python.
+- AX via System Events (`osascript`) for structure; Terminal has Accessibility.
+  Gotcha: `(item 2 of (size of w)) as text` inside a `&` concatenation throws
+  -1700 unpredictably. Return raw lists (`return {title of w, size of w}`) and
+  parse in the shell instead.
 - Reference the app by process: `first process whose name is "Snippets"` — but window
   lookups fail transiently; `set frontmost … delay 0.5` first, and retry once.
 - Structure: `window 1 > group 1 > splitter group 1 > group 1 (sidebar) / group 2 (content)`.

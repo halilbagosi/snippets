@@ -10,6 +10,7 @@ struct SnippetEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let mode: Mode
     let availableCollections: [SnippetCollection]
@@ -196,10 +197,8 @@ struct SnippetEditorView: View {
                 if canSave {
                     save()
                 } else {
-                    withAnimation { showValidationFeedback = true }
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.2)) {
-                        validationShake.toggle()
-                    }
+                    withAnimation(DSToken.Motion.reveal) { showValidationFeedback = true }
+                    validationShake.toggle()
                     if viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         focus = .title
                     } else if viewModel.code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -255,7 +254,10 @@ struct SnippetEditorView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { focus = .title }
         }
-        .offset(x: validationShake && viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 5 : 0)
+        .validationShake(
+            trigger: validationShake,
+            active: !reduceMotion && viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        )
     }
 
     private var descriptionSection: some View {
@@ -386,7 +388,10 @@ struct SnippetEditorView: View {
                 }
             }
         }
-        .offset(x: validationShake && viewModel.code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 5 : 0)
+        .validationShake(
+            trigger: validationShake,
+            active: !reduceMotion && viewModel.code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        )
     }
 
     private var collectionsSection: some View {
@@ -852,6 +857,42 @@ private struct MediaThumbnail: View {
         #else
         loadFailed = true // Simulate failure on non-AppKit for missing ImageFileLoader
         #endif
+    }
+}
+
+private extension View {
+    /// Nudges the view side to side once and returns it to rest.
+    ///
+    /// The previous implementation animated a static `offset(x: 5)` with an
+    /// underdamped spring, which oscillated and then *settled* at 5pt — the
+    /// field stayed visibly displaced until the next failed save flipped it
+    /// back. A keyframe track plays the full shake and always lands on zero.
+    func validationShake(trigger: Bool, active: Bool) -> some View {
+        modifier(ValidationShakeModifier(trigger: trigger, active: active))
+    }
+}
+
+/// A `ViewModifier` rather than a method body on `View`: writing the keyframe
+/// closure directly in a generic `View` extension captures `Self.Type` in an
+/// isolated closure, which the compiler warns about.
+private struct ValidationShakeModifier: ViewModifier {
+    let trigger: Bool
+    let active: Bool
+
+    func body(content: Content) -> some View {
+        content.keyframeAnimator(
+            initialValue: CGFloat.zero,
+            trigger: trigger
+        ) { view, offset in
+            view.offset(x: active ? offset : 0)
+        } keyframes: { _ in
+            KeyframeTrack {
+                CubicKeyframe(-6, duration: 0.06)
+                CubicKeyframe(6, duration: 0.09)
+                CubicKeyframe(-4, duration: 0.08)
+                CubicKeyframe(0, duration: 0.07)
+            }
+        }
     }
 }
 

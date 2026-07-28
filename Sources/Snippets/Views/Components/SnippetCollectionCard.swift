@@ -112,7 +112,7 @@ struct SnippetCollectionCard: View {
                 } else {
                     HStack(spacing: 8) {
                         Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            withAnimation(DSToken.Motion.toggle) {
                                 collection.isFavorite.toggle()
                             }
                         } label: {
@@ -202,7 +202,7 @@ struct SnippetCollectionCard: View {
                     shape
                         .fill(accent.opacity(colorScheme == .dark ? 0.10 : 0.07))
                         .opacity(effectiveIsHovered ? 1 : 0)
-                        .animation(.easeOut(duration: 0.14), value: effectiveIsHovered)
+                        .animation(DSToken.Motion.hover, value: effectiveIsHovered)
                 }
         }
         .overlay {
@@ -251,7 +251,7 @@ struct SnippetCollectionCard: View {
             onOpen()
         }
         .onAppear {
-            withAnimation(.spring(response: 0.30, dampingFraction: 0.94)) {
+            withAnimation(DSToken.Motion.hover) {
                 didAppear = true
             }
         }
@@ -264,19 +264,19 @@ struct SnippetCollectionCard: View {
                     y: min(max(location.y, 0), max(cardSize.height, 1))
                 )
                 if !isHovered {
-                    withAnimation(.easeOut(duration: 0.16)) {
+                    withAnimation(DSToken.Motion.hover) {
                         isHovered = true
                     }
                 }
             case .ended:
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.94)) {
+                withAnimation(DSToken.Motion.hover) {
                     isHovered = false
                     hoverLocation = hoverCenter
                 }
             }
         }
-        .animation(.spring(response: 0.26, dampingFraction: 0.94), value: isHovered)
-        .animation(.interactiveSpring(response: 0.20, dampingFraction: 0.86), value: hoverLocation)
+        .animation(DSToken.Motion.hover, value: isHovered)
+        .animation(DSToken.Motion.tilt, value: hoverLocation)
         .accessibilityLabel("\(collection.name), \(snippetSummary)")
         .accessibilityAddTraits(.isButton)
         .accessibilityAction {

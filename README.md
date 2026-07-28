@@ -31,39 +31,39 @@ Snippets is a native macOS app built with SwiftUI and SwiftData for organizing, 
 
 - macOS 26+ (the app links against the macOS 26 SDK for the Liquid Glass design system)
 - Xcode (beta) with Swift 6.2 tools; SwiftData macros require the full Xcode toolchain, not the Command Line Tools alone
-- Swift Package Manager
 
 ## Build and Run
 
-From the project root:
+`Snippets.xcodeproj` is the only build system — it is what produces the signed
+`.app` with its icon, entitlements and App Intents. From the project root:
 
 > SwiftData macros require the full Xcode (beta) toolchain. Point `DEVELOPER_DIR` at it before building or testing:
 
 ```sh
 export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
-swift build
+xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' build
 ```
 
-To run the app from Xcode, open the project and launch the Snippets scheme.
+To run the app, open the project and launch the Snippets scheme.
 
-### Dual build system
+### Adding files
 
-SwiftPM (`Package.swift`) auto-discovers sources, but the Xcode project lists files manually — any new source file under `Sources/` must also be added to `Snippets.xcodeproj`.
+The project lists source files explicitly (it does not use synchronized
+folders), so a new file under `Sources/` has to be added to the `Snippets`
+target, and a new file under `Tests/SnippetsTests/` to the `SnippetsTests`
+target. Adding it in Xcode does both; adding it on disk alone leaves it
+uncompiled.
 
 ## Testing
 
 ```sh
 export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
-swift test
+xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' test
 ```
 
-To keep build artifacts outside the repository during local development:
-
-```sh
-swift build --build-path /tmp/snippets-build
-swift test --build-path /tmp/snippets-test-build
-```
+The `SnippetsTests` target is hosted by the app, so a test run launches
+`Snippets.app` — expect the app to appear briefly.
 
 ## Notes
 
-Generated build products, local Xcode/SwiftPM state, and temporary editor files are intentionally excluded from source control. The repository ignores these files so local development stays clean.
+Generated build products, local Xcode state, and temporary editor files are intentionally excluded from source control. The repository ignores these files so local development stays clean.

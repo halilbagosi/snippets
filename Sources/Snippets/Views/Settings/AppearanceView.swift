@@ -85,7 +85,7 @@ struct AppearanceView: View {
     private func schemeTile(_ option: SchemeOption) -> some View {
         let isSelected = appearanceSettings.preferredColorScheme == option.rawValue
         return Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            withAnimation(DSToken.Motion.toggle) {
                 appearanceSettings.preferredColorScheme = option.rawValue
             }
         } label: {
@@ -298,7 +298,7 @@ struct AppearanceView: View {
         let swatchColor = Color(hex: preset.hex) ?? theme.accent
         let isActive = appearanceSettings.themeColorHex.lowercased() == preset.hex.lowercased()
         return Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            withAnimation(DSToken.Motion.toggle) {
                 appearanceSettings.themeColorHex = preset.hex
             }
         } label: {
@@ -320,7 +320,7 @@ struct AppearanceView: View {
             }
             .frame(width: 38, height: 38)
             .scaleEffect(isActive ? 1.08 : 1.0)
-            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isActive)
+            .animation(DSToken.Motion.toggle, value: isActive)
         }
         .buttonStyle(.plain)
         .help(preset.name)
@@ -379,7 +379,7 @@ struct AppearanceView: View {
         }
         .frame(width: 38, height: 38)
         .scaleEffect(isCustomActive ? 1.08 : 1.0)
-        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isCustomActive)
+        .animation(DSToken.Motion.toggle, value: isCustomActive)
         .help("Custom color")
         .accessibilityLabel("Custom theme color")
     }

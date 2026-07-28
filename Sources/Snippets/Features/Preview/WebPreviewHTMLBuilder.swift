@@ -9,26 +9,97 @@ enum WebPreviewHTMLBuilder {
         let textHex: String
     }
 
+    /// What a snippet's preview is permitted to do beyond running offline in a
+    /// closed frame. Every field defaults to denied: a capability is granted
+    /// only where the user has explicitly granted it, for that one snippet.
+    struct Policy: Equatable {
+        /// Whether this snippet may pull npm modules from esm.sh.
+        ///
+        /// Granting it widens `script-src` to include the CDN, which hands the
+        /// snippet both third-party code execution and — because `import()`
+        /// answers to script-src rather than connect-src — a way out through
+        /// the specifier it requests. Nothing else in the preview can reach the
+        /// network, so this flag is the whole egress decision.
+        var allowsCDNModules: Bool = false
+
+        /// The default for anything that has not been granted anything.
+        static let denied = Policy()
+    }
+
+    /// The npm specifiers a React snippet declared, split by what the policy
+    /// lets the preview actually do with them.
+    struct CDNModules: Equatable {
+        /// Fetched from esm.sh before the snippet evaluates.
+        let allowed: [String]
+        /// Detected but refused; reported in the preview console.
+        let blocked: [String]
+
+        init(detected: [String], policy: Policy) {
+            if policy.allowsCDNModules {
+                allowed = detected
+                blocked = []
+            } else {
+                allowed = []
+                blocked = detected
+            }
+        }
+    }
+
     /// Vendored runtime scripts, inlined into the document so previews work
     /// offline and never depend on file-URL resource loading.
-    struct ReactRuntime {
+    struct PreviewRuntime {
         let react: String
         let reactDOM: String
         let babel: String
+        /// Tailwind's browser build. ReactBits ships every component in a
+        /// Tailwind variant whose entire layout lives in utility classes
+        /// (`absolute top-1/2`, `[font-size:var(--x)]`), so without it those
+        /// previews collapse into an unstyled stack of their own children.
+        let tailwind: String
+        /// Bootstrap's stylesheet and its JS bundle (Popper included). Unlike
+        /// Tailwind these are injected only into documents that actually look
+        /// like Bootstrap — its Reboot reset restyles every bare `<h2>` and
+        /// `<button>`, which would rewrite unrelated HTML previews.
+        let bootstrapCSS: String
+        let bootstrapJS: String
+
+        init(
+            react: String, reactDOM: String, babel: String,
+            tailwind: String = "", bootstrapCSS: String = "", bootstrapJS: String = ""
+        ) {
+            self.react = react
+            self.reactDOM = reactDOM
+            self.babel = babel
+            self.tailwind = tailwind
+            self.bootstrapCSS = bootstrapCSS
+            self.bootstrapJS = bootstrapJS
+        }
     }
 
     static func document(
         code: String,
         flavor: WebPreviewFlavor,
         appearance: Appearance,
-        runtime: ReactRuntime
+        runtime: PreviewRuntime,
+        policy: Policy = .denied
     ) -> String {
         document(
             linked: [LinkedSource(language: language(for: flavor), code: code)],
             entryFlavor: flavor,
             appearance: appearance,
-            runtime: runtime
+            runtime: runtime,
+            policy: policy
         )
+    }
+
+    /// The npm specifiers `linked` would need from the CDN — what the preview
+    /// asks the user to approve. Empty for every flavor but React, and for
+    /// React snippets that import nothing beyond the bundled runtimes.
+    static func cdnSpecifiers(linked: [LinkedSource], entryFlavor: WebPreviewFlavor) -> [String] {
+        guard entryFlavor == .react, let entry = linked.last else { return [] }
+        let helperScript = helperRoles(in: linked, entryFlavor: entryFlavor)
+            .script.map(\.code).joined(separator: "\n\n")
+        return unsupportedImports(in: helperScript + "\n" + entry.code)
     }
 
     /// Combined document for a snippet plus its resolved dependencies
@@ -39,33 +110,37 @@ enum WebPreviewHTMLBuilder {
         linked: [LinkedSource],
         entryFlavor: WebPreviewFlavor,
         appearance: Appearance,
-        runtime: ReactRuntime
+        runtime: PreviewRuntime,
+        policy: Policy = .denied
     ) -> String {
         guard let entry = linked.last else {
             return skeleton(appearance: appearance, body: "")
         }
-        let helpers = linked.dropLast()
-        let css = helpers.filter { $0.language == .css }.map(\.code).joined(separator: "\n\n")
-        let html = helpers.filter { $0.language == .html }
+        let helpers = helperRoles(in: linked, entryFlavor: entryFlavor)
+        let css = helpers.css.map(\.code).joined(separator: "\n\n")
+        let html = helpers.markup
             .map { strippingLeadingModuleLines(fromMarkup: $0.code) }
             .joined(separator: "\n")
-        let scriptHelpers = helpers.filter { [.javascript, .typescript, .react].contains($0.language) }
-        let helperScript = scriptHelpers.map(\.code).joined(separator: "\n\n")
-        let helpersNeedBabel = scriptHelpers.contains { $0.language != .javascript }
+        let helperScript = helpers.script.map(\.code).joined(separator: "\n\n")
+        let helpersNeedBabel = helpers.script.contains { $0.language != .javascript }
+        // Decided across every linked source: a Bootstrap component's markup
+        // and its stylesheet routinely arrive as two connected snippets.
+        let bootstrap = linked.contains { usesBootstrap($0.code) }
 
         switch entryFlavor {
         case .html:
             return htmlDocument(
                 code: entry.code, appearance: appearance,
                 prependedHTML: html, extraCSS: css,
-                helperScript: helperScript, needsBabel: helpersNeedBabel, runtime: runtime
+                helperScript: helperScript, needsBabel: helpersNeedBabel,
+                runtime: runtime, bootstrap: bootstrap
             )
         case .css:
-            let helperCSS = helpers.filter { $0.language == .css }.map(\.code)
             return cssDocument(
-                code: (helperCSS + [entry.code]).joined(separator: "\n\n"),
+                code: (helpers.css.map(\.code) + [entry.code]).joined(separator: "\n\n"),
                 markup: html,
-                appearance: appearance
+                appearance: appearance,
+                runtime: runtime, bootstrap: bootstrap
             )
         case .javascript, .typescript:
             let combined = helperScript.isEmpty ? entry.code : helperScript + "\n\n" + entry.code
@@ -74,18 +149,189 @@ enum WebPreviewHTMLBuilder {
                 code: combined, appearance: appearance,
                 babel: useBabel ? runtime.babel : nil,
                 presets: useBabel ? typescriptPresets : nil,
-                prependedHTML: html, extraCSS: css
+                prependedHTML: html, extraCSS: css,
+                runtime: runtime, bootstrap: bootstrap
             )
         case .react:
             return reactDocument(
                 code: entry.code, appearance: appearance, runtime: runtime,
-                helperScript: helperScript, prependedHTML: html, extraCSS: css
+                helperScript: helperScript, prependedHTML: html, extraCSS: css,
+                bootstrap: bootstrap, policy: policy
             )
         case .glsl:
-            let combined = (helpers.filter { $0.language == .glsl }.map(\.code) + [entry.code])
-                .joined(separator: "\n\n")
+            let combined = (helpers.glsl.map(\.code) + [entry.code]).joined(separator: "\n\n")
             return glslDocument(code: combined, appearance: appearance)
         }
+    }
+
+    /// Splits a snippet's helpers by the role they play in the generated
+    /// document. Language alone doesn't decide it: a JSX *usage* snippet
+    /// (`<CursorGrid cellSize={70} />`) is routinely stored as HTML, because
+    /// capitalized component tags read as markup to the language detector.
+    /// Pasted into the body as markup it renders as an unknown empty element
+    /// and — worse — the component then mounts with its own defaults instead
+    /// of the props the snippet exists to demonstrate. Routed to the script
+    /// side, `reactSource` turns it into the mount target, which is what the
+    /// component's page on ReactBits shows.
+    static func helperRoles(
+        in linked: [LinkedSource], entryFlavor: WebPreviewFlavor
+    ) -> (css: [LinkedSource], markup: [LinkedSource], script: [LinkedSource], glsl: [LinkedSource]) {
+        var css: [LinkedSource] = []
+        var markup: [LinkedSource] = []
+        var script: [LinkedSource] = []
+        var glsl: [LinkedSource] = []
+        for helper in linked.dropLast() {
+            switch helper.language {
+            case .css: css.append(helper)
+            case .glsl: glsl.append(helper)
+            case .javascript, .typescript, .react: script.append(helper)
+            case .html:
+                if entryFlavor == .react, isJSXUsage(helper.code) {
+                    script.append(LinkedSource(language: .react, code: helper.code))
+                } else {
+                    markup.append(helper)
+                }
+            default: break
+            }
+        }
+        return (css, markup, script, glsl)
+    }
+
+    /// Whether a snippet is a Bootstrap component, so the preview should
+    /// inline Bootstrap for it. Every token here is one Bootstrap owns and
+    /// Tailwind spells differently (`d-flex` vs `flex`, `col-md-6` vs
+    /// `md:w-1/2`, `justify-content-center` vs `justify-center`), because a
+    /// false positive would drop Reboot on a Tailwind snippet and restyle it.
+    /// `data-bs-*` is the strongest signal: it is Bootstrap's own JS API.
+    static func usesBootstrap(_ code: String) -> Bool {
+        let markers = [
+            #"\bdata-bs-[a-z]+"#,
+            #"\bbtn btn-|\bbtn-(?:outline-|group\b|close\b)"#,
+            #"\bnavbar(?:-expand|-brand|-toggler|-nav)"#,
+            #"\bcard-(?:body|header|footer|title|text)\b"#,
+            #"\bcontainer-fluid\b|\bcol-(?:sm|md|lg|xl|xxl)-\d"#,
+            #"\bform-(?:control|select|check|floating)\b|\binput-group\b"#,
+            #"\blist-group(?:-item)?\b|\bmodal-(?:dialog|content|body)\b"#,
+            #"\bcarousel-(?:inner|item)\b|\baccordion-(?:item|button)\b"#,
+            #"\bdropdown-(?:menu|toggle|item)\b|\bprogress-bar\b"#,
+            #"\bspinner-(?:border|grow)\b|\boffcanvas\b|\bpage-link\b"#,
+            #"\bd-(?:flex|none|block|inline-block|grid)\b"#,
+            #"\bjustify-content-(?:center|between|around|start|end)\b"#,
+            #"\balign-items-(?:center|start|end|baseline)\b"#,
+            #"\btext-bg-|\balert alert-|\bbadge bg-"#,
+            // A Bootstrap CDN <link>/<script> the preview's CSP would block.
+            #"(?:href|src)=["'][^"']*bootstrap[^"']*\.(?:css|js)"#
+        ]
+        return markers.contains { code.range(of: $0, options: .regularExpression) != nil }
+    }
+
+    /// The range of the first complete top-level JSX element in `code`.
+    ///
+    /// ReactBits usage blocks routinely list several presets of the same
+    /// component one after another, with `// …` labels between them. The
+    /// site's live demo shows one, and so must the preview: rendering the
+    /// whole block mounted every preset at once, and the labels — which are
+    /// plain text inside a JSX fragment, not comments — showed up as content.
+    /// A usage that wraps its component in a sized frame is a single element
+    /// and comes back whole.
+    static func firstJSXElement(in code: String) -> Range<String.Index>? {
+        guard let open = code.range(of: "<[A-Za-z]", options: .regularExpression) else { return nil }
+        let nameStart = code.index(after: open.lowerBound)
+        var cursor = nameStart
+        while cursor < code.endIndex, code[cursor].isLetter || code[cursor].isNumber
+                || code[cursor] == "_" || code[cursor] == "$" || code[cursor] == "." {
+            cursor = code.index(after: cursor)
+        }
+        let tag = String(code[nameStart..<cursor])
+
+        /// Advances past a balanced `{…}` or a quoted string at `i`.
+        func skipDelimited(_ i: inout String.Index) -> Bool {
+            guard i < code.endIndex else { return false }
+            let opener = code[i]
+            if opener == "\"" || opener == "'" {
+                i = code.index(after: i)
+                while i < code.endIndex {
+                    if code[i] == "\\" {
+                        i = code.index(i, offsetBy: 2, limitedBy: code.endIndex) ?? code.endIndex
+                        continue
+                    }
+                    if code[i] == opener { i = code.index(after: i); return true }
+                    i = code.index(after: i)
+                }
+                return true
+            }
+            guard opener == "{" else { return false }
+            var depth = 0
+            while i < code.endIndex {
+                if code[i] == "\"" || code[i] == "'" { _ = skipDelimited(&i); continue }
+                if code[i] == "{" { depth += 1 }
+                if code[i] == "}" {
+                    depth -= 1
+                    i = code.index(after: i)
+                    if depth == 0 { return true }
+                    continue
+                }
+                i = code.index(after: i)
+            }
+            return true
+        }
+
+        /// Consumes the rest of an opening tag, reporting whether it self-closed.
+        func finishOpeningTag(_ i: inout String.Index) -> Bool {
+            var lastMeaningful: Character = " "
+            while i < code.endIndex {
+                if code[i] == "\"" || code[i] == "'" || code[i] == "{" {
+                    _ = skipDelimited(&i)
+                    lastMeaningful = "x"
+                    continue
+                }
+                if code[i] == ">" {
+                    i = code.index(after: i)
+                    return lastMeaningful == "/"
+                }
+                if !code[i].isWhitespace { lastMeaningful = code[i] }
+                i = code.index(after: i)
+            }
+            return false
+        }
+
+        if finishOpeningTag(&cursor) { return open.lowerBound..<cursor }
+
+        // Paired element: balance `<tag …>` against `</tag>`. Only the same
+        // tag name matters — a different nested element cannot close this one.
+        var depth = 1
+        while cursor < code.endIndex, depth > 0 {
+            guard let next = code.range(of: "<", range: cursor..<code.endIndex) else { break }
+            var i = next.upperBound
+            let closing = i < code.endIndex && code[i] == "/"
+            if closing { i = code.index(after: i) }
+            let start = i
+            while i < code.endIndex, code[i].isLetter || code[i].isNumber
+                    || code[i] == "_" || code[i] == "$" || code[i] == "." {
+                i = code.index(after: i)
+            }
+            guard String(code[start..<i]) == tag else { cursor = next.upperBound; continue }
+            if closing {
+                while i < code.endIndex, code[i] != ">" { i = code.index(after: i) }
+                if i < code.endIndex { i = code.index(after: i) }
+                depth -= 1
+                cursor = i
+                if depth == 0 { return open.lowerBound..<cursor }
+            } else {
+                if !finishOpeningTag(&i) { depth += 1 }
+                cursor = i
+            }
+        }
+        return open.lowerBound..<code.endIndex
+    }
+
+    /// Whether a snippet is JSX rather than markup: it opens with a tag and
+    /// names at least one capitalized component. Real HTML has no
+    /// uppercase-initial tag names, so plain markup helpers stay markup.
+    static func isJSXUsage(_ code: String) -> Bool {
+        let body = strippingLeadingModuleLines(fromMarkup: code)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return body.hasPrefix("<") && body.range(of: "<[A-Z]", options: .regularExpression) != nil
     }
 
     private static let typescriptPresets = #"[["typescript", { "allExtensions": true }]]"#
@@ -110,16 +356,35 @@ enum WebPreviewHTMLBuilder {
         extraCSS: String = "",
         helperScript: String = "",
         needsBabel: Bool = false,
-        runtime: ReactRuntime? = nil
+        runtime: PreviewRuntime? = nil,
+        bootstrap: Bool = false
     ) -> String {
+        let bootstrapCSS = runtime.map { bootstrapStyle($0, if: bootstrap) } ?? ""
+        let bootstrapJS = runtime.map { bootstrapScript($0, if: bootstrap) } ?? ""
         let hasExtras = !prependedHTML.isEmpty || !extraCSS.isEmpty || !helperScript.isEmpty
+            || !bootstrapCSS.isEmpty
         if code.range(of: "<html", options: .caseInsensitive) != nil {
             // Full-document passthrough. With connections the extras are
             // injected into the document itself — wrapping a complete <html>
             // document inside the skeleton's <body> is invalid markup that
             // WebKit renders unpredictably.
-            guard hasExtras else { return code }
-            var doc = code
+            //
+            // The CSP goes in unconditionally, before the `hasExtras` shortcut:
+            // a passthrough document that needs no extras is still snippet code
+            // about to run, and without the meta tag it would inherit no policy
+            // at all — free to pull remote scripts and beacon out through
+            // subresource loads the navigation delegate never sees.
+            var doc = insertingCSP(into: code, allowsCDNModules: false)
+            guard hasExtras else { return doc }
+            // Ahead of the snippet's own CSS so its overrides still win, and
+            // it supersedes the CDN <link> such documents usually carry — that
+            // link resolves to nothing here.
+            if !bootstrapCSS.isEmpty {
+                doc = inserting(bootstrapCSS, before: "</head>", in: doc, fallbackPrefix: true)
+            }
+            if !bootstrapJS.isEmpty {
+                doc = inserting(bootstrapJS, before: "</body>", in: doc, fallbackPrefix: false)
+            }
             if !extraCSS.isEmpty {
                 doc = inserting(styleTag(extraCSS), before: "</head>", in: doc, fallbackPrefix: true)
             }
@@ -146,7 +411,36 @@ enum WebPreviewHTMLBuilder {
                 presets: needsBabel ? typescriptPresets : nil
             )
         }
-        return skeleton(appearance: appearance, body: body, headExtras: styleTag(extraCSS))
+        if !bootstrapJS.isEmpty { body += "\n" + bootstrapJS }
+        return skeleton(
+            appearance: appearance, body: body,
+            headExtras: bootstrapCSS + styleTag(extraCSS)
+        )
+    }
+
+    /// Puts the CSP meta tag as early in `document` as the markup allows.
+    ///
+    /// Position is load-bearing, not cosmetic: WebKit enforces a meta CSP from
+    /// the point it parses it, so a policy appended before `</head>` would let
+    /// any `<script src>` or `<link>` above it load unpoliced. Preference order
+    /// is therefore immediately after `<head…>`, then after `<html…>`, then the
+    /// very front of the document (which also covers fragments that open with
+    /// `<html` inside a comment and have no real head).
+    ///
+    /// A document that already carries its own CSP keeps it — meta policies
+    /// intersect rather than override, so ours can only tighten it further.
+    static func insertingCSP(into document: String, allowsCDNModules: Bool) -> String {
+        let meta = cspMeta(allowsCDNModules: allowsCDNModules)
+        for tag in ["<head", "<html"] {
+            guard let open = document.range(of: tag, options: .caseInsensitive),
+                  let close = document.range(
+                    of: ">", options: [], range: open.upperBound..<document.endIndex
+                  ) else { continue }
+            return document.replacingCharacters(
+                in: close.upperBound..<close.upperBound, with: "\n" + meta
+            )
+        }
+        return meta + "\n" + document
     }
 
     /// Inserts `fragment` on its own line before the first (case-insensitive)
@@ -174,12 +468,17 @@ enum WebPreviewHTMLBuilder {
 
     // MARK: - CSS
 
-    private static func cssDocument(code: String, markup: String = "", appearance: Appearance) -> String {
+    private static func cssDocument(
+        code: String, markup: String = "", appearance: Appearance,
+        runtime: PreviewRuntime? = nil, bootstrap: Bool = false
+    ) -> String {
         // Snippets that carry their own markup alongside the CSS preview as
         // HTML — but only when no connected markup exists, and only when the
         // tag sits outside comments/strings (`content: "<b>"` is still CSS).
         if markup.isEmpty, containsMarkup(code) {
-            return htmlDocument(code: code, appearance: appearance)
+            return htmlDocument(
+                code: code, appearance: appearance, runtime: runtime, bootstrap: bootstrap
+            )
         }
         let demoMarkup = """
         <div class="demo">
@@ -189,11 +488,16 @@ enum WebPreviewHTMLBuilder {
           <div class="card box item">.card .box .item</div>
         </div>
         """
+        let bootstrapJS = runtime.map { bootstrapScript($0, if: bootstrap) } ?? ""
         let body = """
         \(markup.isEmpty ? demoMarkup : markup)
         \(styleTag(code))
+        \(bootstrapJS)
         """
-        return skeleton(appearance: appearance, body: body)
+        return skeleton(
+            appearance: appearance, body: body,
+            headExtras: runtime.map { bootstrapStyle($0, if: bootstrap) } ?? ""
+        )
     }
 
     /// Whether `code` contains an HTML tag outside CSS comments and quoted
@@ -216,12 +520,19 @@ enum WebPreviewHTMLBuilder {
         babel: String?,
         presets: String?,
         prependedHTML: String = "",
-        extraCSS: String = ""
+        extraCSS: String = "",
+        runtime: PreviewRuntime? = nil,
+        bootstrap: Bool = false
     ) -> String {
         var body = ""
         if !prependedHTML.isEmpty { body += prependedHTML + "\n" }
         body += executionBlock(code: code, babel: babel, presets: presets)
-        return skeleton(appearance: appearance, body: body, headExtras: styleTag(extraCSS))
+        let bootstrapJS = runtime.map { bootstrapScript($0, if: bootstrap) } ?? ""
+        if !bootstrapJS.isEmpty { body += "\n" + bootstrapJS }
+        return skeleton(
+            appearance: appearance, body: body,
+            headExtras: (runtime.map { bootstrapStyle($0, if: bootstrap) } ?? "") + styleTag(extraCSS)
+        )
     }
 
     /// Console panel + script tag that JSON-embeds `code` and evaluates it,
@@ -232,7 +543,7 @@ enum WebPreviewHTMLBuilder {
         <pre id="console" class="snippet-console"></pre>
         \(babelTag)
         <script>
-        \(consoleShim)
+        \(consoleShim(errorsOnly: false))
         \(scriptProgram(code: code, useBabel: babel != nil, presets: presets))
         </script>
         """
@@ -265,10 +576,12 @@ enum WebPreviewHTMLBuilder {
     private static func reactDocument(
         code: String,
         appearance: Appearance,
-        runtime: ReactRuntime,
+        runtime: PreviewRuntime,
         helperScript: String = "",
         prependedHTML: String = "",
-        extraCSS: String = ""
+        extraCSS: String = "",
+        bootstrap: Bool = false,
+        policy: Policy = .denied
     ) -> String {
         // Babel output is strict-mode, so declarations inside eval() stay
         // scoped to it: the component must be captured from within the
@@ -276,23 +589,32 @@ enum WebPreviewHTMLBuilder {
         // detection uses the entry code only — helpers never become the root.
         // Stripped react imports leave hooks unbound; the UMD runtime only
         // exposes the React/ReactDOM globals. (All handled in `reactSource`.)
-        let (source, cdnSpecifiers) = reactSource(code: code, helperScript: helperScript)
+        let (source, cdnSpecifiers) = reactSource(
+            code: code, helperScript: helperScript, policy: policy
+        )
         var body = ""
         if !prependedHTML.isEmpty { body += prependedHTML + "\n" }
         body += """
+        \(tailwindBlock(runtime.tailwind))
         <div id="root"></div>
         <pre id="console" class="snippet-console"></pre>
         <script>\(runtime.react)</script>
         <script>\(runtime.reactDOM)</script>
         <script>\(runtime.babel)</script>
         <script>
-        \(consoleShim)
-        \(reactProgram(source: source, cdnSpecifiers: cdnSpecifiers))
+        \(consoleShim(errorsOnly: true))
+        \(reactProgram(source: source, cdn: cdnSpecifiers))
         </script>
+        \(bootstrapScript(runtime, if: bootstrap))
         """
         return skeleton(
-            appearance: appearance, body: body, headExtras: styleTag(extraCSS),
-            allowsCDNModules: !cdnSpecifiers.isEmpty
+            appearance: appearance, body: body,
+            headExtras: bootstrapStyle(runtime, if: bootstrap) + styleTag(extraCSS),
+            // Only a grant widens the CSP. A snippet with npm imports the user
+            // has not approved renders under the closed policy, so even the
+            // loader's own `import()` would be blocked — belt to the braces of
+            // simply not emitting it.
+            allowsCDNModules: !cdnSpecifiers.allowed.isEmpty
         )
     }
 
@@ -300,25 +622,73 @@ enum WebPreviewHTMLBuilder {
     /// shared by the initial document and `sourceUpdateScript`. The root is
     /// kept on `window` so an update can re-render without a second
     /// `createRoot` on the same container.
-    private static func reactProgram(source: String, cdnSpecifiers: [String]) -> String {
+    private static func reactProgram(source: String, cdn: CDNModules) -> String {
         // npm packages resolve through esm.sh; loaded modules are cached on
-        // `window.__snippetModules` so source updates don't re-fetch. The
-        // `typeof __generation` check discards a mount whose module loads
-        // were overtaken by a newer source update (the update path declares
-        // `__generation` in its wrapping IIFE; the document path has none).
-        let loader = cdnSpecifiers.isEmpty ? "" : """
+        // `window.__snippetModules` so source updates don't re-fetch.
+        let loader = cdn.allowed.isEmpty ? "" : """
           window.__snippetModules = window.__snippetModules || {};
-          for (const __spec of [\(cdnSpecifiers.map(jsonLiteral).joined(separator: ", "))]) {
+          for (const __spec of [\(cdn.allowed.map(jsonLiteral).joined(separator: ", "))]) {
             if (!window.__snippetModules[__spec]) {
               window.__snippetModules[__spec] = await import("https://esm.sh/" + __spec);
             }
           }
-          if (typeof __generation !== "undefined" && __generation !== window.__previewGeneration) { return; }
+        """
+        // Denied imports fail loudly rather than as a bare "X is not defined"
+        // twenty lines into someone else's minified component.
+        let blocked = cdn.blocked.isEmpty ? "" : """
+          __snippetConsole.append("error", \(jsonLiteral(
+            "Blocked npm import(s): " + cdn.blocked.joined(separator: ", ")
+              + ". Allow this snippet to load packages from esm.sh to run it."
+          )));
         """
         return """
         const __snippetSource = \(jsonLiteral(source));
+        // Tailwind can only see a component's utility classes once React has
+        // put them in the DOM, so the stylesheet for them lands a tick after
+        // mount — by which time any component that measured its own container
+        // (every canvas/WebGL one) has latched a pre-layout size. They all
+        // re-measure on window resize, so replaying that as the stylesheet
+        // appears and grows repairs the size without knowing anything about
+        // them. Mounting is never *blocked* on Tailwind: waiting on a compile
+        // that may be slow (or on rAF, which a background window throttles to
+        // a crawl) leaves the preview empty for as long as it takes.
+        // Scoped to <head>, where Tailwind injects, so React's own DOM writes
+        // in <body> can't feed a resize back into a component that resizes.
+        function __snippetSettleLayout() {
+          if (!document.querySelector('style[type="text/tailwindcss"]')) return;
+          let frame = 0;
+          const nudge = () => {
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
+          };
+          const observer = new MutationObserver(nudge);
+          observer.observe(document.head, { childList: true, characterData: true, subtree: true });
+          setTimeout(() => {
+            observer.disconnect();
+            nudge();
+          }, 1500);
+        }
+        // Re-applies prop overrides onto the previewed component wherever it
+        // appears inside a usage snippet's JSX (`<div …><CursorGrid … /></div>`).
+        // Assigned to `window` because the snippet runs through indirect eval,
+        // which only sees globals — and on the update path this whole program
+        // is wrapped in an IIFE.
+        window.__snippetOverride = (node, target, overrides) => {
+          if (!overrides || !target || !React.isValidElement(node)) return node;
+          if (node.type === target) return React.cloneElement(node, overrides);
+          const children = node.props && node.props.children;
+          if (children === undefined || children === null) return node;
+          return React.cloneElement(node, undefined, React.Children.map(
+            children, (child) => window.__snippetOverride(child, target, overrides)
+          ));
+        };
         async function __snippetMount() {
+        \(blocked)
         \(loader)
+          // Discards a mount whose awaits were overtaken by a newer source
+          // update (the update path declares `__generation` in its wrapping
+          // IIFE; the document path has none).
+          if (typeof __generation !== "undefined" && __generation !== window.__previewGeneration) { return; }
           const out = Babel.transform(__snippetSource, {
             presets: [["react"], ["typescript", { "isTSX": true, "allExtensions": true }]],
             filename: "snippet.tsx"
@@ -334,6 +704,7 @@ enum WebPreviewHTMLBuilder {
             );
           };
           window.__snippetRender();
+          __snippetSettleLayout();
         }
         __snippetMount().catch((e) => {
           __snippetConsole.append("error", __snippetErrorText(e));
@@ -343,25 +714,48 @@ enum WebPreviewHTMLBuilder {
 
     /// The complete evaluated React source (helpers stripped and prepended,
     /// hook bindings, export capture) — shared by document and update paths.
-    private static func reactSource(code: String, helperScript: String) -> (source: String, cdnSpecifiers: [String]) {
+    private static func reactSource(
+        code: String, helperScript: String, policy: Policy = .denied
+    ) -> (source: String, cdnSpecifiers: CDNModules) {
         // npm imports beyond the bundled react/react-dom are stripped like the
         // rest of the module syntax, then re-bound from the CDN modules that
-        // `reactProgram` awaits into `window.__snippetModules` before eval.
+        // `reactProgram` awaits into `window.__snippetModules` before eval —
+        // but only where the policy allows the fetch. Denied, the bindings are
+        // left out too: they would resolve to `undefined` members of an empty
+        // module map and fail further from the cause than the console error.
         let fullCode = helperScript + "\n" + code
-        let cdnSpecifiers = unsupportedImports(in: fullCode)
-        let bindings = cdnImportBindings(in: fullCode)
+        let cdnSpecifiers = CDNModules(
+            detected: unsupportedImports(in: fullCode), policy: policy
+        )
+        let bindings = cdnSpecifiers.allowed.isEmpty ? "" : cdnImportBindings(in: fullCode)
         var source = stripModuleSyntax(code, rewriteDefaultExport: true)
         // A helper that is a bare JSX expression is a usage/demo snippet: it
         // references the entry's component, so it must run AFTER the entry
         // (prepending it hits the const's temporal dead zone), wrapped as a
         // component so the element actually renders — as the mount target.
+        let target = reactMountTarget(in: code).map { "(typeof \($0) !== \"undefined\" ? \($0) : null)" } ?? "null"
         var usageComponent = ""
         if !helperScript.isEmpty {
             let strippedHelper = stripModuleSyntax(helperScript, rewriteDefaultExport: false)
             var trimmed = strippedHelper.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.hasPrefix("<") {
+                // Only the first preset — see `firstJSXElement`.
+                if let first = firstJSXElement(in: trimmed) {
+                    trimmed = String(trimmed[first])
+                }
                 while trimmed.hasSuffix(";") { trimmed = String(trimmed.dropLast()).trimmingCharacters(in: .whitespacesAndNewlines) }
-                usageComponent = "\n\nconst __SnippetUsage = () => (<>\n\(trimmed)\n</>);"
+                // The usage snippet hard-codes its props, so rendering it as-is
+                // would swallow every parameter control: the shim hands prop
+                // overrides to the mount target, which here is the wrapper, not
+                // the component. `__snippetOverride` re-applies them onto the
+                // component's own element wherever it sits in the usage tree.
+                usageComponent = """
+
+
+                const __SnippetUsage = (__props) => window.__snippetOverride((<>
+                \(trimmed)
+                </>), \(target), __props);
+                """
             } else {
                 source = strippedHelper + "\n\n" + source
             }
@@ -372,7 +766,6 @@ enum WebPreviewHTMLBuilder {
 
         """ + source
 
-        let target = reactMountTarget(in: code).map { "(typeof \($0) !== \"undefined\" ? \($0) : null)" } ?? "null"
         source += usageComponent + """
 
 
@@ -469,7 +862,22 @@ enum WebPreviewHTMLBuilder {
             with: "", options: .regularExpression
         )
         if rewriteDefaultExport {
-            source = source.replacingOccurrences(of: "export default", with: "const __SnippetDefault =")
+            // `export default function Strands() {}` is a *declaration*. Turning
+            // it into `const __SnippetDefault = function Strands() {}` makes it a
+            // named function *expression*, whose name binds only inside its own
+            // body — so a usage snippet's `<Strands />` throws "Strands is not
+            // defined". Keep the declaration and alias it instead.
+            let named = firstMatch(#"export\s+default\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)"#, in: source)
+                ?? firstMatch(#"export\s+default\s+class\s+([A-Za-z_$][\w$]*)"#, in: source)
+            if let named {
+                source = source.replacingOccurrences(
+                    of: #"export\s+default\s+(?=(?:async\s+)?function\b|class\b)"#,
+                    with: "", options: .regularExpression
+                )
+                source += "\n\nconst __SnippetDefault = \(named);"
+            } else {
+                source = source.replacingOccurrences(of: "export default", with: "const __SnippetDefault =")
+            }
         } else {
             source = source.replacingOccurrences(of: "export default function", with: "function")
             source = source.replacingOccurrences(of: "export default class", with: "class")
@@ -540,7 +948,7 @@ enum WebPreviewHTMLBuilder {
         <canvas id="glcanvas"></canvas>
         <pre id="console" class="snippet-console"></pre>
         <script>
-        \(consoleShim)
+        \(consoleShim(errorsOnly: true))
         // Custom uniforms drive the preview's parameter controls: overrides
         // arrive via the same __snippetRender(overrides) hook the React
         // flavor uses, and are applied every frame.
@@ -703,11 +1111,11 @@ enum WebPreviewHTMLBuilder {
     /// document path uses (`scriptProgram` / `reactSource` + `reactProgram`).
     static func sourceUpdateScript(
         linked: [LinkedSource],
-        entryFlavor: WebPreviewFlavor
+        entryFlavor: WebPreviewFlavor,
+        policy: Policy = .denied
     ) -> String? {
         guard let entry = linked.last else { return nil }
-        let helpers = linked.dropLast()
-        let scriptHelpers = helpers.filter { [.javascript, .typescript, .react].contains($0.language) }
+        let scriptHelpers = helperRoles(in: linked, entryFlavor: entryFlavor).script
         let helperScript = scriptHelpers.map(\.code).joined(separator: "\n\n")
         let helpersNeedBabel = scriptHelpers.contains { $0.language != .javascript }
 
@@ -724,8 +1132,10 @@ enum WebPreviewHTMLBuilder {
                 presets: useBabel ? typescriptPresets : nil
             )
         case .react:
-            let (source, cdnSpecifiers) = reactSource(code: entry.code, helperScript: helperScript)
-            program = reactProgram(source: source, cdnSpecifiers: cdnSpecifiers)
+            let (source, cdnSpecifiers) = reactSource(
+                code: entry.code, helperScript: helperScript, policy: policy
+            )
+            program = reactProgram(source: source, cdn: cdnSpecifiers)
         case .html, .css, .glsl:
             return nil
         }
@@ -746,6 +1156,28 @@ enum WebPreviewHTMLBuilder {
 
     // MARK: - Shared pieces
 
+    /// The preview's Content-Security-Policy, as a `<meta>` tag.
+    ///
+    /// Everything the preview legitimately needs is inline: 'unsafe-inline'
+    /// covers the embedded runtimes and snippet code, 'unsafe-eval' the React
+    /// path (Babel output runs via eval). connect-src 'none' is the actual
+    /// security payoff — no fetch/XHR/WebSocket egress; img-src data:/blob:
+    /// keeps data-URI images working while blocking remote beacons.
+    ///
+    /// Documents the user opted into npm imports for additionally allow module
+    /// loads from esm.sh. That widening is what `import()` needs, and it is
+    /// genuinely a hole in the no-egress property: dynamic `import()` is
+    /// governed by script-src, not connect-src, so snippet code can encode data
+    /// into a specifier and reach the network. It is gated behind an explicit
+    /// per-snippet opt-in for exactly that reason — see `Policy`.
+    ///
+    /// Emitted into *every* document path, skeleton and full-document
+    /// passthrough alike (`htmlDocument`), so no preview ever runs unpoliced.
+    static func cspMeta(allowsCDNModules: Bool) -> String {
+        let scriptSrc = "'unsafe-inline' 'unsafe-eval'" + (allowsCDNModules ? " https://esm.sh" : "")
+        return "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src \(scriptSrc); style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'\">"
+    }
+
     private static func skeleton(
         appearance: Appearance,
         body: String,
@@ -753,23 +1185,12 @@ enum WebPreviewHTMLBuilder {
         headExtras: String = "",
         allowsCDNModules: Bool = false
     ) -> String {
-        // Everything the preview legitimately needs is inline: 'unsafe-inline'
-        // covers the embedded runtimes and snippet code, 'unsafe-eval' the React
-        // path (Babel output runs via eval). connect-src 'none' is the actual
-        // security payoff — no fetch/XHR/WebSocket egress; img-src data:/blob:
-        // keeps data-URI images working while blocking remote beacons.
-        // Documents with npm imports additionally allow module loads from
-        // esm.sh (script-src only — connect-src stays closed, so snippet code
-        // still can't fetch/beacon, even to esm.sh).
-        // Note: full-document passthrough snippets bypass this skeleton (and its
-        // CSP); the WebPreviewView navigation delegate constrains those instead.
-        let scriptSrc = "'unsafe-inline' 'unsafe-eval'" + (allowsCDNModules ? " https://esm.sh" : "")
         return """
         <!doctype html>
         <html>
         <head>
         <meta charset="utf-8">
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src \(scriptSrc); style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+        \(cspMeta(allowsCDNModules: allowsCDNModules))
         <meta name="color-scheme" content="\(appearance.isDark ? "dark" : "light")">
         <style>
         :root { --preview-bg: \(appearance.backgroundHex); --preview-text: \(appearance.textHex); }
@@ -780,12 +1201,40 @@ enum WebPreviewHTMLBuilder {
           font: 14px -apple-system, system-ui, sans-serif;
           padding: 16px;
           box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
         }
+        /* The React mount point fills the preview and centers what it mounts,
+           mirroring the demo frame every ReactBits component is authored
+           against: `h-full`/`w-full` roots need a parent with a real height,
+           and a small component reads as placed rather than dropped in the
+           top-left corner. */
+        #root {
+          flex: 1 1 auto;
+          min-height: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+        /* Usage snippets frame their demo at a fixed size (`height: 600px`),
+           which on the site sits in a page that scrolls. Here the pane is the
+           frame, so a taller demo would just be cut off — clipping a glass
+           orb's top and bottom. Capping makes it shrink to fit instead; it
+           never stretches anything smaller. */
+        #root > * { max-width: 100%; max-height: 100%; }
         .snippet-console {
           font: 12px ui-monospace, monospace;
           white-space: pre-wrap;
           margin: 0;
+          flex: 0 1 auto;
+          overflow: auto;
         }
+        /* An untouched console must not reserve space, and a chatty one (a
+           component logging from `onChange` on every scroll tick) must not
+           push the preview off screen. */
+        .snippet-console:empty { display: none; }
+        #root ~ .snippet-console { max-height: 33%; }
         .snippet-console .error { color: #ff6b6b; }
         \(extraCSS)
         </style>\(headExtras)
@@ -797,6 +1246,43 @@ enum WebPreviewHTMLBuilder {
         """
     }
 
+    /// Tailwind's browser build plus the stylesheet it compiles against.
+    /// Importing `theme` and `utilities` directly (rather than the umbrella
+    /// `tailwindcss`) deliberately skips Preflight: the reset would strip the
+    /// native look off every `<h2>`/`<button>` in non-Tailwind React snippets.
+    /// Only `border-box` is reinstated, because utility padding scales assume
+    /// it. Both specifiers are bundled in the build, so nothing is fetched —
+    /// which matters under the skeleton's `connect-src 'none'`.
+    private static func tailwindBlock(_ tailwind: String) -> String {
+        guard !tailwind.isEmpty else { return "" }
+        return """
+        <style type="text/tailwindcss">
+        @import "tailwindcss/theme" layer(theme);
+        @import "tailwindcss/utilities" layer(utilities);
+        @layer base { *, ::before, ::after { box-sizing: border-box; } }
+        </style>
+        <script>\(tailwind)</script>
+        """
+    }
+
+    /// Bootstrap's stylesheet, as a head fragment. Its own `@charset` rule is
+    /// dropped: valid only at the very start of an external stylesheet, it is
+    /// meaningless inside a `<style>` tag.
+    private static func bootstrapStyle(_ runtime: PreviewRuntime, if needed: Bool) -> String {
+        guard needed, !runtime.bootstrapCSS.isEmpty else { return "" }
+        let css = runtime.bootstrapCSS.replacingOccurrences(
+            of: #"^@charset\s+"[^"]*";"#, with: "", options: .regularExpression
+        )
+        return styleTag(css)
+    }
+
+    /// Bootstrap's JS bundle, as a body fragment. Dropdowns, modals, tabs,
+    /// carousels and tooltips are inert markup without it.
+    private static func bootstrapScript(_ runtime: PreviewRuntime, if needed: Bool) -> String {
+        guard needed, !runtime.bootstrapJS.isEmpty else { return "" }
+        return "<script>\(runtime.bootstrapJS)</script>"
+    }
+
     /// Style tag for dependency CSS; empty input produces no tag at all so
     /// single-source documents stay byte-identical.
     private static func styleTag(_ css: String) -> String {
@@ -806,15 +1292,31 @@ enum WebPreviewHTMLBuilder {
 
     /// Mirrors console output into the in-page panel so JS snippets have
     /// visible output without the web inspector.
-    private static let consoleShim = """
+    ///
+    /// `errorsOnly` is for the React flavor, where the preview *is* the
+    /// output: a component wired to `onChange={(i, x) => console.log(i, x)}`
+    /// — the ReactBits house style — otherwise paints a running list of its
+    /// own options over the demo. Errors still surface, and everything still
+    /// reaches the web inspector.
+    private static func consoleShim(errorsOnly: Bool) -> String {
+        """
     const __snippetConsole = {
       el: document.getElementById("console"),
+      // A component that logs on every animation/scroll tick would otherwise
+      // grow the panel without bound; only the newest lines are worth keeping.
+      limit: 200,
+      errorsOnly: \(errorsOnly),
       append(level, text) {
         if (!this.el) return;
+        if (this.errorsOnly && level !== "error") return;
         const line = document.createElement("div");
         if (level === "error") line.className = "error";
         line.textContent = text;
         this.el.appendChild(line);
+        while (this.el.childElementCount > this.limit) {
+          this.el.removeChild(this.el.firstElementChild);
+        }
+        this.el.scrollTop = this.el.scrollHeight;
       }
     };
     for (const level of ["log", "info", "warn", "error"]) {
@@ -841,6 +1343,7 @@ enum WebPreviewHTMLBuilder {
       return e.stack ? head + "\\n" + e.stack : head;
     }
     """
+    }
 
     /// JSON string literal for safe embedding inside <script> — JSONEncoder
     /// escapes forward slashes, so "</script>" can never terminate the tag.

@@ -15,46 +15,88 @@ struct MetalShaderPreviewView: View {
 
     private var changeKey: String { (helpers + [entry]).joined(separator: "\u{0}") }
 
-    @State private var state: CompileState = .compiling
+    /// The last pipeline that compiled successfully. Kept on screen while a
+    /// recompile runs so an edit (or applying a parameter config, which
+    /// rewrites the source) never blanks the canvas.
+    @State private var pipeline: ShaderPipeline?
+    @State private var failure: String?
 
-    private enum CompileState {
-        case compiling
-        case ready(ShaderPipeline)
-        case failed(String)
-    }
+    private var isFirstCompile: Bool { pipeline == nil && failure == nil }
 
     var body: some View {
         ZStack {
-            switch state {
-            case .compiling:
-                ProgressView()
-                    .controlSize(.small)
-            case .ready(let pipeline):
+            // The canvas is opaque black in every state, and matches the
+            // MTKView's own clear colour. An MTKView presents nothing until its
+            // first drawable, and the panel behind this view is bright Liquid
+            // Glass — which is what showed through as a white flash each time a
+            // shader was compiled or recompiled.
+            Color.black
+
+            if let pipeline {
                 ShaderRenderView(pipeline: pipeline, params: params, paramValues: paramValues)
-            case .failed(let message):
+            }
+
+            if let failure {
                 ScrollView {
-                    Text(message)
+                    Text(failure)
                         .font(Mono.font(size: 11))
                         .foregroundStyle(.red)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(DSToken.Spacing.md)
                 }
+            } else if isFirstCompile {
+                ProgressView()
+                    .controlSize(.small)
             }
         }
+        // Controls sit on the black canvas regardless of the app's appearance.
+        .environment(\.colorScheme, .dark)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: changeKey) {
-            state = .compiling
             let source = entry
             let helperSources = helpers
             let result = await Task.detached(priority: .userInitiated) {
                 ShaderPipeline.compile(entry: source, helpers: helperSources)
             }.value
+            // `.task(id:)` cancels this task when the source changes, but the
+            // detached compile runs to completion regardless — dropping its
+            // result keeps a slow older compile from overwriting a newer one.
+            guard !Task.isCancelled else { return }
             switch result {
-            case .success(let pipeline): state = .ready(pipeline)
-            case .failure(let error): state = .failed(error.localizedDescription)
+            case .success(let compiled):
+                pipeline = compiled
+                failure = nil
+            case .failure(let error):
+                pipeline = nil
+                failure = error.localizedDescription
             }
         }
+    }
+}
+
+/// Shader time, accumulated per drawn frame rather than read off a wall clock.
+///
+/// An MTKView stops drawing whenever the preview cannot be seen (occluded,
+/// minimized, behind another window), but wall-clock time keeps running — so a
+/// clock built on `CACurrentMediaTime()` alone made a shader lurch forward by
+/// the whole length of the pause the moment it came back into view.
+struct ShaderClock {
+    private(set) var elapsed: CFTimeInterval = 0
+    private var lastFrameTime: CFTimeInterval?
+
+    /// Longest gap credited to a single frame. Collapses a pause of any length
+    /// to an imperceptible step, while staying well above the frame time of
+    /// even a very heavy shader so real rendering is never slowed down.
+    static let maxFrameDelta: CFTimeInterval = 0.25
+
+    mutating func advance(to now: CFTimeInterval) {
+        if let lastFrameTime {
+            // A backwards step (clock adjustment) contributes nothing rather
+            // than winding the shader back.
+            elapsed += max(0, min(now - lastFrameTime, Self.maxFrameDelta))
+        }
+        lastFrameTime = now
     }
 }
 
@@ -68,6 +110,11 @@ private struct ShaderRenderView: NSViewRepresentable {
     func makeNSView(context: Context) -> MouseTrackingMTKView {
         let view = MouseTrackingMTKView(frame: .zero, device: pipeline.device)
         view.colorPixelFormat = .bgra8Unorm
+        // Opaque black, matching the canvas behind the view, so the frames
+        // before the first drawable are indistinguishable from a cleared one.
+        view.clearColor = MTLClearColorMake(0, 0, 0, 1)
+        view.layer?.isOpaque = true
+        view.layer?.backgroundColor = NSColor.black.cgColor
         // Match ProMotion displays (the disintegration renderer already runs
         // at 120); MTKView clamps to the actual display refresh rate.
         view.preferredFramesPerSecond = 120
@@ -78,6 +125,11 @@ private struct ShaderRenderView: NSViewRepresentable {
     }
 
     func updateNSView(_ view: MouseTrackingMTKView, context: Context) {
+        // A recompile can hand back a pipeline built on a different device;
+        // rendering it through the view's original one draws nothing at all.
+        if view.device !== pipeline.device {
+            view.device = pipeline.device
+        }
         context.coordinator.attach(pipeline: pipeline, view: view)
         context.coordinator.setParams(params, values: paramValues)
     }
@@ -93,7 +145,7 @@ private struct ShaderRenderView: NSViewRepresentable {
         private var pipeline: ShaderPipeline?
         private var commandQueue: MTLCommandQueue?
         private weak var trackingView: MouseTrackingMTKView?
-        private let startTime = CACurrentMediaTime()
+        private var clock = ShaderClock()
         /// Pre-packed `SnippetParams` buffer contents (see
         /// `PreviewParamDetector.packMetalParams`); empty when the snippet
         /// declares no params struct.
@@ -114,6 +166,9 @@ private struct ShaderRenderView: NSViewRepresentable {
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
 
         func draw(in view: MTKView) {
+            // A zero-sized drawable yields a degenerate resolution uniform,
+            // which divides to NaN in most shaders.
+            guard view.drawableSize.width > 0, view.drawableSize.height > 0 else { return }
             guard let pipeline,
                   let commandQueue,
                   let descriptor = view.currentRenderPassDescriptor,
@@ -122,8 +177,10 @@ private struct ShaderRenderView: NSViewRepresentable {
                   let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
                 return
             }
+            clock.advance(to: CACurrentMediaTime())
+
             var uniforms = Uniforms()
-            uniforms.time = Float(CACurrentMediaTime() - startTime)
+            uniforms.time = Float(clock.elapsed)
             uniforms.resolution = SIMD2(Float(view.drawableSize.width), Float(view.drawableSize.height))
             uniforms.mouse = trackingView?.mouseState ?? .zero
             encoder.setRenderPipelineState(pipeline.pipelineState)

@@ -93,24 +93,13 @@ struct SnippetDetailView: View {
             .accessibilityLabel("Close snippet")
 
             if canGoBack {
-                Button(action: onBack) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(theme.text)
-                        .frame(width: 30, height: 30)
-                        .contentShape(Circle())
-                        .liquidGlassSurface(
-                            in: Circle(),
-                            shadowRadius: 12,
-                            shadowY: 6
-                        )
-                }
-                .buttonStyle(.plain)
-                .padding(.top, 14)
-                .padding(.leading, 14)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .transition(.opacity.combined(with: .scale(scale: 0.8)))
-                .accessibilityLabel("Back to previous snippet")
+                BackButton(action: onBack, accessibilityLabel: "Back to previous snippet")
+                    .padding(.top, 14)
+                    .padding(.leading, 14)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    // 0.94 matches the scale the modals and move sheet enter
+                    // at; 0.8 read as a pop next to the rest of the chrome.
+                    .transition(.opacity.combined(with: .scale(scale: 0.94)))
             }
         }
 
@@ -258,12 +247,32 @@ struct SnippetDetailView: View {
         }
     }
 
-    /// Preview height is capped at 20% taller than the measured code area,
-    /// so toggling never balloons the pane; falls back to the old fixed
-    /// height until the code has been measured.
+    /// The preview occupies exactly the code window's footprint, so toggling
+    /// between source and preview swaps the contents without resizing the pane.
+    /// Falls back to the code view's own minimum height until it has been
+    /// measured (the source view is shown first, so this is only the very
+    /// first layout pass).
     private var previewHeight: CGFloat {
-        guard codeAreaHeight > 0 else { return 420 }
-        return min(420, codeAreaHeight * 1.2)
+        codeAreaHeight > 0 ? codeAreaHeight : Self.codeMinHeight
+    }
+
+    private static let codeMinHeight: CGFloat = 240
+    private static let codeMaxHeight: CGFloat = 520
+
+    /// Base colour the preview panel paints before its content is on screen.
+    ///
+    /// The source panel is deliberately transparent — `HighlightedCodeView`
+    /// draws no background, so the panel's background *is* the Liquid Glass
+    /// behind it. Without an opaque backdrop of its own, that bright glass
+    /// stayed visible for the whole toggle animation and compile, which is the
+    /// white flash before a (usually dark) preview appears. `canvasDeep` is
+    /// near-white in light mode, so a shader canvas has to be black rather than
+    /// simply "the deep canvas colour".
+    private var previewBackdrop: Color {
+        switch language.previewKind {
+        case .metal: .black // matches the shader canvas and the MTKView clear colour
+        case .web, .swiftUI, .none: theme.canvasDeep
+        }
     }
 
     private var codeBlock: some View {
@@ -275,6 +284,13 @@ struct SnippetDetailView: View {
             // binding above doesn't provide.
             let configResolution = resolution
                 ?? (snippet.paramConfigs.isEmpty ? nil : SnippetLinker.resolve(entry: snippet))
+            // Detection is by far the most expensive thing in this body — it
+            // runs regexes over the whole linked source — and this body is
+            // re-evaluated on every frame of a parameter-slider drag. Derive it
+            // once here and hand it to everything below rather than letting the
+            // config control, the parameter panel and the preview each ask
+            // again.
+            let detected = configResolution.map(detectedParams) ?? []
             HStack(spacing: 8) {
                 SectionHeader(showPreview ? "preview" : "source")
                 if let resolution, !resolution.excluded.isEmpty {
@@ -284,8 +300,7 @@ struct SnippetDetailView: View {
                 }
                 Spacer(minLength: 16)
                 if let configResolution,
-                   !snippet.paramConfigs.isEmpty
-                    || !PreviewParamDetector.detect(for: language, resolution: configResolution).isEmpty {
+                   !snippet.paramConfigs.isEmpty || !detected.isEmpty {
                     PreviewConfigControl(
                         configs: snippet.paramConfigs,
                         activeID: snippet.activeParamConfigID,
@@ -305,7 +320,7 @@ struct SnippetDetailView: View {
                         accent: theme.accent,
                         isSelected: showPreview
                     ) {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        withAnimation(DSToken.Motion.reveal) {
                             showPreview.toggle()
                         }
                     }
@@ -315,10 +330,17 @@ struct SnippetDetailView: View {
                 if let resolution, language.previewKind != nil {
                     SnippetPreviewView(
                         resolution: resolution, language: language, theme: theme,
+                        params: detected.map(\.param),
                         paramOverrides: $paramOverrides
                     )
                     .frame(height: previewHeight)
-                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                    // Instant swap, never a cross-fade. Every preview engine is
+                    // an NSViewRepresentable, and fading one in forces SwiftUI
+                    // to rasterise the AppKit-hosted subtree to apply group
+                    // opacity — that snapshot composites as a white frame over
+                    // everything, including the backdrop below, which is the
+                    // white flash on toggling. See `previewBackdrop`.
+                    .transition(.identity)
                 } else {
                     HighlightedCodeView(
                         code: snippet.code,
@@ -326,17 +348,39 @@ struct SnippetDetailView: View {
                         theme: theme,
                         fontSize: 13
                     )
-                    .frame(minHeight: 240, maxHeight: 520)
+                    .frame(minHeight: Self.codeMinHeight, maxHeight: Self.codeMaxHeight)
                     .onGeometryChange(for: CGFloat.self) { proxy in
                         proxy.size.height
                     } action: { height in
                         codeAreaHeight = height
                     }
-                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                    // Same reason as the preview branch: HighlightedCodeView is
+                    // an NSScrollView, so fading it out rasterises it too.
+                    .transition(.identity)
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .liquidGlassSurface(
+            .background {
+                // The backdrop must be opaque from the very first frame of the
+                // toggle: letting it fade in would reopen the exact gap it
+                // exists to close, since the content fading in over it is
+                // transparent for the length of the animation. `.identity`
+                // plus a nil animation scoped to just this layer pins it,
+                // without touching the content's own cross-fade.
+                Group {
+                    if showPreview, language.previewKind != nil {
+                        previewBackdrop.transition(.identity)
+                    }
+                }
+                .animation(nil, value: showPreview)
+            }
+            // A *well*, not a surface: `liquidGlassSurface` composites the glass
+            // backdrop and a full-area white fill (16% in light mode) over its
+            // content. With no preview frame yet drawn there is nothing to
+            // dominate that stack, so the panel reads as a bright rectangle
+            // until the engine's first frame lands — the white flash before the
+            // preview starts. A well puts the same material strictly behind,
+            // leaving only the hairline rim on top.
+            .liquidGlassWell(
                 in: RoundedRectangle(cornerRadius: 14, style: .continuous),
                 tint: (Color(hex: language.accentHex) ?? theme.accent).opacity(0.08),
                 shadowRadius: 10,
@@ -346,8 +390,8 @@ struct SnippetDetailView: View {
             // Parameter controls are their own collapsible panel below the
             // preview, not stacked inside its fixed-height frame — so expanding
             // them grows this column downward instead of shrinking the preview.
-            if let resolution, showPreview, language.previewKind != nil {
-                let params = detectedParams(resolution).map(\.param)
+            if resolution != nil, showPreview, language.previewKind != nil {
+                let params = detected.map(\.param)
                 if !params.isEmpty {
                     PreviewParamControls(params: params, overrides: $paramOverrides, theme: theme)
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -375,17 +419,67 @@ struct SnippetDetailView: View {
     }
 
     /// Params the previewed source currently declares.
+    ///
+    /// A connected usage snippet sets props explicitly on the component it
+    /// mounts, and those beat the component's defaults in the preview — so
+    /// where one exists it, not the entry, states the parameter's current
+    /// value. Reporting the entry's default here would show the controls one
+    /// value while the preview rendered another.
     private func detectedParams(_ resolution: SnippetLinker.Resolution) -> [DetectedParam] {
-        PreviewParamDetector.detect(for: language, resolution: resolution)
+        let declared = PreviewParamDetector.detect(for: language, resolution: resolution)
+        guard let usage = usageSnippet(resolution) else { return declared }
+        return PreviewParamDetector.merging(
+            usage: PreviewParamDetector.detectJSXUsage(in: usage.code), into: declared
+        )
     }
 
-    /// Rewrites the snippet's source so it declares `values`, then clears the
-    /// live overrides — the code now *is* the config, so nothing is overridden.
+    /// The connected snippet whose JSX mounts the entry component, if any.
+    /// Matched against the resolved sources so it is the same snippet the
+    /// preview builder routes into the mount position.
+    private func usageSnippet(_ resolution: SnippetLinker.Resolution) -> Snippet? {
+        guard language.previewKind == .web(.react) else { return nil }
+        let usageCode = Set(
+            resolution.sources.dropLast()
+                .filter { WebPreviewHTMLBuilder.isJSXUsage($0.code) }
+                .map(\.code)
+        )
+        guard !usageCode.isEmpty else { return nil }
+        return snippet.dependencies.first { usageCode.contains($0.code) }
+    }
+
+    /// Rewrites the source so it declares `values`, then clears the live
+    /// overrides — the code now *is* the config, so nothing is overridden.
+    ///
+    /// Values a usage snippet pins are written *there*: rewriting only the
+    /// component's defaults left them shadowed, so a saved config appeared to
+    /// do nothing. Params the usage does not mention still go to the entry.
     private func applyValues(
         _ values: [String: PreviewParamValue], resolution: SnippetLinker.Resolution
     ) {
-        let detected = detectedParams(resolution)
-        snippet.code = PreviewParamWriter.apply(values, to: snippet.code, params: detected)
+        if let usage = usageSnippet(resolution) {
+            let usageParams = PreviewParamDetector.detectJSXUsage(in: usage.code)
+            let pinned = Set(usageParams.map(\.param.name))
+            if !pinned.isEmpty {
+                usage.code = PreviewParamWriter.apply(
+                    values.filter { pinned.contains($0.key) }, to: usage.code, params: usageParams
+                )
+                usage.updatedAt = .now
+            }
+            let rest = values.filter { !pinned.contains($0.key) }
+            if !rest.isEmpty {
+                snippet.code = PreviewParamWriter.apply(
+                    rest, to: snippet.code,
+                    params: PreviewParamDetector.detect(for: language, resolution: resolution)
+                )
+            }
+            snippet.updatedAt = .now
+            paramOverrides = [:]
+            return
+        }
+        snippet.code = PreviewParamWriter.apply(
+            values, to: snippet.code,
+            params: PreviewParamDetector.detect(for: language, resolution: resolution)
+        )
         snippet.updatedAt = .now
         paramOverrides = [:]
     }
@@ -693,7 +787,7 @@ private struct MediaAttachmentLightbox: View {
                     .onEnded { _ in dragBaseOffset = nil }
             )
             .onTapGesture(count: 2) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                withAnimation(DSToken.Motion.reveal) {
                     setZoom(zoomScale > 1 ? 1 : 2.5)
                 }
             }
@@ -743,7 +837,7 @@ private struct MediaAttachmentLightbox: View {
         .overlay(alignment: .bottom) {
             HStack(spacing: 6) {
                 zoomButton(systemName: "minus", key: "-", isEnabled: zoomScale > minZoom) {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                    withAnimation(DSToken.Motion.reveal) {
                         setZoom(zoomScale / 1.4)
                     }
                 }
@@ -752,7 +846,7 @@ private struct MediaAttachmentLightbox: View {
                     .foregroundStyle(theme.textMuted)
                     .padding(.horizontal, 6)
                 zoomButton(systemName: "plus", key: "=", isEnabled: zoomScale < maxZoom) {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                    withAnimation(DSToken.Motion.reveal) {
                         setZoom(zoomScale * 1.4)
                     }
                 }
@@ -766,7 +860,7 @@ private struct MediaAttachmentLightbox: View {
         // Fitted sizing tracks the ideal size as the media's aspect ratio
         // resolves, while the flexible frame keeps the sheet user-resizable.
         .presentationSizing(.fitted)
-        .animation(.spring(response: 0.35, dampingFraction: 0.9), value: contentAspect)
+        .animation(DSToken.Motion.reveal, value: contentAspect)
     }
 
     /// Sheet dimensions derived from the media's aspect ratio: the frame goes
@@ -917,7 +1011,7 @@ private struct LightboxImageView: View {
         .aspectRatio(cardAspectRatio, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .animation(.spring(response: 0.35, dampingFraction: 0.9), value: cardAspectRatio)
+        .animation(DSToken.Motion.reveal, value: cardAspectRatio)
         .onAppear(perform: loadImage)
         .onDisappear {
             #if canImport(AppKit)
@@ -991,7 +1085,7 @@ private struct LightboxVideoView: View {
         let width = abs(size.width)
         let height = abs(size.height)
         guard width > 0, height > 0 else { return }
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+        withAnimation(DSToken.Motion.reveal) {
             aspectRatio = width / height
         }
         onAspectResolved?(width / height)

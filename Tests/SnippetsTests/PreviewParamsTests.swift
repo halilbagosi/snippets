@@ -78,6 +78,104 @@ final class PreviewParamsTests: XCTestCase {
         ))
     }
 
+    func test_stringPropIndexingLookupTable_becomesChoice() {
+        let params = PreviewParamDetector.reactParams(in: """
+        const FALLOFF_CURVES = {
+          linear: p => p,
+          smooth: p => p * p * (3 - 2 * p),
+          sharp: p => p * p * p
+        };
+        const LineSidebar = ({ falloff = 'smooth' }) => {
+          const ease = FALLOFF_CURVES[falloff] ?? FALLOFF_CURVES.linear;
+          return <div>{ease(1)}</div>;
+        };
+        export default LineSidebar;
+        """)
+        XCTAssertEqual(params[0].kind, .choice(
+            default: "smooth", options: ["smooth", "linear", "sharp"]
+        ))
+    }
+
+    /// Nested values must not contribute their own keys, and quoted keys must
+    /// read the same as bare ones.
+    func test_lookupTableOptions_readOnlyTopLevelKeys() {
+        let params = PreviewParamDetector.reactParams(in: """
+        const PRESETS = {
+          'soft': { blur: 4, spread: 2 },
+          hard: { blur: 0, spread: 0 }
+        };
+        const Card = ({ preset = 'soft' }) => <div style={PRESETS[preset]} />;
+        export default Card;
+        """)
+        XCTAssertEqual(params[0].kind, .choice(default: "soft", options: ["soft", "hard"]))
+    }
+
+    /// A component that bundles its props into one object still names the prop
+    /// where it indexes the table.
+    func test_lookupTableIndexedThroughPropsObject_becomesChoice() {
+        let params = PreviewParamDetector.reactParams(in: """
+        const FALLOFF_CURVES = { linear: p => p, smooth: p => p * p, sharp: p => p * p * p };
+        const CursorGrid = ({ falloff = 'smooth' }) => {
+          const draw = p => FALLOFF_CURVES[p.falloff] ?? FALLOFF_CURVES.linear;
+          return <canvas ref={draw({ falloff })} />;
+        };
+        export default CursorGrid;
+        """)
+        XCTAssertEqual(params[0].kind, .choice(
+            default: "smooth", options: ["smooth", "linear", "sharp"]
+        ))
+    }
+
+    func test_stringPropSwitchedOn_becomesChoice() {
+        let params = PreviewParamDetector.reactParams(in: """
+        const Easing = ({ curve = 'linear' }) => {
+          switch (curve) {
+            case 'linear': return <A/>;
+            case 'ease-in': return <B/>;
+            default: return null;
+          }
+        };
+        export default Easing;
+        """)
+        XCTAssertEqual(params[0].kind, .choice(
+            default: "linear", options: ["linear", "ease-in"]
+        ))
+    }
+
+    /// The options live in the component; the usage only pins a value. Merging
+    /// has to keep the dropdown rather than let the usage's bare string win.
+    func test_usagePinnedChoice_keepsComponentOptions() {
+        let component = PreviewParamDetector.detectReact(in: """
+        const FALLOFF_CURVES = { linear: p => p, smooth: p => p * p, sharp: p => p * p * p };
+        const LineSidebar = ({ falloff = 'linear' }) => <div>{FALLOFF_CURVES[falloff](1)}</div>;
+        export default LineSidebar;
+        """)
+        let usage = PreviewParamDetector.detectJSXUsage(in: #"<LineSidebar falloff="smooth" />"#)
+        let merged = PreviewParamDetector.merging(usage: usage, into: component)
+
+        XCTAssertEqual(merged.map(\.param.kind), [
+            .choice(default: "smooth", options: ["linear", "smooth", "sharp"])
+        ])
+        // The usage owns the write target, so a saved config still lands where
+        // the value that renders actually lives.
+        XCTAssertEqual(merged.map(\.target), usage.map(\.target))
+    }
+
+    /// A usage pinning something the component never lists still has to show
+    /// what is on screen.
+    func test_usagePinnedValueOutsideOptions_leadsTheList() {
+        let component = PreviewParamDetector.detectReact(in: """
+        const CURVES = { linear: 1, smooth: 2 };
+        const Line = ({ falloff = 'linear' }) => <div>{CURVES[falloff]}</div>;
+        export default Line;
+        """)
+        let usage = PreviewParamDetector.detectJSXUsage(in: #"<Line falloff="custom" />"#)
+        XCTAssertEqual(
+            PreviewParamDetector.merging(usage: usage, into: component).map(\.param.kind),
+            [.choice(default: "custom", options: ["custom", "linear", "smooth"])]
+        )
+    }
+
     func test_stringPropWithoutDiscoverableOptions_staysTextField() {
         let params = PreviewParamDetector.reactParams(in: """
         const App = ({ label = "hello" }) => <p>{label}</p>;
@@ -276,5 +374,165 @@ final class PreviewParamsTests: XCTestCase {
             excluded: []
         )
         XCTAssertTrue(PreviewParamDetector.detect(for: .swift, resolution: resolution).isEmpty)
+    }
+}
+
+// MARK: - Config write-back with a connected usage snippet
+
+extension PreviewParamsTests {
+    private var strandsEntry: String {
+        """
+        const Strands = ({
+          count = 3,
+          speed = 0.5,
+          glass = false
+        }) => null;
+        export default Strands;
+        """
+    }
+    private var strandsUsage: String {
+        """
+        import Strands from './Strands';
+
+        <Strands
+          count={3}
+          speed={0.5}
+          glass={false}
+        />
+        """
+    }
+
+    /// The bug: a saved config rewrote the component's *defaults*, but the
+    /// preview mounts the usage snippet, whose explicit props win — so the
+    /// preview kept showing the old values.
+    func test_usageSnippet_ownsTheValuesAConfigMustWrite() {
+        let usageParams = PreviewParamDetector.detectJSXUsage(in: strandsUsage)
+        XCTAssertEqual(Set(usageParams.map(\.param.name)), ["count", "speed", "glass"])
+
+        let written = PreviewParamWriter.apply(
+            ["count": .number(7), "speed": .number(2), "glass": .boolean(true)],
+            to: strandsUsage, params: usageParams
+        )
+        XCTAssertTrue(written.contains("count={7}"))
+        XCTAssertTrue(written.contains("speed={2}"))
+        XCTAssertTrue(written.contains("glass={true}"))
+    }
+
+    func test_detectJSXUsage_readsEffectiveValuesNotComponentDefaults() {
+        let usage = """
+        <Strands count={9} label="hi" tint="#ff0044" glass loop={false} />
+        """
+        let byName = Dictionary(
+            uniqueKeysWithValues: PreviewParamDetector.detectJSXUsage(in: usage).map { ($0.param.name, $0.param.kind) }
+        )
+        XCTAssertEqual(byName["count"], .number(default: 9))
+        XCTAssertEqual(byName["label"], .text(default: "hi"))
+        XCTAssertEqual(byName["tint"], .color(defaultHex: "#ff0044"))
+        // A bare JSX attribute is `true`.
+        XCTAssertEqual(byName["glass"], .boolean(default: true))
+        XCTAssertEqual(byName["loop"], .boolean(default: false))
+    }
+
+    func test_detectJSXUsage_ignoresNonUsageSources() {
+        XCTAssertTrue(PreviewParamDetector.detectJSXUsage(in: strandsEntry).isEmpty)
+        XCTAssertTrue(PreviewParamDetector.detectJSXUsage(in: "<div class=\"card\">plain</div>").isEmpty)
+    }
+}
+
+extension PreviewParamsTests {
+    /// The full loop the bug broke: save a config → write it back → the
+    /// generated preview document must carry the new values.
+    func test_configWriteBack_changesWhatThePreviewRenders() {
+        let entry = """
+        const Strands = ({ count = 3, speed = 0.5, glass = false, hidden = 1 }) => null;
+        export default Strands;
+        """
+        let usage = """
+        import Strands from './Strands';
+
+        <Strands
+          count={3}
+          speed={0.5}
+          glass={false}
+        />
+        """
+        let values: [String: PreviewParamValue] = [
+            "count": .number(9), "speed": .number(2), "glass": .boolean(true), "hidden": .number(42)
+        ]
+        // Params the usage pins go to the usage; the rest to the component.
+        let usageParams = PreviewParamDetector.detectJSXUsage(in: usage)
+        let pinned = Set(usageParams.map(\.param.name))
+        XCTAssertEqual(pinned, ["count", "speed", "glass"])
+
+        let newUsage = PreviewParamWriter.apply(
+            values.filter { pinned.contains($0.key) }, to: usage, params: usageParams
+        )
+        let newEntry = PreviewParamWriter.apply(
+            values.filter { !pinned.contains($0.key) }, to: entry,
+            params: PreviewParamDetector.detectReact(in: entry)
+        )
+        XCTAssertTrue(newEntry.contains("hidden = 42"), "unpinned param still writes to the component")
+        XCTAssertTrue(newEntry.contains("count = 3"), "pinned param must NOT be written to the component")
+
+        let doc = WebPreviewHTMLBuilder.document(
+            linked: [
+                LinkedSource(language: .react, code: newUsage),
+                LinkedSource(language: .react, code: newEntry)
+            ],
+            entryFlavor: .react,
+            appearance: .init(isDark: true, backgroundHex: "#000", textHex: "#fff"),
+            runtime: .init(react: "", reactDOM: "", babel: "")
+        )
+        // The mounted usage element carries the saved values.
+        XCTAssertTrue(doc.contains("count={9}"))
+        XCTAssertTrue(doc.contains("speed={2}"))
+        XCTAssertTrue(doc.contains("glass={true}"))
+        XCTAssertFalse(doc.contains("count={3}"))
+    }
+}
+
+extension PreviewParamsTests {
+    /// Regression: an array prop was read as a bare attribute, and the scan
+    /// then walked *into* the array and minted params from its contents —
+    /// `colors={["#F97316", …]}` produced params named `F97316`, `C3AED`, …
+    func test_detectJSXUsage_stepsOverExpressionPropsInsteadOfIntoThem() {
+        let usage = """
+        <Strands
+          colors={["#F97316","#7C3AED","#06B6D4"]}
+          onChange={(index, item) => console.log(index, item)}
+          items={DEFAULT_ITEMS}
+          style={{ width: '100%' }}
+          {...rest}
+          count={3}
+        />
+        """
+        let names = PreviewParamDetector.detectJSXUsage(in: usage).map(\.param.name)
+        XCTAssertEqual(names, ["count"])
+        XCTAssertFalse(names.contains { $0.contains("F97316") })
+    }
+
+    func test_jsxWriteBack_preservesEachAttributeShape() {
+        let usage = #"<OptionWheel side="left" fontSize={3} draggable soundVolume={0.5} />"#
+        let out = PreviewParamWriter.apply(
+            ["side": .string("right"), "fontSize": .number(4),
+             "draggable": .boolean(false), "soundVolume": .number(0.2)],
+            to: usage, params: PreviewParamDetector.detectJSXUsage(in: usage)
+        )
+        XCTAssertEqual(out, #"<OptionWheel side="right" fontSize={4} draggable={false} soundVolume={0.2} />"#)
+    }
+
+    func test_jsxWriteBack_leavesUntouchedPropsByteIdentical() {
+        let usage = """
+        <Strands
+          colors={["#F97316","#7C3AED"]}
+          count={3}
+          onChange={(i) => console.log(i)}
+        />
+        """
+        let out = PreviewParamWriter.apply(
+            ["count": .number(7)], to: usage,
+            params: PreviewParamDetector.detectJSXUsage(in: usage)
+        )
+        XCTAssertEqual(out, usage.replacingOccurrences(of: "count={3}", with: "count={7}"))
     }
 }

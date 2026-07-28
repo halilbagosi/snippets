@@ -7,6 +7,10 @@ struct SnippetPreviewView: View {
     let resolution: SnippetLinker.Resolution
     let language: SupportedLanguage
     let theme: Theme
+    /// Parameters the previewed source declares, detected once by the owning
+    /// view. Deriving them here instead would re-run the detector on every
+    /// override change — i.e. every frame of a slider drag.
+    let params: [PreviewParam]
 
     @Binding var paramOverrides: [String: PreviewParamValue]
 
@@ -45,7 +49,6 @@ struct SnippetPreviewView: View {
     /// without a `SnippetParams` struct.
     @ViewBuilder
     private var metalPreview: some View {
-        let params = PreviewParamDetector.detect(for: language, resolution: resolution).map(\.param)
         MetalShaderPreviewView(
             entry: entryCode, helpers: helperCodes, theme: theme,
             params: params, paramValues: paramOverrides
@@ -84,25 +87,22 @@ struct PreviewParamControls: View {
         .background(theme.surface.opacity(0.6))
     }
 
+    // The whole strip is the toggle — a 10pt label and a 9pt chevron make far
+    // too small a hit target, and the empty space beside them reads as part of
+    // the same control. "reset" is a nested button, so it swallows its own taps.
     private var header: some View {
         HStack(spacing: 6) {
-            Button {
-                withAnimation(.snappy(duration: 0.18)) { isExpanded.toggle() }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "chevron.right")
-                        .font(Mono.font(size: 9, weight: .semibold))
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    Text("parameters")
-                        .font(Mono.font(size: 10, weight: .semibold))
-                    Text("\(params.count)")
-                        .font(Mono.font(size: 10))
-                        .foregroundStyle(theme.textMuted.opacity(0.7))
-                }
-                .foregroundStyle(theme.textMuted)
-                .contentShape(Rectangle())
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.right")
+                    .font(Mono.font(size: 9, weight: .semibold))
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                Text("parameters")
+                    .font(Mono.font(size: 10, weight: .semibold))
+                Text("\(params.count)")
+                    .font(Mono.font(size: 10))
+                    .foregroundStyle(theme.textMuted.opacity(0.7))
             }
-            .buttonStyle(.plain)
+            .foregroundStyle(theme.textMuted)
 
             Spacer(minLength: 8)
 
@@ -115,6 +115,14 @@ struct PreviewParamControls: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(DSToken.Motion.reveal) { isExpanded.toggle() }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Parameters")
+        .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
     }
 
     /// One grid cell: name above, control below, so every cell is the same

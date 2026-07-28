@@ -1,9 +1,9 @@
 # Runner feasibility (plan 007, decided 2026-07-15): the hosted `macos-26`
 # arm64 image (github.com/actions/runner-images, macos-26-arm64-Readme.md)
-# ships Xcode 26.x (default 26.5) with the macOS 26.x SDKs, which this
-# package requires (Package.swift targets .macOS(.v26) and SwiftData macros
-# need a full Xcode toolchain). The Swift job therefore runs unconditionally
-# on macos-26 with the image's default Xcode.
+# ships Xcode 26.x (default 26.5) with the macOS 26.x SDKs, which this app
+# requires (it targets macOS 26 and SwiftData macros need a full Xcode
+# toolchain). The Swift job therefore runs unconditionally on macos-26 with
+# the image's default Xcode.
 name: CI
 
 on:
@@ -16,14 +16,16 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
-      - name: Cache SwiftPM build
-        uses: actions/cache@v4
-        with:
-          path: .build-ci
-          key: swiftpm-${{ runner.os }}-${{ hashFiles('Package.swift') }}
-          restore-keys: swiftpm-${{ runner.os }}-
+      # Tests are hosted by the app, so this builds and launches Snippets.app.
+      # Signing is skipped: CI has no signing identity, and none is needed to
+      # run unit tests locally on the runner.
       - name: Run tests
-        run: swift test --build-path .build-ci
+        run: |
+          xcodebuild -project Snippets.xcodeproj \
+            -scheme Snippets \
+            -destination 'platform=macOS' \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
+            test
 
   web-build:
     runs-on: ubuntu-latest

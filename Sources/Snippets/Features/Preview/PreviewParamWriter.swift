@@ -39,7 +39,20 @@ enum PreviewParamWriter {
     /// Renders a value in the same shape as the literal it replaces, so a
     /// single-quoted JS string stays single-quoted and a bare `#rrggbb`
     /// annotation stays bare.
+    ///
+    /// Two of those shapes come from a usage snippet's JSX rather than a
+    /// component's defaults: a braced expression prop (`count={3}`) has to
+    /// stay braced, and a bare attribute (`glass`, JSX shorthand for `true`)
+    /// has no literal at all — its range covers the attribute name, so the
+    /// replacement has to re-emit the name with the value attached.
     private static func literalText(_ value: PreviewParamValue, replacing existing: String) -> String {
+        if existing.hasPrefix("{"), existing.hasSuffix("}") {
+            let inner = String(existing.dropFirst().dropLast()).trimmingCharacters(in: .whitespaces)
+            return "{\(literalText(value, replacing: inner))}"
+        }
+        if isBareAttributeName(existing) {
+            return "\(existing)={\(literalText(value, replacing: ""))}"
+        }
         switch value {
         case .number(let number):
             return numberText(number)
@@ -51,6 +64,14 @@ enum PreviewParamWriter {
             }
             return "\(quote)\(escaped(string, delimitedBy: quote))\(quote)"
         }
+    }
+
+    /// Whether `existing` is a JSX attribute name standing in for `={true}`,
+    /// rather than a value literal. Value literals are quoted, numeric, or
+    /// `true`/`false`; anything else identifier-shaped is a bare attribute.
+    private static func isBareAttributeName(_ existing: String) -> Bool {
+        guard existing != "true", existing != "false", Double(existing) == nil else { return false }
+        return existing.range(of: #"^[A-Za-z_$][\w$]*$"#, options: .regularExpression) != nil
     }
 
     /// Escapes a value for embedding in a source string literal delimited by
