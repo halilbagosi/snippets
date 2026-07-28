@@ -131,6 +131,8 @@
 		F6E64CBF8C0BB58AA4AAC952 /* ColorPanelCenterer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E354289B46DE4F38455950B /* ColorPanelCenterer.swift */; };
 		A1B2C3D40001QUICKSCOPE /* QuickCopyScope.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002QUICKSCOPE /* QuickCopyScope.swift */; };
 		A1B2C3D40001QUICKRESULTS /* QuickCopyResults.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002QUICKRESULTS /* QuickCopyResults.swift */; };
+		A1B2C3D40001QUICKSELECT /* QuickCopySelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002QUICKSELECT /* QuickCopySelection.swift */; };
+		A1B2C3D40001TQUICKSELECT /* QuickCopySelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002TQUICKSELECT /* QuickCopySelectionTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -261,6 +263,8 @@
 		FDCE1D4586F0F153EC14552A /* MediaManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
 		A1B2C3D40002QUICKSCOPE /* QuickCopyScope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopyScope.swift; path = QuickCopyScope.swift; sourceTree = "<group>"; };
 		A1B2C3D40002QUICKRESULTS /* QuickCopyResults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopyResults.swift; path = QuickCopyResults.swift; sourceTree = "<group>"; };
+		A1B2C3D40002QUICKSELECT /* QuickCopySelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopySelection.swift; path = QuickCopySelection.swift; sourceTree = "<group>"; };
+		A1B2C3D40002TQUICKSELECT /* QuickCopySelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopySelectionTests.swift; path = QuickCopySelectionTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXContainerItemProxy section */
@@ -285,6 +289,7 @@
 		5E57E5700000000000000003 /* SnippetsTests */ = {
 			isa = PBXGroup;
 			children = (
+				A1B2C3D40002TQUICKSELECT /* QuickCopySelectionTests.swift */,
 				5E57E5700000000000000100 /* AppearanceSettingsTests.swift */,
 				5E57E5700000000000000101 /* CollectionMoveTreeTests.swift */,
 				5E57E5700000000000000102 /* LanguageDetectorCorpusTests.swift */,
@@ -645,6 +650,7 @@
 		A1B2C3D4364B5CA722DD5D13 /* QuickCopy */ = {
 			isa = PBXGroup;
 			children = (
+				A1B2C3D40002QUICKSELECT /* QuickCopySelection.swift */,
 				A1B2C3D40002QUICKRESULTS /* QuickCopyResults.swift */,
 				A1B2C3D40002QUICKSCOPE /* QuickCopyScope.swift */,
 			);
@@ -771,6 +777,7 @@
 				5E57E570000000000000020E /* SnippetGalleryViewModelTests.swift in Sources */,
 				5E57E570000000000000020F /* SnippetIntentLogicTests.swift in Sources */,
 				5E57E5700000000000000210 /* SnippetLinkerTests.swift in Sources */,
+				A1B2C3D40001TQUICKSELECT /* QuickCopySelectionTests.swift in Sources */,
 				5E57E5700000000000000230 /* QuickCopyResultsTests.swift in Sources */,
 				5E57E5700000000000000211 /* SnippetQueryFilterTests.swift in Sources */,
 				5E57E5700000000000000212 /* SnippetStackerTests.swift in Sources */,
@@ -860,6 +867,7 @@
 				C98F41AE96957AE96871BC9E /* ShaderPipeline.swift in Sources */,
 				CB7D4731B1A3464B16D3758C /* SwiftPreviewHarness.swift in Sources */,
 				A1B2C3D40001PREVIEWTRUST /* PreviewTrust.swift in Sources */,
+				A1B2C3D40001QUICKSELECT /* QuickCopySelection.swift in Sources */,
 				A1B2C3D40001QUICKRESULTS /* QuickCopyResults.swift in Sources */,
 				A1B2C3D40001QUICKSCOPE /* QuickCopyScope.swift in Sources */,
 				86474F60B44AF311DE427561 /* SwiftPreviewBuilder.swift in Sources */,
