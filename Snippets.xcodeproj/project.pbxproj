@@ -24,6 +24,7 @@
 		5E57E570000000000000020E /* SnippetGalleryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E570000000000000010E /* SnippetGalleryViewModelTests.swift */; };
 		5E57E570000000000000020F /* SnippetIntentLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E570000000000000010F /* SnippetIntentLogicTests.swift */; };
 		5E57E5700000000000000210 /* SnippetLinkerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000110 /* SnippetLinkerTests.swift */; };
+		5E57E5700000000000000230 /* QuickCopyResultsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000130 /* QuickCopyResultsTests.swift */; };
 		5E57E5700000000000000211 /* SnippetQueryFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000111 /* SnippetQueryFilterTests.swift */; };
 		5E57E5700000000000000212 /* SnippetStackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000112 /* SnippetStackerTests.swift */; };
 		5E57E5700000000000000213 /* SwiftPreviewBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000113 /* SwiftPreviewBuilderTests.swift */; };
@@ -128,6 +129,8 @@
 		F2D69E38FFD282172D3E3E2E /* OpenSnippetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BA65E851EB41731B3949F97 /* OpenSnippetIntent.swift */; };
 		F5959339759E376F7863731D /* SnippetGalleryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C656C885257DE5CAA7598C /* SnippetGalleryViewModel.swift */; };
 		F6E64CBF8C0BB58AA4AAC952 /* ColorPanelCenterer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E354289B46DE4F38455950B /* ColorPanelCenterer.swift */; };
+		A1B2C3D40001QUICKSCOPE /* QuickCopyScope.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002QUICKSCOPE /* QuickCopyScope.swift */; };
+		A1B2C3D40001QUICKRESULTS /* QuickCopyResults.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002QUICKRESULTS /* QuickCopyResults.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -148,6 +151,7 @@
 		5E57E570000000000000010E /* SnippetGalleryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetGalleryViewModelTests.swift; sourceTree = "<group>"; };
 		5E57E570000000000000010F /* SnippetIntentLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetIntentLogicTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000110 /* SnippetLinkerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetLinkerTests.swift; sourceTree = "<group>"; };
+		5E57E5700000000000000130 /* QuickCopyResultsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickCopyResultsTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000111 /* SnippetQueryFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetQueryFilterTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000112 /* SnippetStackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetStackerTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000113 /* SwiftPreviewBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftPreviewBuilderTests.swift; sourceTree = "<group>"; };
@@ -255,6 +259,8 @@
 		F9544908AF26BCE6FEDB330E /* MetalShaderPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MetalShaderPreviewView.swift; path = MetalShaderPreviewView.swift; sourceTree = "<group>"; };
 		FAA046938633C6AB461C2EC3 /* Snippet+Linkable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "Snippet+Linkable.swift"; path = "Snippet+Linkable.swift"; sourceTree = "<group>"; };
 		FDCE1D4586F0F153EC14552A /* MediaManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
+		A1B2C3D40002QUICKSCOPE /* QuickCopyScope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopyScope.swift; path = QuickCopyScope.swift; sourceTree = "<group>"; };
+		A1B2C3D40002QUICKRESULTS /* QuickCopyResults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickCopyResults.swift; path = QuickCopyResults.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXContainerItemProxy section */
@@ -296,6 +302,7 @@
 				5E57E570000000000000010E /* SnippetGalleryViewModelTests.swift */,
 				5E57E570000000000000010F /* SnippetIntentLogicTests.swift */,
 				5E57E5700000000000000110 /* SnippetLinkerTests.swift */,
+				5E57E5700000000000000130 /* QuickCopyResultsTests.swift */,
 				5E57E5700000000000000111 /* SnippetQueryFilterTests.swift */,
 				5E57E5700000000000000112 /* SnippetStackerTests.swift */,
 				5E57E5700000000000000113 /* SwiftPreviewBuilderTests.swift */,
@@ -627,11 +634,21 @@
 		D162801B5F6E0AE5BCE07169 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				A1B2C3D4364B5CA722DD5D13 /* QuickCopy */,
 				32F8FA0F9162B95586F72B95 /* Editor */,
 				752E4D5163A0932DB1FC0C7E /* Gallery */,
 				4C734715871117432A0E4E49 /* Preview */,
 			);
 			path = Features;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4364B5CA722DD5D13 /* QuickCopy */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D40002QUICKRESULTS /* QuickCopyResults.swift */,
+				A1B2C3D40002QUICKSCOPE /* QuickCopyScope.swift */,
+			);
+			path = QuickCopy;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -754,6 +771,7 @@
 				5E57E570000000000000020E /* SnippetGalleryViewModelTests.swift in Sources */,
 				5E57E570000000000000020F /* SnippetIntentLogicTests.swift in Sources */,
 				5E57E5700000000000000210 /* SnippetLinkerTests.swift in Sources */,
+				5E57E5700000000000000230 /* QuickCopyResultsTests.swift in Sources */,
 				5E57E5700000000000000211 /* SnippetQueryFilterTests.swift in Sources */,
 				5E57E5700000000000000212 /* SnippetStackerTests.swift in Sources */,
 				5E57E5700000000000000213 /* SwiftPreviewBuilderTests.swift in Sources */,
@@ -842,6 +860,8 @@
 				C98F41AE96957AE96871BC9E /* ShaderPipeline.swift in Sources */,
 				CB7D4731B1A3464B16D3758C /* SwiftPreviewHarness.swift in Sources */,
 				A1B2C3D40001PREVIEWTRUST /* PreviewTrust.swift in Sources */,
+				A1B2C3D40001QUICKRESULTS /* QuickCopyResults.swift in Sources */,
+				A1B2C3D40001QUICKSCOPE /* QuickCopyScope.swift in Sources */,
 				86474F60B44AF311DE427561 /* SwiftPreviewBuilder.swift in Sources */,
 				EBC24B86BF8A8F5BA787EEA2 /* SnippetLinker.swift in Sources */,
 				602347E3AE1728CF6E97232F /* Snippet+Linkable.swift in Sources */,
