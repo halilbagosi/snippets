@@ -26,6 +26,10 @@ final class QuickCopyViewModel {
     private(set) var sections: [QuickCopyResults.Section<Snippet>] = []
     private(set) var selectedIndex: Int = 0
 
+    /// A clipboard capture awaiting a Save/Dismiss decision, or nil.
+    /// At most one exists — a newer capture replaces an older one.
+    var pendingCapture: ClipboardCapture.Candidate?
+
     private let context: ModelContext
     private let defaults: UserDefaults
     private var allSnippets: [Snippet] = []
