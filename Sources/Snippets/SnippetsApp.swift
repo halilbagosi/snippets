@@ -90,9 +90,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Returning `false` suppresses AppKit's own untitled-window restoration.
+    /// `MainWindowOpener` already restores exactly one window; letting AppKit
+    /// also act opens a second, empty duplicate on every Dock click.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
         MainWindowOpener.activate()
-        return true
+        return false
     }
 
     /// The app now lives in the menu bar after its last window closes, which is

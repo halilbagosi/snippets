@@ -37,6 +37,16 @@ final class CaptureDraft {
     private init() {}
 }
 
+/// A borderless panel that can actually take keyboard focus.
+///
+/// `NSWindow.canBecomeKey` is false for borderless windows, and no amount of
+/// `makeKey()` or `becomesKeyOnlyIfNeeded` overrides it — without this
+/// subclass the search field silently never receives a keystroke.
+final class QuickCopyPanelWindow: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+}
+
 /// Owns the menu bar item and the panel that hangs from it.
 ///
 /// The only AppKit surface in this feature. `MenuBarExtra(.window)` was not
@@ -96,7 +106,13 @@ final class MenuBarController: NSObject, NSWindowDelegate {
 
         panel.orderFront(nil)
         if capture == nil {
-            panel.makeKey()
+            // Clicking a status item does not activate the app, and a panel
+            // that is key inside an inactive app still receives no keystrokes —
+            // the search field would be dead. Activation is deliberately
+            // skipped for captures, which must not steal focus from whatever
+            // the user is typing in.
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKeyAndOrderFront(nil)
         }
     }
 
@@ -129,7 +145,7 @@ final class MenuBarController: NSObject, NSWindowDelegate {
     private func existingOrNewPanel() -> NSPanel {
         if let panel { return panel }
 
-        let created = NSPanel(
+        let created = QuickCopyPanelWindow(
             contentRect: NSRect(
                 x: 0, y: 0,
                 width: QuickCopyPanel.panelWidth,

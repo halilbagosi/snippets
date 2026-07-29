@@ -82,13 +82,6 @@ struct QuickCopyPanel: View {
             model.pendingCapture = nil
             onDismiss()
         }
-        .onKeyPress(.upArrow) { model.move(by: -1); return .handled }
-        .onKeyPress(.downArrow) { model.move(by: 1); return .handled }
-        .onKeyPress(.escape) {
-            if model.handleEscape() == .dismiss { onDismiss() }
-            return .handled
-        }
-        .onKeyPress(.return) { handleReturn() }
     }
 
     // MARK: Regions
@@ -102,6 +95,17 @@ struct QuickCopyPanel: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
                 .focused($searchFocused)
+                // Key handling belongs here, not on the enclosing VStack: the
+                // search field holds focus, and a focused TextField consumes
+                // Return and the arrow keys before an ancestor's onKeyPress
+                // ever sees them.
+                .onKeyPress(.upArrow) { model.move(by: -1); return .handled }
+                .onKeyPress(.downArrow) { model.move(by: 1); return .handled }
+                .onKeyPress(.escape) {
+                    if model.handleEscape() == .dismiss { onDismiss() }
+                    return .handled
+                }
+                .onSubmit { _ = handleReturn() }
         }
         .padding(.horizontal, DSToken.Spacing.sm)
         .padding(.vertical, DSToken.Spacing.xs)
