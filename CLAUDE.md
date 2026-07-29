@@ -22,7 +22,7 @@ DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer xcodebuild -projec
 
 ## Test
 
-305 XCTest cases in the `SnippetsTests` target, hosted by the app (so a run launches `Snippets.app` briefly):
+389 XCTest cases in the `SnippetsTests` target, hosted by the app (so a run launches `Snippets.app` briefly):
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' test

@@ -76,10 +76,22 @@ struct QuickCopyPanel: View {
         .task(id: model.pendingCapture) {
             // A capture is a moment, not an inbox: if it is not acted on it
             // goes, so opening the panel later never shows a stale banner.
+            //
+            // Only the banner retires — not the panel. Dismissing the whole
+            // surface here would yank it away mid-keystroke from someone who
+            // ignored the capture and started searching.
             guard model.pendingCapture != nil else { return }
             try? await Task.sleep(for: .seconds(6))
             guard !Task.isCancelled else { return }
             model.pendingCapture = nil
+        }
+        .task(id: confirmingID) {
+            // The confirmation is visible before the surface leaves. Tied to
+            // the view's lifetime, so a reopened panel cancels a stale hold.
+            guard confirmingID != nil else { return }
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled else { return }
+            confirmingID = nil
             onDismiss()
         }
     }
@@ -238,14 +250,10 @@ struct QuickCopyPanel: View {
         }
 
         guard let copied = model.copySelected() else { return .handled }
+        // Setting this starts the confirmation hold in `.task(id:)` below,
+        // rather than a detached Task: a detached one outlives this view and
+        // would dismiss a panel the user had already reopened.
         confirmingID = copied.persistentModelID
-
-        // Feedback is visible before the surface leaves, then the panel goes.
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(350))
-            confirmingID = nil
-            onDismiss()
-        }
         return .handled
     }
 }
