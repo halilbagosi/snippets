@@ -29,6 +29,8 @@ struct ContentView: View {
     @State private var editingSnippet: Snippet? = nil
     @State private var isPresentingNew: Bool = false
     @State private var newSnippetPreselectedCollectionID: PersistentIdentifier? = nil
+    /// Code captured from the clipboard, seeding the next new-snippet editor.
+    @State private var newSnippetDraftCode: String? = nil
     @State private var isPresentingCollectionEditor: Bool = false
     @State private var editingCollection: SnippetCollection? = nil
     @State private var collectionDraftName: String = ""
@@ -653,10 +655,14 @@ struct ContentView: View {
                             let w: CGFloat = 640
                             let h = min(max(proxy.size.height * 0.92, 660), 960)
                             SnippetEditorView(
-                                mode: .create(preselectedCollectionID: newSnippetPreselectedCollectionID),
+                                mode: .create(
+                                    preselectedCollectionID: newSnippetPreselectedCollectionID,
+                                    draftCode: newSnippetDraftCode
+                                ),
                                 availableCollections: collections,
                                 availableSnippets: snippets,
                                 onRequestDismiss: {
+                                    newSnippetDraftCode = nil
                                     withAnimation(DSToken.Motion.overlay) {
                                         isPresentingNew = false
                                     }
@@ -664,6 +670,7 @@ struct ContentView: View {
                                 onSave: { newSnippet in
                                     modelContext.insert(newSnippet)
                                     saveOrToast(modelContext)
+                                    newSnippetDraftCode = nil
                                     withAnimation(DSToken.Motion.overlay) {
                                         isPresentingNew = false
                                     }
@@ -789,6 +796,10 @@ struct ContentView: View {
         .onChange(of: navigator.pendingNewSnippet) { _, isPending in
             guard isPending else { return }
             presentNewSnippetFromIntent()
+        }
+        .onChange(of: CaptureDraft.shared.pending) { _, candidate in
+            guard let candidate else { return }
+            presentCapturedDraft(candidate)
         }
         .sheet(item: $editingSnippet) { snippet in
             SnippetEditorView(mode: .edit(snippet), availableCollections: collections, availableSnippets: snippets) { _ in
@@ -969,6 +980,18 @@ struct ContentView: View {
             isPresentingNew = true
         }
         navigator.pendingNewSnippet = false
+    }
+
+    /// Opens the new-snippet editor seeded with captured clipboard code.
+    /// Nothing is written to the store — the user still has to save.
+    private func presentCapturedDraft(_ candidate: ClipboardCapture.Candidate) {
+        newSnippetPreselectedCollectionID = nil
+        newSnippetDraftCode = candidate.code
+        withAnimation(DSToken.Motion.overlay) {
+            selectedSnippetID = nil
+            isPresentingNew = true
+        }
+        CaptureDraft.shared.pending = nil
     }
 
     private func navigateBackFromCollection() {

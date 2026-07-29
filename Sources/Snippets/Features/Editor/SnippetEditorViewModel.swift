@@ -3,7 +3,10 @@ import Observation
 import SwiftData
 
 enum SnippetEditorMode {
-    case create(preselectedCollectionID: PersistentIdentifier? = nil)
+    /// `draftCode` seeds a new snippet from captured clipboard code. It stays
+    /// unsaved: the user still has to name it and press save, so a bad capture
+    /// leaves nothing behind.
+    case create(preselectedCollectionID: PersistentIdentifier? = nil, draftCode: String? = nil)
     case edit(Snippet)
 }
 
@@ -77,9 +80,12 @@ final class SnippetEditorViewModel {
                 detectedLanguage = LanguageDetector.detect(code: snippet.code)
             }
         } else {
-            if case .create(let preselectedCollectionID) = mode, let id = preselectedCollectionID {
-                selectedCollectionIDs.insert(id)
+            if case .create(let preselectedCollectionID, let draftCode) = mode {
+                if let id = preselectedCollectionID { selectedCollectionIDs.insert(id) }
+                if let draftCode { code = draftCode }
             }
+            // Derived from `code` below, so a captured language needs no
+            // separate channel — the detector reaches the same answer.
             detectedLanguage = LanguageDetector.detect(code: code)
         }
     }

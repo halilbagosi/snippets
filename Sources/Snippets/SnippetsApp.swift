@@ -79,6 +79,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         ColorPanelCenterer.shared.install()
+        MenuBarController.shared.install()
+        ClipboardMonitor.shared.start()
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(50))
             NSApp.activate(ignoringOtherApps: true)
@@ -88,15 +90,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Returning `false` suppresses AppKit's own untitled-window restoration.
+    /// `MainWindowOpener` already restores exactly one window; letting AppKit
+    /// also act opens a second, empty duplicate on every Dock click.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        for window in sender.windows where window.canBecomeMain {
-            window.makeKeyAndOrderFront(nil)
-        }
-        sender.activate(ignoringOtherApps: true)
-        return true
+        MainWindowOpener.activate()
+        return false
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    /// The app now lives in the menu bar after its last window closes, which is
+    /// the whole point of the quick-copy panel — it must be reachable while the
+    /// user is working somewhere else. The panel footer carries Quit, because
+    /// with no window and another app frontmost the menu bar is not ours.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
 }
 #endif
@@ -110,8 +116,10 @@ struct SnippetsApp: App {
     @State private var appearanceSettings = AppearanceSettings()
     @State private var previewTrust = PreviewTrust()
 
+    static let mainWindowID = "main"
+
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: SnippetsApp.mainWindowID) {
             if #available(macOS 15.0, *) {
                 ContentView()
                     .previewTrustPrompt()
@@ -119,6 +127,7 @@ struct SnippetsApp: App {
                     .environment(appearanceSettings)
                     .environment(previewTrust)
                     .environment(AppIntentNavigator.shared)
+                    .modifier(MainWindowOpenerInstaller())
                 // Appearance preference is applied via NSApp.appearance in
                 // AppearanceSettings: preferredColorScheme would pin a per-window
                 // override that AppKit can't clear when following the system.
@@ -139,6 +148,7 @@ struct SnippetsApp: App {
                     .environment(appearanceSettings)
                     .environment(previewTrust)
                     .environment(AppIntentNavigator.shared)
+                    .modifier(MainWindowOpenerInstaller())
                 // Appearance preference is applied via NSApp.appearance in
                 // AppearanceSettings: preferredColorScheme would pin a per-window
                 // override that AppKit can't clear when following the system.
@@ -181,3 +191,17 @@ struct SnippetsApp: App {
         }
     }
 }
+
+#if canImport(AppKit)
+/// Parks an `openWindow` closure where `AppDelegate` can reach it, so clicking
+/// the Dock icon can restore a window after the last one was closed.
+private struct MainWindowOpenerInstaller: ViewModifier {
+    @Environment(\.openWindow) private var openWindow
+
+    func body(content: Content) -> some View {
+        content.onAppear {
+            MainWindowOpener.open = { openWindow(id: SnippetsApp.mainWindowID) }
+        }
+    }
+}
+#endif

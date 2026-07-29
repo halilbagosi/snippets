@@ -161,4 +161,48 @@ final class SnippetIntentLogicTests: XCTestCase {
             XCTAssertEqual(error as? SnippetIntentError, .snippetNotFound)
         }
     }
+
+    // MARK: recordCopy
+
+    func test_recordCopy_bumpsCountAndLeavesUpdatedAtAlone() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let stamp = Date(timeIntervalSince1970: 1000)
+        let snippet = Snippet(title: "Parser", code: "c", updatedAt: stamp, copyCount: 2)
+        context.insert(snippet)
+        try context.save()
+
+        SnippetStore.recordCopy(snippet, in: context)
+
+        XCTAssertEqual(snippet.copyCount, 3)
+        // The gallery orders by updatedAt; copying must not reshuffle it.
+        XCTAssertEqual(snippet.updatedAt, stamp)
+    }
+
+    /// The panel holds Snippet objects directly and never looks them up by
+    /// uuid, so bookkeeping must work on a snippet whose uuid is still nil.
+    func test_recordCopy_worksOnSnippetWithNilUUID() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let snippet = Snippet(uuid: nil, title: "Parser", code: "c")
+        context.insert(snippet)
+        try context.save()
+
+        SnippetStore.recordCopy(snippet, in: context)
+
+        XCTAssertEqual(snippet.copyCount, 1)
+    }
+
+    func test_copyIntent_stillBumpsCountThroughRecordCopy() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let id = UUID()
+        let snippet = Snippet(uuid: id, title: "Parser", code: "c", copyCount: 4)
+        context.insert(snippet)
+        try context.save()
+
+        let returned = try CopySnippetIntent.execute(snippetID: id, in: context)
+
+        XCTAssertEqual(returned.copyCount, 5)
+    }
 }
