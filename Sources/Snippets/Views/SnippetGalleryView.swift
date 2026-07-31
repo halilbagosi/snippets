@@ -83,6 +83,13 @@ struct SnippetGalleryView: View {
         hasher.combine(hasAnyGalleryContent)
         hasher.combine(snippets.isEmpty)
         hasher.combine(searchResultSnippets.isEmpty)
+        // Picking a collection also takes the Collections strip away, since
+        // `hasVisibleSubcollections` requires no collection filter. That is a
+        // whole section leaving from above the grid, but none of the flags
+        // above move when it happens — `hasAnyGalleryContent` stays true on
+        // the strength of the results alone — so the strip used to vanish in
+        // one frame and drop everything below it.
+        hasher.combine(hasVisibleSubcollections)
         return hasher.finalize()
     }
     private var hasVisibleSubcollections: Bool {
@@ -126,6 +133,10 @@ struct SnippetGalleryView: View {
     }
     private var isFilterSelected: Bool {
         !selectedSearchCollections.isEmpty || showUncategorizedOnly
+    }
+    /// How many filters the "Clear Selection" footer would clear.
+    private var selectedFilterCount: Int {
+        selectedSearchCollections.count + (showUncategorizedOnly ? 1 : 0)
     }
     private var collectionFilterPopoverHeight: CGFloat {
         // Obsolete, using fixedSize dynamically in the view instead
@@ -229,21 +240,29 @@ struct SnippetGalleryView: View {
                                 if !selectedLanguages.isEmpty {
                                     languageGroupedSnippets(viewModel.ordered(snippets))
                                 } else if !snippets.isEmpty {
-                                    if !selectedSearchCollections.isEmpty {
+                                    // One `GallerySection` whether or not a
+                                    // collection filter is on — the header is
+                                    // hidden, not branched around. Picking a
+                                    // collection used to swap this whole
+                                    // expression for a bare `snippetGrid`, and
+                                    // the two arms of an `if` are separate view
+                                    // identities: SwiftUI discarded the section
+                                    // and built a new grid, so the cards had no
+                                    // previous frame to animate from and the
+                                    // filter landed as a cut. See `showsHeader`
+                                    // on `GallerySection`.
+                                    GallerySection(
+                                        title: "Snippets",
+                                        count: snippets.count,
+                                        icon: "square.stack.3d.up",
+                                        tint: theme.textMuted,
+                                        isExpanded: $isSnippetsSectionExpanded,
+                                        animation: DSToken.Motion.collapse,
+                                        showsHeader: selectedSearchCollections.isEmpty
+                                    ) {
                                         snippetGrid(viewModel.ordered(snippets))
-                                    } else {
-                                        GallerySection(
-                                            title: "Snippets",
-                                            count: snippets.count,
-                                            icon: "square.stack.3d.up",
-                                            tint: theme.textMuted,
-                                            isExpanded: $isSnippetsSectionExpanded,
-                                            animation: DSToken.Motion.collapse
-                                        ) {
-                                            snippetGrid(viewModel.ordered(snippets))
-                                        }
-                                        .transition(.opacity)
                                     }
+                                    .transition(.opacity)
                                 }
                             }
                         }
@@ -431,9 +450,12 @@ struct SnippetGalleryView: View {
 
     private func subcollectionGrid(_ source: [SnippetCollection]) -> some View {
         let ordered = viewModel.ordered(source)
+        // Same identity scheme as the snippet grid — see ``SortedCardID``.
+        let ids = ordered.map { sortedCardID($0.persistentModelID) }
         return DSGlassContainer(spacing: 18) {
             LazyVGrid(columns: subcollectionColumns, spacing: 14) {
-                ForEach(Array(ordered.enumerated()), id: \.element.persistentModelID) { index, collection in
+                ForEach(Array(zip(ids, ordered).enumerated()), id: \.element.0) { index, pair in
+                    let collection = pair.1
                     CollapsingSectionItem(index: index, count: ordered.count, hasEntered: hasAnimatedCards) {
                     ZStack {
                         SnippetCollectionCard(
@@ -481,6 +503,7 @@ struct SnippetGalleryView: View {
                     }
                     .frame(maxWidth: .infinity)
                     }
+                    .transition(collectionCellTransition)
                 }
             }
             .animation(DSToken.Motion.gridReflow, value: collectionIdentityKey(for: ordered))
@@ -490,10 +513,38 @@ struct SnippetGalleryView: View {
         }
     }
 
-    private struct StackDisplayItem {
+    /// Identity of one card in a sortable grid — the model, **plus the sort
+    /// direction it is being shown in**.
+    ///
+    /// Folding the direction into the identity is what makes a re-sort animate
+    /// like the filter does. With the bare model ID, flipping the sort is a
+    /// *move*: SwiftUI keeps each card and animates it to its new slot. That
+    /// cannot be drawn correctly in a `LazyVGrid`, which only instantiates the
+    /// cells in its visible window — cards arriving from the far end of the
+    /// list have no on-screen frame to leave from, so they animate in from
+    /// stale geometry, travelling up out of the grid and across the sections
+    /// above before dropping into place.
+    ///
+    /// Carrying the direction makes it a *replacement* instead: every card in
+    /// the old order leaves and every card in the new order arrives, each at
+    /// its own position, so the grid cross-fades in place exactly the way it
+    /// does when a filter changes the set. Nothing travels, so nothing can
+    /// travel wrongly, and opacity is bounded — interrupting it mid-flight
+    /// re-aims rather than compounding.
+    private struct SortedCardID: Hashable {
+        let model: PersistentIdentifier
+        let oldestFirst: Bool
+    }
+
+    private struct StackDisplayItem: Identifiable {
         let snippet: Snippet
         let connectedCount: Int
         let isConnected: Bool
+        let id: SortedCardID
+    }
+
+    private func sortedCardID(_ model: PersistentIdentifier) -> SortedCardID {
+        SortedCardID(model: model, oldestFirst: viewModel.isOldestToNewest)
     }
 
     /// Flattens the source into display rows: connected snippets are hidden
@@ -501,16 +552,37 @@ struct SnippetGalleryView: View {
     /// only while that stack is expanded. Trash stays flat.
     private func stackDisplayItems(_ source: [Snippet]) -> [StackDisplayItem] {
         guard !isTrashMode else {
-            return source.map { StackDisplayItem(snippet: $0, connectedCount: 0, isConnected: false) }
+            return source.map {
+                StackDisplayItem(
+                    snippet: $0,
+                    connectedCount: 0,
+                    isConnected: false,
+                    id: sortedCardID($0.persistentModelID)
+                )
+            }
         }
         var added: Set<PersistentIdentifier> = []
         var items: [StackDisplayItem] = []
         for (entry, connected) in SnippetLinker.stacks(in: source) {
             guard added.insert(entry.persistentModelID).inserted else { continue }
-            items.append(StackDisplayItem(snippet: entry, connectedCount: connected.count, isConnected: false))
+            items.append(
+                StackDisplayItem(
+                    snippet: entry,
+                    connectedCount: connected.count,
+                    isConnected: false,
+                    id: sortedCardID(entry.persistentModelID)
+                )
+            )
             guard expandedStacks.contains(entry.persistentModelID) else { continue }
             for member in connected where added.insert(member.persistentModelID).inserted {
-                items.append(StackDisplayItem(snippet: member, connectedCount: 0, isConnected: true))
+                items.append(
+                    StackDisplayItem(
+                        snippet: member,
+                        connectedCount: 0,
+                        isConnected: true,
+                        id: sortedCardID(member.persistentModelID)
+                    )
+                )
             }
         }
         return items
@@ -519,7 +591,7 @@ struct SnippetGalleryView: View {
     private func snippetGrid(_ source: [Snippet]) -> some View {
         let items = stackDisplayItems(source)
         return LazyVGrid(columns: columns, spacing: 18) {
-            ForEach(Array(items.enumerated()), id: \.element.snippet.persistentModelID) { index, item in
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 CollapsingSectionItem(index: index, count: items.count, hasEntered: hasAnimatedCards) {
                     snippetCell(
                         item.snippet,
@@ -540,6 +612,12 @@ struct SnippetGalleryView: View {
                         }
                     }
                 }
+                // For cards the filter adds or removes. `CollapsingSectionItem`
+                // above covers the two cases it knows about — the one-time
+                // gallery entrance, and the section folding shut — but neither
+                // fires when the set itself changes underneath, so a filtered-out
+                // card simply stopped being rendered.
+                .transition(snippetCellTransition)
             }
         }
         .animation(DSToken.Motion.gridReflow, value: snippetIdentityKey(for: source))
@@ -661,19 +739,53 @@ struct SnippetGalleryView: View {
         }
     }
 
+    /// Insert/remove transition for a snippet card — the filter adding or
+    /// removing one, and, via ``SortedCardID``, the whole grid re-sorting.
+    ///
+    /// 0.96 and never 0, matching `CollapsingSectionItem`: a card that shrinks
+    /// to nothing reads as deletion, where one that recedes slightly reads as
+    /// leaving the filter. Reduce Motion keeps the fade and drops the scale.
+    private var snippetCellTransition: AnyTransition {
+        reduceMotion
+            ? .opacity
+            : .opacity.combined(with: .scale(scale: 0.96))
+    }
+
+    /// Insert/remove transition for a collection card.
+    ///
+    /// Plain opacity — collection cards are larger and fewer, and the scale the
+    /// snippet cards use reads as a pop at that size.
+    private var collectionCellTransition: AnyTransition {
+        .opacity
+    }
+
+    /// Every member, not just count/first/last.
+    ///
+    /// A collection filter can swap the middle of the grid while leaving the
+    /// count and both ends alone — two collections of the same size that share
+    /// their first and last card by sort order is not a corner case. Hashing
+    /// only the ends left `.animation(_:value:)` seeing no change on exactly
+    /// those swaps, so the grid rearranged in one frame. The walk is O(n) over
+    /// an array whose cards each cost far more than a hash to lay out.
     private func snippetIdentityKey(for source: [Snippet]) -> Int {
         var hasher = Hasher()
         hasher.combine(source.count)
-        hasher.combine(source.first?.persistentModelID)
-        hasher.combine(source.last?.persistentModelID)
+        for snippet in source {
+            hasher.combine(snippet.persistentModelID)
+        }
         return hasher.finalize()
     }
 
+    /// Every member, for the reason given on ``snippetIdentityKey(for:)`` — the
+    /// ends-only hash this used to be missed exactly the changes that swap the
+    /// middle of the strip, and the collections grid is short enough that the
+    /// full walk costs nothing next to laying one card out.
     private func collectionIdentityKey(for source: [SnippetCollection]) -> Int {
         var hasher = Hasher()
         hasher.combine(source.count)
-        hasher.combine(source.first?.persistentModelID)
-        hasher.combine(source.last?.persistentModelID)
+        for collection in source {
+            hasher.combine(collection.persistentModelID)
+        }
         return hasher.finalize()
     }
 
@@ -774,6 +886,7 @@ struct SnippetGalleryView: View {
                         BackButton(
                             action: onBack,
                             accessibilityLabel: "Back to all snippets",
+                            style: .square,
                             glassNamespace: topBarGlass
                         )
                         // Horizontal padding only: vertical padding would
@@ -892,9 +1005,11 @@ struct SnippetGalleryView: View {
                                 accent: theme.textMuted,
                                 isSelected: false
                             ) {
-                                withAnimation(DSToken.Motion.toggle) {
-                                    viewModel.isOldestToNewest.toggle()
-                                }
+                                // The row below still animates its own reflow —
+                                // the label swaps width between "sort:newest" and
+                                // "sort:oldest" — through the scoped
+                                // `.animation(_:value:)` on this HStack.
+                                viewModel.isOldestToNewest.toggle()
                             }
                             .transition(.opacity)
 
@@ -920,9 +1035,11 @@ struct SnippetGalleryView: View {
                                     accent: Color(red: 1.0, green: 0.80, blue: 0.20),
                                     isSelected: showFavoritesOnly
                                 ) {
-                                    withAnimation(DSToken.Motion.toggle) {
-                                        showFavoritesOnly.toggle()
-                                    }
+                                    // Bare, same reason. Nothing in this row needs a
+                                    // transaction of its own here: the chip keeps its
+                                    // size either way, and `FilterTag` already fades
+                                    // its own fill on `selection`.
+                                    showFavoritesOnly.toggle()
                                 }
                                 .transition(.opacity)
                             }
@@ -996,8 +1113,18 @@ struct SnippetGalleryView: View {
                             Image(systemName: "xmark.circle")
                             Text("Clear Selection")
                             Spacer()
-                            Text("\(selectedSearchCollections.count + (showUncategorizedOnly ? 1 : 0))")
+                            Text("\(selectedFilterCount)")
                                 .monospacedDigit()
+                                // The one number in this popover that changes
+                                // while the user watches it. Monospaced digits
+                                // already hold the width, so the digit can roll
+                                // in place instead of teleporting. Keyed on the
+                                // count alone: the popover's own
+                                // `.animation(_:value: isFilterSelected)` above
+                                // only fires when the footer appears or leaves,
+                                // never on 1 → 2.
+                                .contentTransition(.numericText())
+                                .animation(DSToken.Motion.selection, value: selectedFilterCount)
                         }
                         .font(Sans.font(size: 13, weight: .semibold))
                         .foregroundStyle(theme.text)
@@ -1005,7 +1132,7 @@ struct SnippetGalleryView: View {
                         .frame(height: 53)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(CollectionFilterRowButtonStyle(accent: theme.textMuted, cornerRadius: 0))
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -1072,7 +1199,9 @@ struct SnippetGalleryView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "checkmark")
                         .font(Sans.font(size: 13, weight: .semibold))
-                        .foregroundStyle(showUncategorizedOnly ? theme.text : .clear)
+                        .foregroundStyle(theme.text)
+                        .opacity(showUncategorizedOnly ? 1 : 0)
+                        .scaleEffect(showUncategorizedOnly ? 1 : 0.7)
                         .frame(width: 18)
 
                     CollectionIconView(
@@ -1099,8 +1228,12 @@ struct SnippetGalleryView: View {
                         .fill(showUncategorizedOnly ? theme.textMuted.opacity(colorScheme == .dark ? 0.18 : 0.12) : Color.clear)
                 }
                 .contentShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+                // Scoped to this row, so the transaction stays inside the
+                // popover — see `collectionFilterRow` for why the mutation
+                // above stays bare.
+                .animation(DSToken.Motion.selection, value: showUncategorizedOnly)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(CollectionFilterRowButtonStyle(accent: theme.textMuted))
         }
     }
 
@@ -1119,6 +1252,22 @@ struct SnippetGalleryView: View {
         }
     }
 
+    /// Picking a collection must **not** wrap the mutation in `withAnimation`,
+    /// for the reason spelled out above `filterBar`: this rewrites the whole
+    /// gallery sitting behind the popover, and the grid already declares
+    /// `gridReflow` on its own identity key. An ambient transaction here would
+    /// hand the cards this row's 120ms `selection` curve instead.
+    ///
+    /// So the row animates itself. The scoped `.animation(_:value: isSelected)`
+    /// below stays inside the popover, and covers the two things that used to
+    /// change between frames with nothing in between: the fill behind the row,
+    /// and the checkmark.
+    ///
+    /// The checkmark fades *and* scales rather than fading a `.clear`
+    /// foreground in and out — a glyph that only fades reads as a smudge
+    /// resolving, where one that also grows the last 30% reads as a check
+    /// landing. It sits in a fixed 18pt frame, so the scale never reflows the
+    /// row next to it.
     private func collectionFilterRow(_ collection: SnippetCollection) -> some View {
         let isSelected = selectedSearchCollections.contains(collection.persistentModelID)
         let accent = collection.displayColor
@@ -1135,7 +1284,9 @@ struct SnippetGalleryView: View {
             HStack(spacing: 10) {
                 Image(systemName: "checkmark")
                     .font(Sans.font(size: 13, weight: .semibold))
-                    .foregroundStyle(isSelected ? theme.text : .clear)
+                    .foregroundStyle(theme.text)
+                    .opacity(isSelected ? 1 : 0)
+                    .scaleEffect(isSelected ? 1 : 0.7)
                     .frame(width: 18)
 
                 CollectionIconView(
@@ -1167,8 +1318,9 @@ struct SnippetGalleryView: View {
                     .fill(isSelected ? accent.opacity(colorScheme == .dark ? 0.18 : 0.12) : Color.clear)
             }
             .contentShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .animation(DSToken.Motion.selection, value: isSelected)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(CollectionFilterRowButtonStyle(accent: accent))
     }
 
     private var searchBar: some View {
@@ -1237,6 +1389,20 @@ struct SnippetGalleryView: View {
         .onTapGesture { searchFocused = true }
     }
 
+    /// Selecting a language must **not** wrap the mutation in `withAnimation`.
+    ///
+    /// A language filter rewrites the whole gallery, and an ambient transaction
+    /// here is applied to all of it: the section chrome — header bar, its glass
+    /// frame, the count — takes the chip's own 120ms `selection` curve while the
+    /// cards inside keep the `gridReflow` spring they declare for themselves.
+    /// One visual, two curves, so a card's frame and the content it holds land
+    /// on different frames. Clicking quickly is where it shows worst: a
+    /// fixed-duration `easeOut` retargeted mid-flight restarts from zero while
+    /// the reflow spring carries its velocity, and the frames visibly detach.
+    ///
+    /// Left alone, each surface animates on the curve it already asks for —
+    /// `FilterTag` fades its own fill on `selection`, the grid reflows on
+    /// `gridReflow` — and nothing has to agree with anything else.
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             DSGlassContainer(spacing: 8) {
@@ -1248,9 +1414,7 @@ struct SnippetGalleryView: View {
                         selectedFillAccent: theme.accent.blended(with: .black, ratio: 0.1),
                         isSelected: selectedLanguages.isEmpty
                     ) {
-                        withAnimation(DSToken.Motion.selection) {
-                            selectedLanguages.removeAll()
-                        }
+                        selectedLanguages.removeAll()
                     }
                     ForEach(availableLanguages) { language in
                         let baseAccent = Color(hex: language.accentHex) ?? theme.accent
@@ -1268,12 +1432,10 @@ struct SnippetGalleryView: View {
                             selectedFillAccent: selectedAccent,
                             isSelected: selectedLanguages.contains(language)
                         ) {
-                            withAnimation(DSToken.Motion.selection) {
-                                if selectedLanguages.contains(language) {
-                                    selectedLanguages.remove(language)
-                                } else {
-                                    selectedLanguages.insert(language)
-                                }
+                            if selectedLanguages.contains(language) {
+                                selectedLanguages.remove(language)
+                            } else {
+                                selectedLanguages.insert(language)
                             }
                         }
                     }
@@ -1575,5 +1737,46 @@ private struct MoveToCollectionCard: View {
         }
         .buttonStyle(.plain)
         .onHover { hoveredRowID = $0 ? row.id : nil }
+    }
+}
+
+/// Hover and press feedback for a row in the collections filter popover.
+///
+/// The rows were `.plain` buttons, which on macOS means no hover highlight and
+/// no press response at all — sitting under a `FilterTag` that both tints and
+/// scales when you click it, they read as labels rather than as the controls
+/// they are. The chip's own answer, `scaleEffect(0.95)`, is wrong at this size:
+/// a full-width 34pt row that shrinks inside a fixed-width popover looks like a
+/// rendering glitch, not like a press. So the feedback is a fill, the way a
+/// native menu row highlights.
+///
+/// The fill sits *behind* the label, so it stacks under the row's own selection
+/// fill rather than replacing it — hovering a selected row deepens it instead
+/// of flattening it back to the unselected tint.
+private struct CollectionFilterRowButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var colorScheme
+    let accent: Color
+    var cornerRadius: CGFloat = 9
+
+    @State private var isHovering = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        // Pressed reads clearly darker than hovered, so the click lands as its
+        // own event rather than as more of the same highlight.
+        let level: Double = configuration.isPressed ? 0.20 : (isHovering ? 0.10 : 0)
+        configuration.label
+            .background {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(accent.opacity(colorScheme == .dark ? level : level * 0.7))
+            }
+            .onHover { isHovering = $0 }
+            // Pressing is the user's own action and wants to feel immediate;
+            // letting go is the row settling back, so it gets the slower
+            // `release`, matching the rest of the app's press feedback.
+            .animation(
+                configuration.isPressed ? DSToken.Motion.press : DSToken.Motion.release,
+                value: configuration.isPressed
+            )
+            .animation(DSToken.Motion.hover, value: isHovering)
     }
 }

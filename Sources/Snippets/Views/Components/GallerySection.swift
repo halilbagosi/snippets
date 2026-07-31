@@ -11,6 +11,24 @@ struct GallerySection<Content: View>: View {
     var action: (() -> Void)? = nil
     @Binding var isExpanded: Bool
     var animation: Animation = DSToken.Motion.collapse
+    /// Whether to draw the header above the content.
+    ///
+    /// A caller that wants the bare content **must** hide the header here
+    /// rather than branching to the content on its own:
+    ///
+    /// ```swift
+    /// if filtered { grid() } else { GallerySection { grid() } }   // ← wrong
+    /// ```
+    ///
+    /// The two arms of an `if` are separate cases of `_ConditionalContent`, so
+    /// SwiftUI treats them as different views: flipping the condition destroys
+    /// the section and builds the grid again from nothing. A rebuilt grid has
+    /// no previous frame, so every `.animation(_:value:)` inside it is dead on
+    /// that transition and the change lands as a hard cut.
+    ///
+    /// Hiding the header keeps one identity for the content, which is what
+    /// lets the cards underneath reflow instead of being replaced.
+    var showsHeader: Bool = true
     let content: Content
 
     init(
@@ -22,6 +40,7 @@ struct GallerySection<Content: View>: View {
         action: (() -> Void)? = nil,
         isExpanded: Binding<Bool>,
         animation: Animation = DSToken.Motion.collapse,
+        showsHeader: Bool = true,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
@@ -32,22 +51,32 @@ struct GallerySection<Content: View>: View {
         self.action = action
         self._isExpanded = isExpanded
         self.animation = animation
+        self.showsHeader = showsHeader
         self.content = content()
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            GallerySectionHeader(
-                title: title,
-                count: count,
-                icon: icon,
-                tint: tint,
-                actionIcon: actionIcon,
-                action: action,
-                isExpanded: $isExpanded
-            )
+        VStack(alignment: .leading, spacing: showsHeader ? 12 : 0) {
+            if showsHeader {
+                GallerySectionHeader(
+                    title: title,
+                    count: count,
+                    icon: icon,
+                    tint: tint,
+                    actionIcon: actionIcon,
+                    action: action,
+                    isExpanded: $isExpanded
+                )
+                // Leaves upward, into the space it occupies, so the content
+                // below reads as rising to take its place rather than as the
+                // header dissolving and everything then jumping.
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
 
-            CollapsibleSectionContent(isExpanded: isExpanded) {
+            // Forced open with the header hidden: the chevron is the only way
+            // to expand a section, so a collapsed section whose header just
+            // disappeared would be content the user cannot get back.
+            CollapsibleSectionContent(isExpanded: showsHeader ? isExpanded : true) {
                 content
             }
         }
@@ -56,6 +85,11 @@ struct GallerySection<Content: View>: View {
         // so an `.animation(_:value: isExpanded)` down there never fires and
         // the caller's `animation:` argument was silently ignored.
         .animation(animation, value: isExpanded)
+        // `gridReflow`, not `animation`: the header leaving and the cards
+        // below reflowing are one movement, and the grid inside declares
+        // `gridReflow` for itself. Giving the header the section's collapse
+        // curve instead would split the two apart mid-flight.
+        .animation(DSToken.Motion.gridReflow, value: showsHeader)
     }
 }
 

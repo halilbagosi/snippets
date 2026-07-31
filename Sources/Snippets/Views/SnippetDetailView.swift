@@ -71,7 +71,12 @@ struct SnippetDetailView: View {
                     Spacer(minLength: 24)
                 }
                 .padding(.horizontal, 32)
-                .padding(.top, 24)
+                // The back button is overlaid at the top leading corner, right
+                // where the title block starts, so the content has to start
+                // below it when it is there: 14 top inset + 30 button + 12 gap.
+                // The close button never needs this — it sits opposite the
+                // title, not on top of it.
+                .padding(.top, canGoBack ? 56 : 24)
                 .padding(.bottom, 32)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -93,7 +98,11 @@ struct SnippetDetailView: View {
             .accessibilityLabel("Close snippet")
 
             if canGoBack {
-                BackButton(action: onBack, accessibilityLabel: "Back to previous snippet")
+                BackButton(
+                    action: onBack,
+                    accessibilityLabel: "Back to previous snippet",
+                    style: .circle
+                )
                     .padding(.top, 14)
                     .padding(.leading, 14)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -211,7 +220,7 @@ struct SnippetDetailView: View {
             }
 
             FilterTag(
-                label: snippet.isFavorite ? "unfavorite" : "favorite",
+                label: snippet.isFavorite ? "favorited" : "favorite",
                 icon: snippet.isFavorite ? "star.fill" : "star",
                 accent: snippet.isFavorite ? Color(red: 1.0, green: 0.80, blue: 0.20) : theme.textMuted,
                 isSelected: snippet.isFavorite
@@ -565,8 +574,8 @@ struct SnippetDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader("meta")
             HStack(spacing: 12) {
-                metaPill(label: "created", value: snippet.createdAt.formatted(date: .abbreviated, time: .shortened))
-                metaPill(label: "updated", value: snippet.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                metaPill(label: "created", value: snippet.createdAt.formatted(date: .abbreviated, time: .omitted))
+                metaPill(label: "updated", value: snippet.updatedAt.formatted(date: .abbreviated, time: .omitted))
                 metaPill(label: "lines", value: "\(snippet.code.split(separator: "\n").count)")
                 metaPill(label: "chars", value: "\(snippet.code.count)")
                 Spacer()

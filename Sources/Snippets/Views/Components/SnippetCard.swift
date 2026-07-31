@@ -120,6 +120,11 @@ struct SnippetCard: View {
                     .font(Mono.font(size: 9, weight: .semibold))
                 Text(isStackExpanded ? "hide" : "\(linkedCount) linked")
                     .font(Mono.font(size: 10, weight: .semibold))
+                    // "N linked" is the only footer label with a space in it, so
+                    // it is the one the row breaks when a card narrows (sidebar
+                    // open). Wrapped, the chip grows to two lines and stands
+                    // taller than the copy chip it is supposed to match.
+                    .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
