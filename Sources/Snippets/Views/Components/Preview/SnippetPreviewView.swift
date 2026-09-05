@@ -118,7 +118,7 @@ struct SnippetPreviewView: View {
     /// no params, which renders identically to passing none.
     @ViewBuilder
     private func webPreview(flavor: WebPreviewFlavor) -> some View {
-        WebPreviewView(
+        WebPreviewSurface(
             sources: resolution.sources, flavor: flavor, theme: theme,
             propOverrides: paramOverrides,
             policy: trust.policy(for: snippetID)

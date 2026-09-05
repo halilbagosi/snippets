@@ -1,6 +1,39 @@
 import SwiftUI
 import WebKit
 
+/// Keeps WebKit's default white backing layer out of sight until the preview
+/// document has painted. The SwiftUI preview backdrop is behind `WKWebView`,
+/// so it cannot cover the one native frame WebKit may draw while its renderer
+/// starts; this cover deliberately sits above that native surface instead.
+struct WebPreviewSurface: View {
+    let sources: [LinkedSource]
+    let flavor: WebPreviewFlavor
+    let theme: Theme
+    var propOverrides: [String: PreviewParamValue] = [:]
+    var policy: WebPreviewHTMLBuilder.Policy = .denied
+
+    @State private var isLoading = true
+
+    var body: some View {
+        ZStack {
+            WebPreviewView(
+                sources: sources, flavor: flavor, theme: theme,
+                propOverrides: propOverrides, policy: policy,
+                isLoading: $isLoading
+            )
+
+            if isLoading {
+                // This must be an instant, opaque cover. Animating it would
+                // once again blend WebKit's unpainted white frame into view.
+                theme.canvasDeep
+                    .transition(.identity)
+                    .allowsHitTesting(false)
+            }
+        }
+        .animation(nil, value: isLoading)
+    }
+}
+
 /// Hosts the WKWebView engine for web-family snippet previews. `sources`
 /// are the snippet's resolved dependencies plus the entry itself, last.
 struct WebPreviewView: NSViewRepresentable {
@@ -15,8 +48,13 @@ struct WebPreviewView: NSViewRepresentable {
     /// expressed as a CSP in the document head, which cannot be edited in
     /// place once parsed.
     var policy: WebPreviewHTMLBuilder.Policy = .denied
+    /// True while a full document reload is waiting for WebKit's first
+    /// completed navigation. The owning SwiftUI surface covers the native
+    /// view during this interval, preventing its default white backing layer
+    /// from appearing before the document's background is drawn.
+    @Binding var isLoading: Bool
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeCoordinator() -> Coordinator { Coordinator(isLoading: $isLoading) }
 
     func makeNSView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
@@ -31,6 +69,7 @@ struct WebPreviewView: NSViewRepresentable {
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
+        context.coordinator.isLoading = $isLoading
         webView.underPageBackgroundColor = NSColor(theme.canvasDeep)
         // Backstop under the documents' CSP: a WebKit-level rule that drops
         // remote loads whatever the markup asks for. Driven from here rather
@@ -72,6 +111,7 @@ struct WebPreviewView: NSViewRepresentable {
                     guard error != nil else { return }
                     // The incremental path failed (e.g. shell in an unexpected
                     // state) — fall back to a full reload of the same content.
+                    context.coordinator.beginLoading()
                     Self.loadFullDocument(
                         webView, sources: sources, flavor: flavor,
                         appearance: appearance, policy: policy
@@ -85,6 +125,7 @@ struct WebPreviewView: NSViewRepresentable {
             }
         case .full:
             context.coordinator.pendingOverrides = propOverrides
+            context.coordinator.beginLoading()
             Self.loadFullDocument(
                 webView, sources: sources, flavor: flavor,
                 appearance: appearance, policy: policy
@@ -114,6 +155,7 @@ struct WebPreviewView: NSViewRepresentable {
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate {
+        var isLoading: Binding<Bool>
         private var lastSources: [LinkedSource]?
         private var lastFlavor: WebPreviewFlavor?
         private var lastIsDark: Bool?
@@ -126,7 +168,16 @@ struct WebPreviewView: NSViewRepresentable {
         /// reload resets `window.__snippetPropOverrides`.
         var pendingOverrides: [String: PreviewParamValue] = [:]
 
+        init(isLoading: Binding<Bool>) {
+            self.isLoading = isLoading
+        }
+
+        func beginLoading() {
+            isLoading.wrappedValue = true
+        }
+
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            isLoading.wrappedValue = false
             guard !pendingOverrides.isEmpty else { return }
             webView.evaluateJavaScript(
                 WebPreviewHTMLBuilder.propsUpdateScript(overrides: pendingOverrides)
