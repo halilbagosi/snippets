@@ -148,7 +148,12 @@ enum SnippetLinker {
             return [.html, .css].contains(dep)
         case .glsl: return dep == .glsl
         case .metal: return dep == .metal
-        case .swift: return dep == .swift
+        case .swift:
+            #if APP_STORE
+            return false   // no Swift engine to feed in this build
+            #else
+            return dep == .swift
+            #endif
         default: return false
         }
     }

@@ -27,7 +27,14 @@ extension SupportedLanguage {
         case .react: return .web(.react)
         case .glsl: return .web(.glsl)
         case .metal: return .metal
-        case .swift: return .swiftUI
+        case .swift:
+            // The App Store build has no Swift engine (see SwiftPreviewBuilder),
+            // so Swift snippets are code-only there, like Python.
+            #if APP_STORE
+            return nil
+            #else
+            return .swiftUI
+            #endif
         case .python, .rust, .go, .kotlin, .hlsl, .json, .cpp, .unknown:
             return nil
         }

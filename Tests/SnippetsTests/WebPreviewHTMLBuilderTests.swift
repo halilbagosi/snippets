@@ -874,7 +874,12 @@ final class PreviewKindTests: XCTestCase {
 
     func test_nativeEngines() {
         XCTAssertEqual(SupportedLanguage.metal.previewKind, .metal)
+        #if APP_STORE
+        XCTAssertNil(SupportedLanguage.swift.previewKind, "the App Store build must not compile and load Swift")
+        XCTAssertFalse(SnippetLinker.canContribute(.swift, toEntry: .swift))
+        #else
         XCTAssertEqual(SupportedLanguage.swift.previewKind, .swiftUI)
+        #endif
     }
 
     func test_unsupportedLanguages_haveNoPreview() {

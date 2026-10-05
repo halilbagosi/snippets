@@ -161,7 +161,7 @@ struct SnippetsApp: App {
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) { }
-            CommandGroup(replacing: .help) { }
+            HelpCommands()
             CommandGroup(after: .windowArrangement) {
                 Button("Toggle Full Screen") {
                     NSApp.keyWindow?.toggleFullScreen(nil)
@@ -178,6 +178,11 @@ struct SnippetsApp: App {
                 .environment(appearanceSettings)
                 .environment(previewTrust)
         }
+
+        Window("Third-Party Notices", id: ThirdPartyNoticesView.windowID) {
+            ThirdPartyNoticesView()
+        }
+        .windowResizability(.contentMinSize)
         #endif
     }
 

@@ -1,3 +1,8 @@
+// Compiles user code with the Xcode toolchain and dlopens it into this
+// process — not shippable on the Mac App Store (guidelines 2.4.5 / 2.5.2), and
+// impossible inside the App Sandbox anyway. The AppStore configuration
+// defines APP_STORE and leaves the whole engine out.
+#if !APP_STORE
 import AppKit
 import CryptoKit
 import Foundation
@@ -328,3 +333,4 @@ actor SwiftPreviewBuilder {
         }
     }
 }
+#endif

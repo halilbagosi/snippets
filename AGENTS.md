@@ -22,10 +22,22 @@ xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=m
 
 ## Test
 
-389 XCTest cases in the `SnippetsTests` target, hosted by the app (so a run launches `Snippets.app` briefly):
+393 XCTest cases in the `SnippetsTests` target, hosted by the app (so a run launches `Snippets.app` briefly):
 
 ```sh
 xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' test
+```
+
+## App Store build
+
+The `AppStore` configuration (used by Archive) is sandboxed via
+`Snippets-AppStore.entitlements` and defines `APP_STORE`, which compiles out
+the Swift preview engine. Code that touches Swift previews must keep both
+builds compiling. Test it too (364 tests — the Swift-preview suites drop out);
+testability is a command-line override, never a setting of that configuration:
+
+```sh
+xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' -configuration AppStore ENABLE_TESTABILITY=YES test
 ```
 
 ## Registering files

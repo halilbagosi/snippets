@@ -452,7 +452,11 @@ struct SnippetEditorView: View {
             Text("• reference a connection by the name it defines — import lines are ignored")
             Text("• keep a component's css as its own connected css snippet (import \"./x.css\" is dropped)")
             Text("• npm packages (framer-motion, gsap…) load on demand from esm.sh")
+            #if APP_STORE
+            Text("• web languages link with web entries; glsl with glsl")
+            #else
             Text("• web languages link with web entries; swift with swift; glsl with glsl")
+            #endif
         }
         .font(Mono.font(size: 10))
         .foregroundStyle(theme.textMuted)
