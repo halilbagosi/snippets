@@ -21,6 +21,15 @@ struct QuickCopyPanel: View {
     /// off the thing that was clicked rather than blooming from its own middle.
     let scaleAnchor: UnitPoint
 
+    /// True when the clipboard monitor opened this panel rather than a click.
+    ///
+    /// The two paths need different exits. A clicked panel is key, so clicking
+    /// away resigns key and `windowDidResignKey` closes it. A capture-opened
+    /// panel is deliberately never key — it must not take keystrokes from the
+    /// app the user is typing in — so that path is dead for it and nothing
+    /// would ever close it.
+    let openedByCapture: Bool
+
     let onDismiss: () -> Void
     /// Passed the snippet to reveal, or nil for a plain "open the app".
     let onOpenMainWindow: (Snippet?) -> Void
@@ -76,14 +85,21 @@ struct QuickCopyPanel: View {
         .task(id: model.pendingCapture) {
             // A capture is a moment, not an inbox: if it is not acted on it
             // goes, so opening the panel later never shows a stale banner.
-            //
-            // Only the banner retires — not the panel. Dismissing the whole
-            // surface here would yank it away mid-keystroke from someone who
-            // ignored the capture and started searching.
             guard model.pendingCapture != nil else { return }
             try? await Task.sleep(for: .seconds(6))
             guard !Task.isCancelled else { return }
             model.pendingCapture = nil
+
+            // A clicked panel keeps standing: the user asked for it, is
+            // looking at it, and may be mid-search — retiring an ignored
+            // banner is no reason to take the surface away.
+            //
+            // A capture-opened panel has to go. It was never key, so
+            // `windowDidResignKey` can never fire for it, and nothing else
+            // closes it: it would float at `.statusBar` level over every other
+            // app until the user found the status item. Nobody asked for this
+            // window, so its welcome expires with the offer that raised it.
+            if openedByCapture { onDismiss() }
         }
         .task(id: confirmingID) {
             // The confirmation is visible before the surface leaves. Tied to

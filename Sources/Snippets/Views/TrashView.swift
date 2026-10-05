@@ -5,6 +5,7 @@ struct TrashView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
     @Environment(AppEnvironment.self) private var appEnvironment
+    @Environment(PreviewTrust.self) private var previewTrust
 
     @Query(filter: #Predicate<Snippet> { $0.deletedAt != nil }, sort: [SortDescriptor(\Snippet.deletedAt, order: .reverse)])
     private var trashedSnippets: [Snippet]
@@ -93,6 +94,12 @@ struct TrashView: View {
     }
 
     private func permanentlyDelete(_ snippet: Snippet) {
+        // Read and drop the preview consent before the model goes: after the
+        // delete `snippet.uuid` is a read off an invalidated object, and a
+        // grant left behind is network permission attached to nothing — the
+        // CDN grant is persisted, so it would outlive the snippet forever.
+        previewTrust.forget(snippet.uuid)
+
         for mediaItem in snippet.mediaItems {
             appEnvironment.mediaManager.deleteFile(for: mediaItem)
         }

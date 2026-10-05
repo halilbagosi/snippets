@@ -203,7 +203,11 @@ struct SnippetDetailView: View {
                 isSelected: didCopy
             ) {
                 Clipboard.copy(snippet.code)
-                snippet.copyCount += 1
+                // Bookkeeping goes through SnippetStore, not inline — see
+                // `recordCopy`: it is the single definition of what a copy
+                // records, and `updatedAt` is deliberately left alone so
+                // copying never reshuffles the gallery.
+                SnippetStore.recordCopy(snippet, in: modelContext)
                 didCopy = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     didCopy = false

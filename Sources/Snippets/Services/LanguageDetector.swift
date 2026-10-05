@@ -18,6 +18,20 @@ enum SupportedLanguage: String, CaseIterable, Identifiable, Hashable {
     case css = "CSS"
     case unknown = "Unknown"
 
+    /// Stored snippets can come from imports or older versions that used a
+    /// different casing or left incidental whitespace around the language.
+    /// Resolve those values to the canonical enum case so filters and gallery
+    /// grouping do not silently disagree about the same language.
+    init?(rawValue: String) {
+        let normalized = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let language = Self.allCases.first(where: {
+            $0.rawValue.compare(normalized, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+        }) else {
+            return nil
+        }
+        self = language
+    }
+
     var id: String { rawValue }
 
     var symbolName: String {

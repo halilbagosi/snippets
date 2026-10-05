@@ -245,6 +245,7 @@ struct WebPreviewView: NSViewRepresentable {
 ///
 /// Only http/https/ws/wss are blocked — `about:`, `data:` and `blob:` are left
 /// alone so the CSP's `img-src data: blob:` keeps working.
+@MainActor
 enum PreviewContentRules {
     private static let blockRemote = """
     [{"trigger": {"url-filter": "^https?://", "url-filter-is-case-sensitive": false},
@@ -283,12 +284,16 @@ enum PreviewContentRules {
         let source = source(for: policy)
         store?.compileContentRuleList(
             forIdentifier: identifier, encodedContentRuleList: source
-        ) { list, _ in
-            guard let list else { return }
-            // The previous policy's list must go, or a revoked grant would
-            // leave its esm.sh exception attached.
-            webView.configuration.userContentController.removeAllContentRuleLists()
-            webView.configuration.userContentController.add(list)
+        ) { [weak webView] list, _ in
+            // WebKit delivers this callback from a nonisolated context. The
+            // web view and its user-content controller are main-actor owned.
+            Task { @MainActor [weak webView] in
+                guard let list, let webView else { return }
+                // The previous policy's list must go, or a revoked grant would
+                // leave its esm.sh exception attached.
+                webView.configuration.userContentController.removeAllContentRuleLists()
+                webView.configuration.userContentController.add(list)
+            }
         }
     }
 }

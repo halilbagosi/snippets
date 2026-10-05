@@ -6,6 +6,11 @@ import XCTest
 /// handed to a preview engine that cannot render them.
 final class LanguageDetectorHardeningTests: XCTestCase {
 
+    func test_storedLanguageValues_areCanonicalizedForFiltering() {
+        XCTAssertEqual(SupportedLanguage(rawValue: "metal"), .metal)
+        XCTAssertEqual(SupportedLanguage(rawValue: " Metal "), .metal)
+    }
+
     // MARK: Unsupported languages must not claim a preview engine
 
     func test_sqlQuery_isNotPreviewable() {

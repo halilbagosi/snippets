@@ -9,6 +9,7 @@ struct SnippetCard: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppearanceSettings.self) private var appearanceSettings
+    @Environment(\.modelContext) private var modelContext
     let snippet: Snippet
     var isSelected: Bool = false
     var inTrashView: Bool = false
@@ -57,7 +58,11 @@ struct SnippetCard: View {
 
     private func performCopy() {
         Clipboard.copy(snippet.code)
-        snippet.copyCount += 1
+        // Bookkeeping goes through SnippetStore, not inline: `copyCount` feeds
+        // the panel's "Frequent" scope and the sidebar's "Frequently used"
+        // section, and a second definition of "a copy happened" is how those
+        // drift apart from each other.
+        SnippetStore.recordCopy(snippet, in: modelContext)
         withAnimation(DSToken.Motion.toggle) {
             didCopy = true
         }

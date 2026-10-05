@@ -29,6 +29,10 @@ struct GallerySection<Content: View>: View {
     /// Hiding the header keeps one identity for the content, which is what
     /// lets the cards underneath reflow instead of being replaced.
     var showsHeader: Bool = true
+    /// Identity for the header's glass inside the gallery's
+    /// `GlassEffectContainer`. See ``GallerySectionHeader``.
+    var glassID: String? = nil
+    var glassNamespace: Namespace.ID? = nil
     let content: Content
 
     init(
@@ -41,6 +45,8 @@ struct GallerySection<Content: View>: View {
         isExpanded: Binding<Bool>,
         animation: Animation = DSToken.Motion.collapse,
         showsHeader: Bool = true,
+        glassID: String? = nil,
+        glassNamespace: Namespace.ID? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
@@ -52,6 +58,8 @@ struct GallerySection<Content: View>: View {
         self._isExpanded = isExpanded
         self.animation = animation
         self.showsHeader = showsHeader
+        self.glassID = glassID
+        self.glassNamespace = glassNamespace
         self.content = content()
     }
 
@@ -65,7 +73,9 @@ struct GallerySection<Content: View>: View {
                     tint: tint,
                     actionIcon: actionIcon,
                     action: action,
-                    isExpanded: $isExpanded
+                    isExpanded: $isExpanded,
+                    glassID: glassID,
+                    glassNamespace: glassNamespace
                 )
                 // Leaves upward, into the space it occupies, so the content
                 // below reads as rising to take its place rather than as the
@@ -103,6 +113,18 @@ struct GallerySectionHeader: View {
     var actionIcon: String? = nil
     var action: (() -> Void)? = nil
     @Binding var isExpanded: Bool
+    /// Identity for this header's glass within the gallery's
+    /// `GlassEffectContainer`.
+    ///
+    /// Section headers are inserted and removed on every language-filter click.
+    /// Without an ID the system treats each one as a brand-new shape and
+    /// resolves its material on its own schedule, while the rim, the tint fills
+    /// and the shadow below are drawn by SwiftUI on the very first frame. The
+    /// result is a crisp empty outline with the dot grid showing through it for
+    /// a beat before the glass arrives — the frame and the glass visibly coming
+    /// apart. With an ID the container morphs the member as one piece.
+    var glassID: String? = nil
+    var glassNamespace: Namespace.ID? = nil
 
     private var theme: Theme { Theme.current(colorScheme) }
 
@@ -133,6 +155,13 @@ struct GallerySectionHeader: View {
                         .font(Mono.font(size: 11, weight: .semibold))
                         .foregroundStyle(theme.textMuted)
                         .monospacedDigit()
+                        // The header now survives a filter change instead of
+                        // being replaced, so the count animates rather than
+                        // arriving with the view. A plain cross-fade draws both
+                        // numbers on top of each other — 14 over 6 reads as
+                        // "16" for a beat — where the numeric transition rolls
+                        // the digits it actually shares.
+                        .contentTransition(.numericText(value: Double(count)))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background {
@@ -173,7 +202,9 @@ struct GallerySectionHeader: View {
             interactive: true,
             borderOpacity: colorScheme == .dark ? 0.14 : 0.30,
             shadowRadius: 5,
-            shadowY: 2
+            shadowY: 2,
+            glassID: glassID,
+            glassNamespace: glassNamespace
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title), \(count), \(isExpanded ? "expanded" : "collapsed")")

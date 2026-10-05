@@ -97,6 +97,15 @@ public extension DSToken {
             blendDuration: 0.12
         )
 
+        /// Favorite and language filters. Critically damped enough to avoid a
+        /// visible bounce when a large grid changes shape, while remaining
+        /// interruptible when the user taps filters in quick succession.
+        public static let filterReflow: Animation = .interactiveSpring(
+            response: 0.36,
+            dampingFraction: 0.96,
+            blendDuration: 0.10
+        )
+
         /// Pointer-tracked parallax on cards; retargets on every mouse move.
         public static let tilt: Animation = .interactiveSpring(
             response: 0.24,
