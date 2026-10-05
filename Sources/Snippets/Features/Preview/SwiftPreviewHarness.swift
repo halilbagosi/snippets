@@ -1,3 +1,5 @@
+// Only feeds SwiftPreviewBuilder; see the note there on APP_STORE.
+#if !APP_STORE
 import CryptoKit
 import Foundation
 
@@ -196,3 +198,4 @@ enum SwiftPreviewHarness {
         }
     }
 }
+#endif

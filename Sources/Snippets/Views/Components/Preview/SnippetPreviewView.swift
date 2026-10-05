@@ -30,10 +30,15 @@ struct SnippetPreviewView: View {
         case .metal:
             gated { metalPreview }
         case .swiftUI:
+            #if APP_STORE
+            // Unreachable: `previewKind` never yields .swiftUI in this build.
+            PreviewUnavailableView(message: "Swift previews aren't available in the App Store version.", theme: theme)
+            #else
             // The Swift flavor keeps its own Run gate unconditionally: it
             // compiles and loads native code into this process, so it is the
             // one engine that must stay explicit even with auto-run enabled.
             SwiftPreviewHostView(entry: entryCode, helpers: helperCodes, theme: theme)
+            #endif
         case nil:
             PreviewUnavailableView(message: "No live preview for \(language.rawValue).", theme: theme)
         }

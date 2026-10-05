@@ -48,7 +48,9 @@ final class SnippetLinkerTests: XCTestCase {
             XCTAssertTrue(SnippetLinker.canContribute(dep, toEntry: .react))
             XCTAssertTrue(SnippetLinker.canContribute(dep, toEntry: .html))
         }
+        #if !APP_STORE
         XCTAssertTrue(SnippetLinker.canContribute(.swift, toEntry: .swift))
+        #endif
         XCTAssertTrue(SnippetLinker.canContribute(.metal, toEntry: .metal))
         XCTAssertTrue(SnippetLinker.canContribute(.glsl, toEntry: .glsl))
         XCTAssertFalse(SnippetLinker.canContribute(.css, toEntry: .glsl))

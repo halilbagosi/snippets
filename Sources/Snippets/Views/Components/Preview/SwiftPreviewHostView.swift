@@ -1,3 +1,5 @@
+// Hosts SwiftPreviewBuilder output; see the note there on APP_STORE.
+#if !APP_STORE
 import SwiftUI
 
 /// Live preview for Swift/SwiftUI snippets. Compilation is explicit (Run):
@@ -117,3 +119,4 @@ private struct CompiledSwiftView: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {}
 }
+#endif

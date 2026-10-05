@@ -1,3 +1,4 @@
+#if !APP_STORE
 import XCTest
 @testable import Snippets
 
@@ -203,3 +204,4 @@ final class SwiftPreviewHarnessTests: XCTestCase {
         }
     }
 }
+#endif

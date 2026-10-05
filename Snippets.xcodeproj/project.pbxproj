@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05C84AB0AD5549D7F7069E6E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 757E7F34577C563AEFCB24FA /* PrivacyInfo.xcprivacy */; };
+		98B128D9E36B123A4D976EB8 /* ThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = 18B912223FDE5C2A7CC856B3 /* ThirdPartyNotices.txt */; };
+		F46B79656507314308974187 /* ThirdPartyNoticesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 271373FECC71F698C4601723 /* ThirdPartyNoticesView.swift */; };
+		40D4ED353970535DB11DCF63 /* HelpCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132202CF7B77D71B4D874FF4 /* HelpCommands.swift */; };
+		CF9418FAE91E4369C97CBFF2 /* AppLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = F22332A83990D91C9C3A122D /* AppLinks.swift */; };
 		5E57E5700000000000000200 /* AppearanceSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000100 /* AppearanceSettingsTests.swift */; };
 		5E57E5700000000000000201 /* CollectionMoveTreeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000101 /* CollectionMoveTreeTests.swift */; };
 		5E57E5700000000000000202 /* LanguageDetectorCorpusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000102 /* LanguageDetectorCorpusTests.swift */; };
@@ -146,6 +151,12 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		A4D3F65EC1966AF5DF35CA28 /* Snippets-AppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Snippets-AppStore.entitlements"; sourceTree = SOURCE_ROOT; };
+		757E7F34577C563AEFCB24FA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		18B912223FDE5C2A7CC856B3 /* ThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThirdPartyNotices.txt; sourceTree = "<group>"; };
+		271373FECC71F698C4601723 /* ThirdPartyNoticesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThirdPartyNoticesView.swift; sourceTree = "<group>"; };
+		132202CF7B77D71B4D874FF4 /* HelpCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpCommands.swift; sourceTree = "<group>"; };
+		F22332A83990D91C9C3A122D /* AppLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLinks.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000100 /* AppearanceSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000101 /* CollectionMoveTreeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionMoveTreeTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000102 /* LanguageDetectorCorpusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetectorCorpusTests.swift; sourceTree = "<group>"; };
@@ -358,6 +369,8 @@
 			children = (
 				77AF4491E0E2EED462C1D90D /* Assets.xcassets */,
 				B2E5F8806A5B4C785DC1EC71 /* WebPreview */,
+				757E7F34577C563AEFCB24FA /* PrivacyInfo.xcprivacy */,
+				18B912223FDE5C2A7CC856B3 /* ThirdPartyNotices.txt */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -379,6 +392,7 @@
 			isa = PBXGroup;
 			children = (
 				C124BF442FF9B12E008B595C /* Snippets-Info.plist */,
+				A4D3F65EC1966AF5DF35CA28 /* Snippets-AppStore.entitlements */,
 				0B9284FC624AB4701E78C6EA /* SnippetsApp.swift */,
 				52340538EFD250B44AE38B68 /* App */,
 				B996AA964155DC8F483D4FD4 /* Core */,
@@ -509,6 +523,8 @@
 			isa = PBXGroup;
 			children = (
 				6CE2410E27F5506076DCBF84 /* AppearanceSettings.swift */,
+				132202CF7B77D71B4D874FF4 /* HelpCommands.swift */,
+				F22332A83990D91C9C3A122D /* AppLinks.swift */,
 				EC81238946BF781158E8BD10 /* AppEnvironment.swift */,
 			);
 			path = App;
@@ -556,6 +572,7 @@
 			children = (
 				3FE6005FDBD6D97E65546E29 /* AppearanceView.swift */,
 				F8540F55E9369EE99D79F3CF /* SettingsView.swift */,
+				271373FECC71F698C4601723 /* ThirdPartyNoticesView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -788,6 +805,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				18842E040399CB803941F5F9 /* Assets.xcassets in Resources */,
+				05C84AB0AD5549D7F7069E6E /* PrivacyInfo.xcprivacy in Resources */,
+				98B128D9E36B123A4D976EB8 /* ThirdPartyNotices.txt in Resources */,
 				C124BF522FFA5675008B595C /* SnippetsIcon.icon in Resources */,
 				5F83E4E6DBEBBC102F4EE2BD /* DisintegrationShaders.metal.txt in Resources */,
 				49595C2F65E32BDA2D559953 /* babel.min.js in Resources */,
@@ -845,6 +864,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				7F62BEEDE019601A65905EF2 /* AppEnvironment.swift in Sources */,
+				F46B79656507314308974187 /* ThirdPartyNoticesView.swift in Sources */,
+				40D4ED353970535DB11DCF63 /* HelpCommands.swift in Sources */,
+				CF9418FAE91E4369C97CBFF2 /* AppLinks.swift in Sources */,
 				D4A378895A23F8FD4EF5248F /* AppIntentNavigator.swift in Sources */,
 				BDC6F6C5E365C5EC65C80F1C /* AppearanceSettings.swift in Sources */,
 				A597CA97EA43C8D4A3C0C695 /* AppearanceView.swift in Sources */,
@@ -955,7 +977,7 @@
 				DEVELOPMENT_TEAM = KCH5545G6F;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.halilbagosi.SnippetsTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -975,7 +997,7 @@
 				DEVELOPMENT_TEAM = KCH5545G6F;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.halilbagosi.SnippetsTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -986,9 +1008,31 @@
 			};
 			name = Release;
 		};
+		AEF8932A52CD80E16C09F7A7 /* AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = KCH5545G6F;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.halilbagosi.SnippetsTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Snippets.app/Contents/MacOS/Snippets";
+			};
+			name = AppStore;
+		};
 		2C773C783E591D0F12D3E158 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				MARKETING_VERSION = 1.0;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -1046,7 +1090,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Made by Halil Bagosi";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -1063,6 +1107,8 @@
 		30C56563761816D8237F1C66 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				MARKETING_VERSION = 1.0;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -1114,7 +1160,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Made by Halil Bagosi";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -1127,6 +1173,76 @@
 			};
 			name = Release;
 		};
+		A4F89950FE14B3EADF6F5AA1 /* AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				MARKETING_VERSION = 1.0;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = APP_STORE;
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = KCH5545G6F;
+				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi";
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = Snippets;
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = AppStore;
+		};
 		3A041FDB52F4DF20F57058FE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1137,12 +1253,12 @@
 				INFOPLIST_FILE = "Snippets-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Made by Halil Bagosi";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.halilbagosi.Snippets;
 				SDKROOT = macosx;
 				SUPPORTS_MACCATALYST = NO;
@@ -1161,12 +1277,12 @@
 				INFOPLIST_FILE = "Snippets-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Made by Halil Bagosi";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.halilbagosi.Snippets;
 				SDKROOT = macosx;
 				SUPPORTS_MACCATALYST = NO;
@@ -1174,6 +1290,31 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 			};
 			name = Release;
+		};
+		929D87EBFBF722CDAB1402DD /* AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Snippets-AppStore.entitlements";
+				ASSETCATALOG_COMPILER_APPICON_NAME = SnippetsIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_DEBUG_DYLIB = NO;
+				INFOPLIST_FILE = "Snippets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.halilbagosi.Snippets;
+				SDKROOT = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = AppStore;
 		};
 /* End XCBuildConfiguration section */
 
@@ -1183,6 +1324,7 @@
 			buildConfigurations = (
 				5E57E5700000000000000006 /* Debug */,
 				5E57E5700000000000000007 /* Release */,
+				AEF8932A52CD80E16C09F7A7 /* AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -1192,6 +1334,7 @@
 			buildConfigurations = (
 				2C773C783E591D0F12D3E158 /* Debug */,
 				30C56563761816D8237F1C66 /* Release */,
+				A4F89950FE14B3EADF6F5AA1 /* AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -1201,6 +1344,7 @@
 			buildConfigurations = (
 				3A041FDB52F4DF20F57058FE /* Debug */,
 				6925DDC254447688B906C53B /* Release */,
+				929D87EBFBF722CDAB1402DD /* AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

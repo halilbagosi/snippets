@@ -51,7 +51,8 @@ rather than something that happens.
 - With it off, a web or Metal preview waits behind a Run button. Approval is per
   snippet and lasts for that launch only.
 - Swift previews always wait for an explicit Run, whatever the setting says, so
-  running native code in the app's process is never automatic.
+  running native code in the app's process is never automatic. They are not in
+  the Mac App Store build at all (see [App Store build](#app-store-build)).
 - Loading npm modules from esm.sh is a separate grant, per snippet, shown as a
   banner naming the packages. It is the only way a preview reaches the network.
 
@@ -95,7 +96,7 @@ looks like code in a language it recognizes, offers to save it as a snippet.
 ## Requirements
 
 - macOS 26+ (the app links against the macOS 26 SDK for the Liquid Glass design system)
-- Xcode (beta) with Swift 6.2 tools; SwiftData macros require the full Xcode toolchain, not the Command Line Tools alone
+- Xcode with Swift 6.2 tools; SwiftData macros require the full Xcode toolchain, not the Command Line Tools alone
 
 ## Build and Run
 
@@ -110,6 +111,24 @@ xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=m
 
 To run the app, open the project and launch the Snippets scheme.
 
+### App Store build
+
+The `AppStore` build configuration is what Product ▸ Archive uses. On top of
+Release it:
+
+- turns on the App Sandbox with `Snippets-AppStore.entitlements` (network
+  client for esm.sh, read-only access to files the user picks);
+- defines `APP_STORE`, which compiles out the Swift preview engine — no
+  `xcrun`, `swiftc` or `dlopen` — so Swift snippets are code-only there.
+
+Debug and Release stay unsandboxed with Swift previews. A sandboxed build keeps
+its library in its container (`~/Library/Containers/com.halilbagosi.Snippets`),
+not in `~/Library/Application Support`.
+
+```sh
+xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' -configuration AppStore build
+```
+
 ### Adding files
 
 The project lists source files explicitly (it does not use synchronized
@@ -122,6 +141,13 @@ uncompiled.
 
 ```sh
 xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' test
+```
+
+To run the suite against the App Store build (sandboxed host, no Swift engine),
+enable testability for that run only — the shipping configuration leaves it off:
+
+```sh
+xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' -configuration AppStore ENABLE_TESTABILITY=YES test
 ```
 
 The `SnippetsTests` target is hosted by the app, so a test run launches
