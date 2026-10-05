@@ -58,6 +58,12 @@ final class ClipboardMonitor {
         timer = nil
     }
 
+    /// Reads the pasteboard's contents, not just its metadata.
+    ///
+    /// Measured on macOS 27.0 (build 26A5388g): this did not produce a visible
+    /// paste-permission alert for this app during the four-copy probe. Re-measure
+    /// on a major OS update — the gating is Apple's and the feature stops being
+    /// viable if it ever starts applying here. See `Docs/security-overview.md`.
     private func poll() {
         let pasteboard = NSPasteboard.general
         let current = pasteboard.changeCount

@@ -17,7 +17,13 @@ enum MainWindowOpener {
     /// Bring the app forward, restoring a window if none is left.
     static func activate() {
         NSApp.activate(ignoringOtherApps: true)
-        let restorable = NSApp.windows.filter(\.canBecomeMain)
+        // `canBecomeMain` alone also matches the Settings window, which would
+        // then be raised instead of the gallery — and the gallery would never
+        // be restored at all, because a non-empty match skips `open?()`.
+        let restorable = NSApp.windows.filter { window in
+            window.canBecomeMain
+                && window.identifier?.rawValue.hasPrefix(SnippetsApp.mainWindowID) == true
+        }
         if restorable.isEmpty {
             open?()
         } else {
@@ -102,7 +108,9 @@ final class MenuBarController: NSObject, NSWindowDelegate {
         // alive across order-out/order-front, so without this neither the
         // entrance animation nor the search-field focus would fire a second
         // time — the panel would open dead on its second use.
-        panel.contentView = NSHostingView(rootView: makeRoot(model: model, panel: panel))
+        panel.contentView = NSHostingView(
+            rootView: makeRoot(model: model, panel: panel, openedByCapture: capture != nil)
+        )
 
         panel.orderFront(nil)
         if capture == nil {
@@ -122,7 +130,12 @@ final class MenuBarController: NSObject, NSWindowDelegate {
             context.duration = 0.13   // matches DSToken.Motion.popoverOut
             panel.animator().alphaValue = 0
         } completionHandler: { [weak panel] in
-            panel?.orderOut(nil)
+            // AppKit invokes this completion handler from a nonisolated
+            // callback, while NSPanel is main-actor isolated in the macOS 26
+            // SDK. Hop back before touching the window.
+            Task { @MainActor [weak panel] in
+                panel?.orderOut(nil)
+            }
         }
     }
 
@@ -131,6 +144,14 @@ final class MenuBarController: NSObject, NSWindowDelegate {
     /// Clicking away dismisses, the way every other menu bar panel behaves.
     func windowDidResignKey(_ notification: Notification) {
         hidePanel()
+    }
+
+    /// A capture-opened panel that the user clicks into is no longer an
+    /// unrequested window — it is one they are using, and it now has a working
+    /// resign-key exit. Clearing the pending capture ends the 6-second hold in
+    /// `QuickCopyPanel`, so engaging with the panel keeps it.
+    func windowDidBecomeKey(_ notification: Notification) {
+        model?.pendingCapture = nil
     }
 
     // MARK: Construction
@@ -169,10 +190,15 @@ final class MenuBarController: NSObject, NSWindowDelegate {
         return created
     }
 
-    private func makeRoot(model: QuickCopyViewModel, panel: NSPanel) -> some View {
+    private func makeRoot(
+        model: QuickCopyViewModel,
+        panel: NSPanel,
+        openedByCapture: Bool
+    ) -> some View {
         QuickCopyPanel(
             model: model,
             scaleAnchor: scaleAnchor(for: panel),
+            openedByCapture: openedByCapture,
             onDismiss: { [weak self] in self?.hidePanel() },
             onOpenMainWindow: { [weak self] snippet in
                 self?.hidePanel()

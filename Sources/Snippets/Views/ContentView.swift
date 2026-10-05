@@ -10,6 +10,7 @@ struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppearanceSettings.self) private var appearanceSettings
     @Environment(AppIntentNavigator.self) private var navigator
+    @Environment(PreviewTrust.self) private var previewTrust
 
     @Query(filter: #Predicate<Snippet> { $0.deletedAt == nil }, sort: [SortDescriptor(\Snippet.updatedAt, order: .reverse)])
     private var snippets: [Snippet]
@@ -754,9 +755,7 @@ struct ContentView: View {
             performTrashCleanup()
             debouncedSearchText = searchText
             rebuildDerivedCaches()
-            // Cold launch: an intent that launched the app may have set the flag
-            // before this view began observing, so onChange never fires for it.
-            if navigator.pendingNewSnippet { presentNewSnippetFromIntent() }
+            drainPendingWork()
         }
         .onChange(of: searchText) { _, newValue in
             debounceSearch(newValue)
@@ -783,15 +782,7 @@ struct ContentView: View {
         }
         .onChange(of: navigator.pendingOpenSnippetUUID) { _, newValue in
             guard let uuid = newValue else { return }
-            if let match = snippets.first(where: { $0.uuid == uuid }) {
-                withAnimation(DSToken.Motion.overlay) {
-                    searchText = ""
-                    selectedCollectionID = nil
-                    sidebarSelectionContext = .allSnippets
-                    selectedSnippetID = match.persistentModelID
-                }
-            }
-            navigator.pendingOpenSnippetUUID = nil
+            openPendingSnippet(uuid)
         }
         .onChange(of: navigator.pendingNewSnippet) { _, isPending in
             guard isPending else { return }
@@ -982,6 +973,22 @@ struct ContentView: View {
         navigator.pendingNewSnippet = false
     }
 
+    /// Opens the snippet `OpenSnippetIntent` or the quick-copy panel asked for,
+    /// clearing the request either way — an unclearable request would make every
+    /// later request for the same snippet a no-op, because `onChange` fires on
+    /// change and not on value.
+    private func openPendingSnippet(_ uuid: UUID) {
+        if let match = snippets.first(where: { $0.uuid == uuid }) {
+            withAnimation(DSToken.Motion.overlay) {
+                searchText = ""
+                selectedCollectionID = nil
+                sidebarSelectionContext = .allSnippets
+                selectedSnippetID = match.persistentModelID
+            }
+        }
+        navigator.pendingOpenSnippetUUID = nil
+    }
+
     /// Opens the new-snippet editor seeded with captured clipboard code.
     /// Nothing is written to the store — the user still has to save.
     private func presentCapturedDraft(_ candidate: ClipboardCapture.Candidate) {
@@ -992,6 +999,22 @@ struct ContentView: View {
             isPresentingNew = true
         }
         CaptureDraft.shared.pending = nil
+    }
+
+    /// Acts on work that was requested before this view existed.
+    ///
+    /// Two ways in: an App Intent that launched the app cold, and the menu bar
+    /// panel handing off after `MainWindowOpener` had to build a fresh window.
+    /// Both set their flag and return immediately, so the value is already in
+    /// place by the time this view first runs its body — and `onChange` fires on
+    /// a change, never on the value it started with. Without this drain the
+    /// request is dropped, and because each handler is also what clears its own
+    /// flag, it stays dropped: every later request for the same snippet writes
+    /// the same value and changes nothing.
+    private func drainPendingWork() {
+        if navigator.pendingNewSnippet { presentNewSnippetFromIntent() }
+        if let uuid = navigator.pendingOpenSnippetUUID { openPendingSnippet(uuid) }
+        if let candidate = CaptureDraft.shared.pending { presentCapturedDraft(candidate) }
     }
 
     private func navigateBackFromCollection() {
@@ -1265,7 +1288,8 @@ struct ContentView: View {
                 snippets: trashedSnippets,
                 collections: collections.filter { $0.deletedAt != nil },
                 cutoff: cutoff,
-                context: modelContext
+                context: modelContext,
+                forgetTrust: { previewTrust.forget($0) }
             )
         } catch {
             showToast("Couldn't save changes: \(error.localizedDescription)")
@@ -1414,7 +1438,11 @@ struct ContentView: View {
                 if selectedSnippetID == snippet.persistentModelID {
                     selectedSnippetID = nil
                 }
-                TrashLifecycle.purgeSnippet(snippet, context: modelContext)
+                TrashLifecycle.purgeSnippet(
+                    snippet,
+                    context: modelContext,
+                    forgetTrust: { previewTrust.forget($0) }
+                )
             } else {
                 self.performDeleteSnippet(snippet)
             }
@@ -1665,8 +1693,23 @@ enum GallerySnippetFilter {
 /// delete flows. Context-injected so the logic is testable outside the view.
 @MainActor
 enum TrashLifecycle {
-    /// Hard-deletes a snippet: removes media files from disk, then deletes the model.
-    static func purgeSnippet(_ snippet: Snippet, context: ModelContext) {
+    /// Hard-deletes a snippet: removes media files from disk, drops any preview
+    /// consent recorded for it, then deletes the model.
+    ///
+    /// `forgetTrust` is `PreviewTrust.forget` at the call sites that have one.
+    /// It is a parameter rather than a global because this type is
+    /// context-injected precisely so it stays testable outside a view, and the
+    /// object being reached for is the one that gates code execution and
+    /// network egress — the last one that should become ambient state.
+    ///
+    /// It fires *before* the delete, deliberately: reading `snippet.uuid` off a
+    /// model the context has already deleted is reading an invalidated object.
+    static func purgeSnippet(
+        _ snippet: Snippet,
+        context: ModelContext,
+        forgetTrust: (@MainActor (UUID?) -> Void)? = nil
+    ) {
+        forgetTrust?(snippet.uuid)
         for media in snippet.mediaItems {
             MediaManager.deleteFile(for: media)
         }
@@ -1680,11 +1723,12 @@ enum TrashLifecycle {
         snippets: [Snippet],
         collections: [SnippetCollection],
         cutoff: Date,
-        context: ModelContext
+        context: ModelContext,
+        forgetTrust: (@MainActor (UUID?) -> Void)? = nil
     ) throws {
         for snippet in snippets {
             if let deletedAt = snippet.deletedAt, deletedAt < cutoff {
-                purgeSnippet(snippet, context: context)
+                purgeSnippet(snippet, context: context, forgetTrust: forgetTrust)
             }
         }
         for collection in collections {
@@ -1698,4 +1742,3 @@ enum TrashLifecycle {
         try context.save()
     }
 }
-

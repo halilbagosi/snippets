@@ -24,7 +24,7 @@ mod-pbxproj's save() sets the file executable; restore with
 
 ## Build & test gate
 ```bash
-export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer   # CLT lacks SwiftData macros
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer   # full Xcode; CLT lacks SwiftData macros
 xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' build \
   2>&1 | grep -iE "error:|BUILD SUCCEEDED|BUILD FAILED|cannot be found"
 xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' test \
