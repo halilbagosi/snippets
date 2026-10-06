@@ -39,7 +39,8 @@ struct ImportSummary: Equatable {
 struct SnippetImporter {
     /// Stores attachment bytes with the given (validated) extension; returns the file name.
     var writeMedia: @MainActor (Data, String) throws -> String
-    /// Deletes a replaced attachment's file. Called only after the save succeeded.
+    /// Deletes an attachment file: a replaced one after the save succeeded, or
+    /// one written by an import that then failed.
     var removeMedia: @MainActor (String) -> Void
     /// Drops preview permissions for a replaced snippet.
     var forgetTrust: @MainActor (UUID) -> Void
@@ -48,6 +49,30 @@ struct SnippetImporter {
         _ archive: SnippetArchive,
         to context: ModelContext,
         resolve: @MainActor (ImportConflict) async -> ConflictResolution
+    ) async throws -> ImportSummary {
+        // `resolve` is a modal dialog in production; the main context must not
+        // autosave this import's half-applied state while it is up.
+        let autosaveWas = context.autosaveEnabled
+        context.autosaveEnabled = false
+        defer { context.autosaveEnabled = autosaveWas }
+
+        // Files written during this call. If anything fails the context is
+        // rolled back, so these would be orphans.
+        var newFiles: [String] = []
+        do {
+            return try await run(archive, to: context, resolve: resolve, newFiles: &newFiles)
+        } catch {
+            context.rollback()
+            newFiles.forEach(removeMedia)
+            throw error
+        }
+    }
+
+    private func run(
+        _ archive: SnippetArchive,
+        to context: ModelContext,
+        resolve: @MainActor (ImportConflict) async -> ConflictResolution,
+        newFiles: inout [String]
     ) async throws -> ImportSummary {
         var snippetsByID: [UUID: Snippet] = [:]
         for snippet in try context.fetch(FetchDescriptor<Snippet>()) {
@@ -85,12 +110,13 @@ struct SnippetImporter {
         var standingChoice: ConflictChoice?
         var written: [(record: SnippetArchive.SnippetRecord, snippet: Snippet)] = []
         var replacedFiles: [String] = []
+        var replacedIDs: [UUID] = []
 
         for record in archive.snippets {
             guard let existing = snippetsByID[record.id] else {
                 let snippet = Snippet(uuid: record.id)
                 context.insert(snippet)
-                replacedFiles += overwrite(snippet, with: record, collections: collectionsByID, in: context)
+                replacedFiles += try overwrite(snippet, with: record, collections: collectionsByID, in: context, newFiles: &newFiles)
                 snippetsByID[record.id] = snippet
                 written.append((record, snippet))
                 summary.added += 1
@@ -116,8 +142,8 @@ struct SnippetImporter {
                 summary.skipped += 1
                 continue
             }
-            replacedFiles += overwrite(existing, with: record, collections: collectionsByID, in: context)
-            forgetTrust(record.id)
+            replacedFiles += try overwrite(existing, with: record, collections: collectionsByID, in: context, newFiles: &newFiles)
+            replacedIDs.append(record.id)
             written.append((record, existing))
             summary.replaced += 1
         }
@@ -129,6 +155,9 @@ struct SnippetImporter {
         }
 
         try context.save()
+        // Only now that the import is committed: drop the replaced snippets'
+        // trust and their old files.
+        replacedIDs.forEach(forgetTrust)
         replacedFiles.forEach(removeMedia)
         return summary
     }
@@ -136,12 +165,15 @@ struct SnippetImporter {
     /// Copies every imported field onto `snippet` and swaps its attachments.
     /// Returns the file names of attachments it removed, for deletion after
     /// the save — a failed save must not have destroyed the user's files.
+    /// Every file it writes is appended to `newFiles` at once, so the caller
+    /// can clean up if a later write or the save fails.
     private func overwrite(
         _ snippet: Snippet,
         with record: SnippetArchive.SnippetRecord,
         collections: [UUID: SnippetCollection],
-        in context: ModelContext
-    ) -> [String] {
+        in context: ModelContext,
+        newFiles: inout [String]
+    ) throws -> [String] {
         snippet.title = record.title
         snippet.snippetDescription = record.description
         snippet.language = record.language
@@ -160,8 +192,8 @@ struct SnippetImporter {
 
         var items: [MediaItem] = []
         for media in record.media {
-            // An attachment that cannot be written is dropped, not fatal.
-            guard let name = try? writeMedia(media.data, media.fileExtension.lowercased()) else { continue }
+            let name = try writeMedia(media.data, media.fileExtension.lowercased())
+            newFiles.append(name)
             let item = MediaItem(fileName: name, kind: MediaManager.kind(for: URL(fileURLWithPath: name)), addedAt: media.addedAt)
             context.insert(item)
             items.append(item)

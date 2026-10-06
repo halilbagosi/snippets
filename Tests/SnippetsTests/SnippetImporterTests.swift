@@ -241,6 +241,104 @@ final class SnippetImporterTests: XCTestCase {
         XCTAssertTrue(user.dependencies.first === local)
     }
 
+    // MARK: Atomicity
+
+    private struct DiskFull: Error {}
+
+    private func png(_ byte: UInt8 = 1) -> SnippetArchive.MediaRecord {
+        .init(kind: "image", fileExtension: "png", addedAt: t, data: Data([byte]))
+    }
+
+    func test_replace_whoseMediaWriteFails_throws_andLeavesTheLibraryAsItWas() async throws {
+        let container = try makeContainer(); let context = container.mainContext
+        let media = MediaStore(); let id = UUID(); let forgotten = Recorder<UUID>()
+        let local = seed(context, media, id: id)
+        let oldFile = local.mediaItems[0].fileName
+        try context.save()
+        let failing = SnippetImporter(
+            writeMedia: { _, _ in throw DiskFull() },
+            removeMedia: { name in media.removed.append(name); media.files[name] = nil },
+            forgetTrust: { forgotten.values.append($0) }
+        )
+
+        do {
+            _ = try await failing.apply(archive([record(id, media: [png()])]), to: context) { _ in
+                ConflictResolution(choice: .replace, applyToAll: false)
+            }
+            XCTFail("the write error must abort the import")
+        } catch is DiskFull {}
+
+        XCTAssertEqual(local.title, "Local")
+        XCTAssertEqual(local.code, "local")
+        XCTAssertEqual(local.mediaItems.map(\.fileName), [oldFile])
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<MediaItem>()), 1)
+        XCTAssertNotNil(media.files[oldFile])
+        XCTAssertTrue(media.removed.isEmpty, "nothing was written, and old files are never removed before a save")
+        XCTAssertTrue(forgotten.values.isEmpty, "trust is only dropped once the replacement is saved")
+    }
+
+    func test_laterWriteFailure_removesEarlierFiles_andDropsEarlierSnippets() async throws {
+        let container = try makeContainer(); let context = container.mainContext
+        let media = MediaStore(); let forgotten = Recorder<UUID>()
+        let calls = Recorder<String>()
+        let flaky = SnippetImporter(
+            writeMedia: { data, ext in
+                if !calls.values.isEmpty { throw DiskFull() }
+                let name = media.write(data, ext: ext)
+                calls.values.append(name)
+                return name
+            },
+            removeMedia: { name in media.removed.append(name); media.files[name] = nil },
+            forgetTrust: { forgotten.values.append($0) }
+        )
+
+        do {
+            _ = try await flaky.apply(
+                archive([record(title: "first", media: [png(1)]), record(title: "second", media: [png(2)])]),
+                to: context, resolve: never)
+            XCTFail("the write error must abort the import")
+        } catch is DiskFull {}
+
+        XCTAssertEqual(calls.values.count, 1)
+        XCTAssertEqual(media.removed, calls.values, "the file written for the first snippet is cleaned up")
+        XCTAssertTrue(media.files.isEmpty)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Snippet>()), 0)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<MediaItem>()), 0)
+    }
+
+    func test_autosaveIsOffWhileResolving_andRestoredAfter() async throws {
+        let container = try makeContainer(); let context = container.mainContext
+        let media = MediaStore(); let id = UUID()
+        seed(context, media, id: id)
+        try context.save()
+        context.autosaveEnabled = true
+        let during = Recorder<Bool>()
+
+        _ = try await importer(media).apply(archive([record(id)]), to: context) { _ in
+            during.values.append(context.autosaveEnabled)
+            return ConflictResolution(choice: .skip, applyToAll: false)
+        }
+
+        XCTAssertEqual(during.values, [false])
+        XCTAssertTrue(context.autosaveEnabled)
+    }
+
+    func test_forgetTrust_isOnlyCalledForReplacedSnippets() async throws {
+        let container = try makeContainer(); let context = container.mainContext
+        let media = MediaStore(); let skippedID = UUID(); let replacedID = UUID()
+        let forgotten = Recorder<UUID>()
+        seed(context, media, id: skippedID); seed(context, media, id: replacedID)
+        try context.save()
+
+        _ = try await importer(media, forgotten: forgotten).apply(
+            archive([record(title: "new"), record(skippedID), record(replacedID)]), to: context
+        ) { conflict in
+            ConflictResolution(choice: conflict.id == replacedID ? .replace : .skip, applyToAll: false)
+        }
+
+        XCTAssertEqual(forgotten.values, [replacedID])
+    }
+
     // MARK: Summary
 
     func test_summaryMessage() {
