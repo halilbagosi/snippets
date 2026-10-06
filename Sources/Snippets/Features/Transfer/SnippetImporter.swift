@@ -45,22 +45,47 @@ struct SnippetImporter {
     /// Drops preview permissions for a replaced snippet.
     var forgetTrust: @MainActor (UUID) -> Void
 
+    /// Two phases. First every conflict is put to `resolve` — which is a
+    /// window-modal dialog in production, so other saves can run while it is
+    /// up — and nothing is mutated. Only once the last answer is in does the
+    /// import touch the context, synchronously, so no other save can ever
+    /// commit a half-applied import and a failure can still roll it all back.
     func apply(
         _ archive: SnippetArchive,
         to context: ModelContext,
         resolve: @MainActor (ImportConflict) async -> ConflictResolution
     ) async throws -> ImportSummary {
-        // `resolve` is a modal dialog in production; the main context must not
-        // autosave this import's half-applied state while it is up.
-        let autosaveWas = context.autosaveEnabled
-        context.autosaveEnabled = false
-        defer { context.autosaveEnabled = autosaveWas }
+        // Ask phase.
+        var plan: [UUID: ConflictChoice] = [:]
+        var stopIndex: Int?
+        var standingChoice: ConflictChoice?
+        var existingByID = try snippetsByID(in: context)
+        for (index, record) in archive.snippets.enumerated() {
+            guard let existing = existingByID[record.id] else { continue }
+            let choice: ConflictChoice
+            if let standingChoice {
+                choice = standingChoice
+            } else {
+                let resolution = await resolve(
+                    ImportConflict(id: record.id, title: existing.title, isInTrash: existing.isDeleted)
+                )
+                if resolution.applyToAll { standingChoice = resolution.choice }
+                choice = resolution.choice
+            }
+            if choice == .stop {
+                stopIndex = index
+                break
+            }
+            plan[record.id] = choice
+        }
+        existingByID = [:]   // stale after the suspensions; the apply phase re-reads
 
+        // Apply phase: no suspension point from here on.
         // Files written during this call. If anything fails the context is
         // rolled back, so these would be orphans.
         var newFiles: [String] = []
         do {
-            return try await run(archive, to: context, resolve: resolve, newFiles: &newFiles)
+            return try commit(archive, to: context, plan: plan, stopIndex: stopIndex, newFiles: &newFiles)
         } catch {
             context.rollback()
             newFiles.forEach(removeMedia)
@@ -68,16 +93,23 @@ struct SnippetImporter {
         }
     }
 
-    private func run(
+    private func snippetsByID(in context: ModelContext) throws -> [UUID: Snippet] {
+        var result: [UUID: Snippet] = [:]
+        for snippet in try context.fetch(FetchDescriptor<Snippet>()) {
+            if let id = snippet.uuid { result[id] = snippet }
+        }
+        return result
+    }
+
+    /// Everything after the last answer. Synchronous on purpose.
+    private func commit(
         _ archive: SnippetArchive,
         to context: ModelContext,
-        resolve: @MainActor (ImportConflict) async -> ConflictResolution,
+        plan: [UUID: ConflictChoice],
+        stopIndex: Int?,
         newFiles: inout [String]
-    ) async throws -> ImportSummary {
-        var snippetsByID: [UUID: Snippet] = [:]
-        for snippet in try context.fetch(FetchDescriptor<Snippet>()) {
-            if let id = snippet.uuid { snippetsByID[id] = snippet }
-        }
+    ) throws -> ImportSummary {
+        var snippetsByID = try snippetsByID(in: context)
         var collectionsByID: [UUID: SnippetCollection] = [:]
         for collection in try context.fetch(FetchDescriptor<SnippetCollection>()) {
             if let id = collection.uuid { collectionsByID[id] = collection }
@@ -107,12 +139,15 @@ struct SnippetImporter {
         }
 
         var summary = ImportSummary()
-        var standingChoice: ConflictChoice?
         var written: [(record: SnippetArchive.SnippetRecord, snippet: Snippet)] = []
         var replacedFiles: [String] = []
-        var replacedIDs: [UUID] = []
+        var distrusted: [UUID] = []   // replaced snippets and their dependents
 
-        for record in archive.snippets {
+        for (index, record) in archive.snippets.enumerated() {
+            if let stopIndex, index >= stopIndex {
+                summary.stopped = true
+                break
+            }
             guard let existing = snippetsByID[record.id] else {
                 let snippet = Snippet(uuid: record.id)
                 context.insert(snippet)
@@ -123,27 +158,17 @@ struct SnippetImporter {
                 continue
             }
 
-            let choice: ConflictChoice
-            if let standingChoice {
-                choice = standingChoice
-            } else {
-                let resolution = await resolve(
-                    ImportConflict(id: record.id, title: existing.title, isInTrash: existing.isDeleted)
-                )
-                if resolution.applyToAll { standingChoice = resolution.choice }
-                choice = resolution.choice
-            }
-
-            if choice == .stop {
-                summary.stopped = true
-                break
-            }
-            if choice == .skip {
+            // A snippet that appeared while the dialog was up was never asked
+            // about; the safe answer is to leave it alone.
+            guard plan[record.id] == .replace else {
                 summary.skipped += 1
                 continue
             }
+            // Its code runs inside its dependents' combined previews, so their
+            // approvals go too.
+            distrusted.append(record.id)
+            distrusted += existing.dependents.compactMap(\.uuid)
             replacedFiles += try overwrite(existing, with: record, collections: collectionsByID, in: context, newFiles: &newFiles)
-            replacedIDs.append(record.id)
             written.append((record, existing))
             summary.replaced += 1
         }
@@ -156,8 +181,9 @@ struct SnippetImporter {
 
         try context.save()
         // Only now that the import is committed: drop the replaced snippets'
-        // trust and their old files.
-        replacedIDs.forEach(forgetTrust)
+        // (and their dependents') trust and the old files.
+        var seen = Set<UUID>()
+        distrusted.filter { seen.insert($0).inserted }.forEach(forgetTrust)
         replacedFiles.forEach(removeMedia)
         return summary
     }

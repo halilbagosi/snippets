@@ -306,21 +306,48 @@ final class SnippetImporterTests: XCTestCase {
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<MediaItem>()), 0)
     }
 
-    func test_autosaveIsOffWhileResolving_andRestoredAfter() async throws {
+    /// The conflict sheet is window-modal, so other saves (File ▸ Export,
+    /// another window) can run while it is up. Nothing of the import may be in
+    /// the context until the last answer is in.
+    func test_contextHasNoChangesWhileResolving() async throws {
         let container = try makeContainer(); let context = container.mainContext
-        let media = MediaStore(); let id = UUID()
-        seed(context, media, id: id)
+        let media = MediaStore(); let a = UUID(), b = UUID()
+        seed(context, media, id: a); seed(context, media, id: b)
         try context.save()
-        context.autosaveEnabled = true
-        let during = Recorder<Bool>()
+        let changed = Recorder<Bool>()
+        let newCollection = SnippetArchive.CollectionRecord(
+            id: UUID(), name: "New", colorHex: "#000000", colorHexDark: nil, iconName: "x",
+            parentID: nil, isFavorite: false, createdAt: t, updatedAt: t)
 
-        _ = try await importer(media).apply(archive([record(id)]), to: context) { _ in
-            during.values.append(context.autosaveEnabled)
-            return ConflictResolution(choice: .skip, applyToAll: false)
+        let summary = try await importer(media).apply(
+            archive([record(title: "first", media: [png()]), record(a), record(b)], collections: [newCollection]),
+            to: context
+        ) { conflict in
+            changed.values.append(context.hasChanges)
+            return ConflictResolution(choice: conflict.id == a ? .skip : .replace, applyToAll: false)
         }
 
-        XCTAssertEqual(during.values, [false])
-        XCTAssertTrue(context.autosaveEnabled)
+        XCTAssertEqual(changed.values, [false, false])
+        XCTAssertEqual(summary, ImportSummary(added: 1, replaced: 1, skipped: 1))
+        XCTAssertTrue(media.removed.count == 1, "only the replaced snippet's old file is removed")
+    }
+
+    func test_stop_importsNothingAtOrAfterTheStoppedSnippet_evenWithEarlierAnswers() async throws {
+        let container = try makeContainer(); let context = container.mainContext
+        let media = MediaStore(); let a = UUID(), b = UUID()
+        let localA = seed(context, media, id: a), localB = seed(context, media, id: b)
+        try context.save()
+
+        let summary = try await importer(media).apply(
+            archive([record(a), record(title: "mid"), record(b), record(title: "after")]), to: context
+        ) { conflict in
+            ConflictResolution(choice: conflict.id == a ? .replace : .stop, applyToAll: false)
+        }
+
+        XCTAssertEqual(summary, ImportSummary(added: 1, replaced: 1, stopped: true))
+        XCTAssertEqual(localA.code, "theirs")
+        XCTAssertEqual(localB.code, "local")
+        XCTAssertEqual(Set(try context.fetch(FetchDescriptor<Snippet>()).map(\.title)), ["Imported", "Local", "mid"])
     }
 
     func test_forgetTrust_isOnlyCalledForReplacedSnippets() async throws {
@@ -339,6 +366,25 @@ final class SnippetImporterTests: XCTestCase {
         XCTAssertEqual(forgotten.values, [replacedID])
     }
 
+    func test_replace_forgetsTrustOfDependentsToo_once() async throws {
+        let container = try makeContainer(); let context = container.mainContext
+        let media = MediaStore(); let libID = UUID(); let forgotten = Recorder<UUID>()
+        let lib = seed(context, media, id: libID)
+        let userA = Snippet(uuid: UUID(), title: "A"), userB = Snippet(uuid: UUID(), title: "B")
+        let bystander = Snippet(uuid: UUID(), title: "bystander")
+        [userA, userB, bystander].forEach(context.insert)
+        userA.dependencies = [lib]; userB.dependencies = [lib]
+        try context.save()
+
+        _ = try await importer(media, forgotten: forgotten).apply(archive([record(libID)]), to: context) { _ in
+            ConflictResolution(choice: .replace, applyToAll: false)
+        }
+
+        XCTAssertEqual(forgotten.values.first, libID)
+        XCTAssertEqual(Set(forgotten.values), [libID, userA.uuid!, userB.uuid!])
+        XCTAssertEqual(forgotten.values.count, 3, "each uuid is forgotten once")
+    }
+
     // MARK: Summary
 
     func test_summaryMessage() {
@@ -355,6 +401,17 @@ final class SnippetImporterTests: XCTestCase {
         XCTAssertEqual(message(1, 0), "Exported 1 snippet")
         XCTAssertEqual(message(5, 2), "Exported 5 snippets · 2 attachments missing")
         XCTAssertEqual(message(1, 1), "Exported 1 snippet · 1 attachment missing")
+    }
+
+    func test_fileName_isSafeAsADefaultSaveName() {
+        let name = SnippetTransferController.fileName
+        XCTAssertEqual(name("My: Snippets/2"), "My- Snippets-2.snippets")
+        XCTAssertEqual(name("..hidden"), "hidden.snippets")
+        XCTAssertEqual(name(" . .x"), "x.snippets")
+        XCTAssertEqual(name("a\u{0}b\u{7}c\nd"), "abcd.snippets")
+        XCTAssertEqual(name("..."), "Snippets.snippets")
+        XCTAssertEqual(name("\u{1}\u{2}"), "Snippets.snippets")
+        XCTAssertEqual(name(""), "Snippets.snippets")
     }
 
     /// Rejected before anything touches the media directory.
