@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3164264C7689400F187F3275 /* SnippetArchiveTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F34D7D26165772B2FBCD32A7 /* SnippetArchiveTests.swift */; };
+		75BA5AA7792F8E5F50152054 /* SnippetArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFBEFAF0AE7D681E3B4DFE7D /* SnippetArchive.swift */; };
 		05C84AB0AD5549D7F7069E6E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 757E7F34577C563AEFCB24FA /* PrivacyInfo.xcprivacy */; };
 		98B128D9E36B123A4D976EB8 /* ThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = 18B912223FDE5C2A7CC856B3 /* ThirdPartyNotices.txt */; };
 		F46B79656507314308974187 /* ThirdPartyNoticesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 271373FECC71F698C4601723 /* ThirdPartyNoticesView.swift */; };
@@ -151,6 +153,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F34D7D26165772B2FBCD32A7 /* SnippetArchiveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetArchiveTests.swift; sourceTree = "<group>"; };
+		BFBEFAF0AE7D681E3B4DFE7D /* SnippetArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetArchive.swift; sourceTree = "<group>"; };
 		A4D3F65EC1966AF5DF35CA28 /* Snippets-AppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Snippets-AppStore.entitlements"; sourceTree = SOURCE_ROOT; };
 		757E7F34577C563AEFCB24FA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		18B912223FDE5C2A7CC856B3 /* ThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThirdPartyNotices.txt; sourceTree = "<group>"; };
@@ -317,9 +321,18 @@
 /* End PBXTargetDependency section */
 
 /* Begin PBXGroup section */
+		1BCA38E9F7E2A72176C796D0 /* Transfer */ = {
+			isa = PBXGroup;
+			children = (
+				BFBEFAF0AE7D681E3B4DFE7D /* SnippetArchive.swift */,
+			);
+			path = Transfer;
+			sourceTree = "<group>";
+		};
 		5E57E5700000000000000003 /* SnippetsTests */ = {
 			isa = PBXGroup;
 			children = (
+				F34D7D26165772B2FBCD32A7 /* SnippetArchiveTests.swift */,
 				A1B2C3D40002TCLIPCAPTURE /* ClipboardCaptureTests.swift */,
 				A1B2C3D40002TCODESHAPE /* CodeShapeHeuristicsTests.swift */,
 				A1B2C3D40002TQUICKVM /* QuickCopyViewModelTests.swift */,
@@ -681,6 +694,7 @@
 		D162801B5F6E0AE5BCE07169 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				1BCA38E9F7E2A72176C796D0 /* Transfer */,
 				A1B2C3D448A6474682646B42 /* QuickCapture */,
 				A1B2C3D4364B5CA722DD5D13 /* QuickCopy */,
 				32F8FA0F9162B95586F72B95 /* Editor */,
@@ -826,6 +840,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5E57E5700000000000000200 /* AppearanceSettingsTests.swift in Sources */,
+				3164264C7689400F187F3275 /* SnippetArchiveTests.swift in Sources */,
 				5E57E5700000000000000201 /* CollectionMoveTreeTests.swift in Sources */,
 				5E57E5700000000000000202 /* LanguageDetectorCorpusTests.swift in Sources */,
 				5E57E5700000000000000203 /* LanguageDetectorHardeningTests.swift in Sources */,
@@ -864,6 +879,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7F62BEEDE019601A65905EF2 /* AppEnvironment.swift in Sources */,
+				75BA5AA7792F8E5F50152054 /* SnippetArchive.swift in Sources */,
 				F46B79656507314308974187 /* ThirdPartyNoticesView.swift in Sources */,
 				40D4ED353970535DB11DCF63 /* HelpCommands.swift in Sources */,
 				CF9418FAE91E4369C97CBFF2 /* AppLinks.swift in Sources */,
