@@ -47,7 +47,8 @@ struct SnippetArchive: Codable, Equatable {
         var isFavorite: Bool
         var copyCount: Int
         var collectionIDs: [UUID]
-        /// In the user's arranged order.
+        /// Written in the exporter's current dependency order. SwiftData does
+        /// not guarantee to-many order across saves, so this is best effort.
         var dependencyIDs: [UUID]
         var paramConfigs: [PreviewParamConfig]
         var activeParamConfigID: UUID?
@@ -107,6 +108,7 @@ struct SnippetArchive: Codable, Equatable {
         guard let envelope = try? decoder.decode(Envelope.self, from: data),
               envelope.format == formatIdentifier
         else { throw ReadError.notAnArchive }
+        guard envelope.version >= 1 else { throw ReadError.damaged }
         guard envelope.version <= currentVersion else { throw ReadError.newerVersion }
 
         let archive: SnippetArchive
@@ -122,7 +124,8 @@ struct SnippetArchive: Codable, Equatable {
     // MARK: Sanitising
 
     /// Drops what cannot be honoured instead of rejecting the file: references
-    /// to ids not in the file, self-dependencies, parent cycles, an active
+    /// to ids not in the file, self-dependencies, parent cycles, duplicate
+    /// param configs (by id, and any default after the first), an active
     /// config that does not exist, and media the app would not accept.
     func sanitized() -> SnippetArchive {
         let collectionIDs = Set(collections.map(\.id))
@@ -143,6 +146,17 @@ struct SnippetArchive: Codable, Equatable {
             record.dependencyIDs = record.dependencyIDs
                 .filter { snippetIDs.contains($0) && $0 != record.id }
                 .removingDuplicates()
+            var seenConfigs = Set<UUID>()
+            var hasDefault = false
+            record.paramConfigs = record.paramConfigs.compactMap { config in
+                guard seenConfigs.insert(config.id).inserted else { return nil }
+                var config = config
+                if config.isDefault {
+                    if hasDefault { config.isDefault = false }
+                    hasDefault = true
+                }
+                return config
+            }
             if let active = record.activeParamConfigID, !record.paramConfigs.contains(where: { $0.id == active }) {
                 record.activeParamConfigID = nil
             }
@@ -181,7 +195,7 @@ struct SnippetArchive: Codable, Equatable {
     /// "video" record can't point at PNG bytes (or the reverse).
     static func isAcceptable(_ media: MediaRecord) -> Bool {
         guard let kind = MediaKind(rawValue: media.kind),
-              !media.fileExtension.isEmpty,
+              !media.fileExtension.isEmpty, media.fileExtension.count <= 10,
               media.fileExtension.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }),
               let type = UTType(filenameExtension: media.fileExtension.lowercased()),
               MediaManager.kind(for: URL(fileURLWithPath: "attachment.\(media.fileExtension)")) == kind

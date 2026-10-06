@@ -54,13 +54,20 @@ dialog shows:
 > A snippet named “*title*” already exists in your library.
 > *(…in Recently Deleted.)* when trashed
 >
-> ☐ Apply to all  [Stop] [Skip] [Replace]
+> [Skip] (default) [Replace] (destructive) [Stop] (Escape) · ☐ Apply to all
+
+The dialog is a sheet on the main gallery window when that window is visible
+and has no sheet already; otherwise (no gallery, or one busy with a sheet) it
+is an app-modal alert. Skip is the default (Return) because it is the one
+choice that cannot lose anything.
 
 - **Skip** leaves the local snippet untouched.
 - **Replace** overwrites the local snippet with the imported fields, media,
   collections, connections and configs; clears `deletedAt` if trashed; and
-  forgets its preview permissions (`PreviewTrust.forget`).
-- **Stop** ends the import. Everything applied before it is kept and saved.
+  forgets its preview permissions (`PreviewTrust.forget`) **and those of its
+  dependents** — the replaced code runs inside their combined previews.
+- **Stop** ends the import. Only snippets *before* the stopped one are
+  imported; nothing after it is.
 - **Apply to all** reuses the choice for the remaining conflicts without asking.
 
 Collections are matched by `uuid` and silently reused (fields are not
@@ -69,8 +76,10 @@ collection in Trash is reused and restored from Trash. Imported snippets with a
 new `uuid` are added as-is with no preview permissions.
 
 On finish, a toast: “Imported 12 snippets · 3 replaced · 30 skipped” (zero
-parts omitted; “Import stopped —” prefix after Stop). Errors are shown as an
-alert and nothing is written.
+parts omitted; after Stop: “Import stopped after N snippets · …”). Errors are
+shown as an alert and nothing is written. Several files opened at once (a
+multi-file Finder open) are queued and imported one after another, each with its
+own dialogs and toast.
 
 ## File format
 
@@ -107,9 +116,12 @@ model is updated so a re-export is stable.
 
 ### Validation (all before any write)
 
-- File larger than 500 MB → “This file is too large to import.”
+- File larger than 500 MB → “This file is too large to import.” Export applies
+  the same cap: an archive over it is not written, and the alert says to export a
+  collection or a selection instead.
 - Not JSON, or `format` mismatch → “This isn't a Snippets export.”
 - `version` > 1 → “This file was made by a newer version of Snippets.”
+  `version` < 1 → damaged.
 - Duplicate ids within the file → reject the file as damaged.
 - Media `kind` must be `image` or `video` and `fileExtension` must be an
   extension of a type in `MediaManager.allowedTypes`; otherwise that
@@ -118,7 +130,9 @@ model is updated so a re-export is stable.
 - `parentID`, `collectionIDs`, `dependencyIDs` that reference ids absent from
   the file are dropped (a `parentID` cycle is broken by dropping the parent
   link of the collection that closes it).
-- `activeParamConfigID` not among the snippet's `paramConfigs` → nil.
+- Duplicate `paramConfigs` ids → first kept; only the first `isDefault` config
+  stays default. `activeParamConfigID` not among them → nil.
+- Attachment `fileExtension` longer than 10 characters → dropped.
 - `language` is stored as given (`SupportedLanguage(rawValue:)` already
   normalises casing; unknown values display as Unknown).
 
@@ -130,9 +144,8 @@ New folder `Sources/Snippets/Features/Transfer/` — no SwiftUI in it.
 |---|---|---|
 | `SnippetArchive.swift` | Codable DTOs (`SnippetArchive`, `.Collection`, `.Snippet`, `.Media`), `UTType.snippetsArchive`, `decode(Data) throws -> SnippetArchive` with the validation above, `encode()` | Foundation, UniformTypeIdentifiers |
 | `SnippetExporter.swift` | `archive(snippets:, collections:, mediaData:) -> SnippetArchive` — closure computation for collections, dependency filtering, uuid assignment | models, `SnippetArchive` |
-| `SnippetImporter.swift` | `apply(_:to:resolve:) async throws -> ImportSummary` (planning folded into apply) | models, `SnippetArchive` |
-| `SnippetTransferController.swift` | `@MainActor @Observable` glue: runs panels, reads/writes files, drives the importer, publishes the pending conflict for the dialog and the summary for the toast | the three above, `MediaManager`, `PreviewTrust`, AppKit panels |
-| `Views/Transfer/ImportConflictDialog.swift` | conflict prompt: an `NSAlert` in `SnippetTransferController` (suppression checkbox = Apply to all; Skip default, Escape = Stop) | controller |
+| `SnippetImporter.swift` | `apply(_:to:resolve:) async throws -> ImportSummary`, in two phases: an *ask* phase that collects every conflict answer into a plan without touching the context (the dialog is window-modal, so other saves can run meanwhile), then a synchronous *apply* phase (no `await`) that mutates, saves, and rolls back + removes new files on failure | models, `SnippetArchive` |
+| `SnippetTransferController.swift` | `@MainActor @Observable` glue: runs panels, reads/writes files, queues incoming URLs, drives the importer, shows the conflict `NSAlert` (suppression checkbox = Apply to all; Skip default, Escape = Stop) and publishes the summary for the toast | the three above, `MediaManager`, `PreviewTrust`, AppKit panels |
 | `App/TransferCommands.swift` | File menu items | calls the `SnippetTransferController.shared` singleton directly |
 
 Media I/O goes through two closures (`mediaData(for: MediaItem) -> Data?`,
@@ -161,8 +174,9 @@ App Store entitlements: `com.apple.security.files.user-selected.read-only` →
 
 ## Testing
 
-New `Tests/SnippetsTests/SnippetTransferTests.swift` (in-memory container,
-closure-backed media):
+`SnippetArchiveTests` (format, validation, sanitising), `SnippetExporterTests`
+(selection closure, trash, ordering) and `SnippetImporterTests` (apply rules,
+atomicity), all in-memory with closure-backed media:
 
 - round trip into an empty store preserves every exported field, collection
   nesting, dependency order, paramConfigs + active config, media bytes;
@@ -174,7 +188,10 @@ closure-backed media):
 - rejects: malformed JSON, wrong format, newer version, duplicate ids,
   oversize; drops: bad media kind/extension, dangling references, parent
   cycles, unknown active config;
-- trash and preview grants never appear in an export.
+- trash and preview grants never appear in an export;
+- the context has no changes while a conflict is being resolved; Stop imports
+  nothing at or after the stopped snippet even with earlier Replace answers;
+  replacing forgets trust for dependents too, once each.
 
 Then: full suite in Debug and AppStore (`ENABLE_TESTABILITY=YES`), and a
 runtime pass in the sandboxed build — export the unsandboxed library from the

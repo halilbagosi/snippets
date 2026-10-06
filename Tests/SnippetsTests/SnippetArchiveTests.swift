@@ -59,6 +59,24 @@ final class SnippetArchiveTests: XCTestCase {
         }
     }
 
+    func test_decode_rejectsVersionBelowOne_evenWhenTheBodyIsComplete() throws {
+        for version in [0, -1] {
+            var archive = SnippetArchive(exportedAt: t, appVersion: "1.0", collections: [], snippets: [snippet()])
+            archive.version = version
+            XCTAssertThrowsError(try SnippetArchive.decode(archive.encoded()), "version \(version)") {
+                XCTAssertEqual($0 as? SnippetArchive.ReadError, .damaged)
+            }
+        }
+    }
+
+    func test_decode_returnsSanitizedOutput() throws {
+        let id = UUID()
+        let archive = SnippetArchive(exportedAt: t, appVersion: "1.0", collections: [],
+                                     snippets: [snippet(id, deps: [UUID(), id])])
+        let decoded = try SnippetArchive.decode(archive.encoded())
+        XCTAssertEqual(decoded.snippets[0].dependencyIDs, [])
+    }
+
     func test_decode_rejectsMissingFields() {
         XCTAssertThrowsError(try SnippetArchive.decode(Data(#"{"format":"com.halilbagosi.snippets","version":1}"#.utf8))) {
             XCTAssertEqual($0 as? SnippetArchive.ReadError, .damaged)
@@ -94,6 +112,29 @@ final class SnippetArchiveTests: XCTestCase {
         XCTAssertNil(archive.snippets[0].activeParamConfigID)
     }
 
+    func test_sanitized_dedupesParamConfigsByID_keepingTheFirst() {
+        let id = UUID()
+        let first = PreviewParamConfig(id: id, name: "first", values: [:], isDefault: false)
+        let dupe = PreviewParamConfig(id: id, name: "dupe", values: [:], isDefault: false)
+        let other = PreviewParamConfig(id: UUID(), name: "other", values: [:], isDefault: false)
+        let archive = SnippetArchive(exportedAt: t, appVersion: "1.0", collections: [],
+                                     snippets: [snippet(configs: [first, dupe, other], active: id)]).sanitized()
+        XCTAssertEqual(archive.snippets[0].paramConfigs.map(\.name), ["first", "other"])
+        XCTAssertEqual(archive.snippets[0].activeParamConfigID, id)
+    }
+
+    func test_sanitized_keepsOnlyTheFirstDefaultConfig() {
+        let configs = [
+            PreviewParamConfig(id: UUID(), name: "Default", values: [:], isDefault: true),
+            PreviewParamConfig(id: UUID(), name: "Also default", values: [:], isDefault: true),
+            PreviewParamConfig(id: UUID(), name: "Plain", values: [:], isDefault: false),
+        ]
+        let archive = SnippetArchive(exportedAt: t, appVersion: "1.0", collections: [],
+                                     snippets: [snippet(configs: configs)]).sanitized()
+        XCTAssertEqual(archive.snippets[0].paramConfigs.map(\.isDefault), [true, false, false])
+        XCTAssertEqual(archive.snippets[0].paramConfigs.map(\.name), ["Default", "Also default", "Plain"])
+    }
+
     func test_sanitized_keepsDependencyOrder() {
         let a = UUID(), b = UUID(), c = UUID()
         let archive = SnippetArchive(exportedAt: t, appVersion: "1.0", collections: [],
@@ -116,6 +157,7 @@ final class SnippetArchiveTests: XCTestCase {
             snippets: [snippet(media: [
                 media("image", "png"), media("video", "mov"), media("audio", "png"),
                 media("image", "exe"), media("image", "../png"), media("image", ""),
+                media("image", "png" + String(repeating: "x", count: 8)),
             ])]).sanitized()
         XCTAssertEqual(archive.snippets[0].media.map(\.fileExtension), ["png", "mov"])
     }
