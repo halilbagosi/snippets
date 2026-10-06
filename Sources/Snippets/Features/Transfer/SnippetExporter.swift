@@ -87,7 +87,7 @@ enum SnippetExporter {
                     dependencyIDs: snippet.dependencies.compactMap(\.uuid),
                     paramConfigs: snippet.paramConfigs,
                     activeParamConfigID: snippet.activeParamConfigID,
-                    media: snippet.mediaItems.sorted { $0.addedAt < $1.addedAt }.compactMap { item in
+                    media: snippet.mediaItems.sorted { ($0.addedAt, $0.fileName) < ($1.addedAt, $1.fileName) }.compactMap { item in
                         guard let data = mediaData(item) else { return nil }
                         return SnippetArchive.MediaRecord(
                             kind: item.fileTypeRaw,

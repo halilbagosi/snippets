@@ -24,6 +24,10 @@ final class SnippetTransferController {
     /// forgotten through this one.
     @ObservationIgnored var previewTrust: PreviewTrust?
 
+    /// Files waiting for their turn (a multi-file Finder open delivers them
+    /// together); drained one at a time so each gets its own conflict dialogs
+    /// and result.
+    @ObservationIgnored private var pendingURLs: [URL] = []
     @ObservationIgnored private var isImporting = false
 
     private var context: ModelContext { SnippetsData.sharedModelContainer.mainContext }
@@ -74,13 +78,17 @@ final class SnippetTransferController {
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         var missingAttachments = 0
+        var readAttachments = 0
         let media = media
         let archive = SnippetExporter.archive(snippets: snippets, collections: collections,
                                               appVersion: appVersion) { item in
             let data = media.data(for: item)
-            if data == nil { missingAttachments += 1 }
+            if data == nil { missingAttachments += 1 } else { readAttachments += 1 }
             return data
         }
+        // Attachments the archive's own validation dropped (an extension an
+        // import would refuse) are as missing as unreadable ones.
+        missingAttachments += readAttachments - archive.snippets.reduce(0) { $0 + $1.media.count }
         guard !archive.snippets.isEmpty || !archive.collections.isEmpty else {
             notice = Notice(message: "Nothing to export")
             return
@@ -88,7 +96,14 @@ final class SnippetTransferController {
 
         do {
             try context.save()   // keeps any uuid the exporter just assigned
-            try archive.encoded().write(to: url, options: .atomic)
+            let data = try archive.encoded()
+            // The importer refuses files over the cap, so one this big would be
+            // an export the user could never bring back.
+            guard data.count <= SnippetArchive.maxByteCount else {
+                report(Self.tooLargeToReimport, doing: "export")
+                return
+            }
+            try data.write(to: url, options: .atomic)
             notice = Notice(message: Self.exportMessage(snippetCount: archive.snippets.count,
                                                         missingAttachments: missingAttachments))
         } catch {
@@ -106,11 +121,24 @@ final class SnippetTransferController {
         return message
     }
 
+    private struct TooLargeToReimport: LocalizedError {
+        var errorDescription: String? {
+            "This export is too large to import again (over 500 MB). Export a collection or a selection instead."
+        }
+    }
+    private static let tooLargeToReimport: Error = TooLargeToReimport()
+
+    /// A safe default name for the save panel: no control characters, no path
+    /// separators, no leading dots (which would hide the file).
     static func fileName(for suggested: String) -> String {
-        let cleaned = suggested
+        var cleaned = String(String.UnicodeScalarView(
+            suggested.unicodeScalars.filter { !CharacterSet.controlCharacters.contains($0) }
+        ))
+        .replacingOccurrences(of: "/", with: "-")
+        .replacingOccurrences(of: ":", with: "-")
+        // Leading dots and spaces together: " . .x" must not leave ".x".
+        cleaned = String(cleaned.drop { $0 == "." || $0.isWhitespace })
             .trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "/", with: "-")
-            .replacingOccurrences(of: ":", with: "-")
         return (cleaned.isEmpty ? "Snippets" : cleaned) + ".snippets"
     }
 
@@ -127,32 +155,36 @@ final class SnippetTransferController {
     }
 
     /// Shared by the open panel and by files opened from Finder or AirDrop.
+    /// A file that arrives while another import is running waits its turn.
     func importFile(at url: URL) {
-        guard !isImporting else {
-            NSSound.beep()
-            return
-        }
+        pendingURLs.append(url)
+        guard !isImporting else { return }
         isImporting = true
-        // The toast and the conflict sheet both need the main window.
-        MainWindowOpener.activate()
-
-        let media = media
         Task {
             defer { isImporting = false }
-            do {
-                let archive = try await Self.loadArchive(from: url)
-                let importer = SnippetImporter(
-                    writeMedia: { data, ext in try media.storeImported(data, fileExtension: ext) },
-                    removeMedia: { name in media.deleteFile(named: name) },
-                    forgetTrust: { [self] id in previewTrust?.forget(id) }
-                )
-                let summary = try await importer.apply(archive, to: context) { [self] conflict in
-                    await ask(conflict)
-                }
-                notice = Notice(message: summary.message)
-            } catch {
-                report(error, doing: "import")
+            while !pendingURLs.isEmpty {
+                await importOne(pendingURLs.removeFirst())
             }
+        }
+    }
+
+    private func importOne(_ url: URL) async {
+        // The toast and the conflict sheet both need the main window.
+        MainWindowOpener.activate()
+        let media = media
+        do {
+            let archive = try await Self.loadArchive(from: url)
+            let importer = SnippetImporter(
+                writeMedia: { data, ext in try media.storeImported(data, fileExtension: ext) },
+                removeMedia: { name in media.deleteFile(named: name) },
+                forgetTrust: { [self] id in previewTrust?.forget(id) }
+            )
+            let summary = try await importer.apply(archive, to: context) { [self] conflict in
+                await ask(conflict)
+            }
+            notice = Notice(message: summary.message)
+        } catch {
+            report(error, doing: "import")
         }
     }
 
@@ -187,7 +219,7 @@ final class SnippetTransferController {
         alert.suppressionButton?.title = "Apply to all"
 
         let response: NSApplication.ModalResponse
-        if let window = NSApp.keyWindow ?? NSApp.mainWindow {
+        if let window = Self.sheetHost() {
             response = await alert.beginSheetModal(for: window)
         } else {
             response = alert.runModal()
@@ -198,6 +230,20 @@ final class SnippetTransferController {
         default: .stop
         }
         return ConflictResolution(choice: choice, applyToAll: alert.suppressionButton?.state == .on)
+    }
+
+    /// The gallery window — the same filter `MainWindowOpener.activate()` uses,
+    /// so Settings or a stray panel is never the host — if it can take a sheet
+    /// right now. Otherwise the caller falls back to an app-modal alert.
+    private static func sheetHost() -> NSWindow? {
+        let galleries = NSApp.windows.filter { window in
+            window.canBecomeMain
+                && window.identifier?.rawValue.hasPrefix(SnippetsApp.mainWindowID) == true
+        }
+        guard let window = galleries.first(where: \.isKeyWindow) ?? galleries.first,
+              window.isVisible, window.attachedSheet == nil
+        else { return nil }
+        return window
     }
 
     private func report(_ error: Error, doing action: String) {
