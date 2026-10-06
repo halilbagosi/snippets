@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F8C62E3A560D9AC54FF7E392 /* SnippetImporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */; };
+		62D6BE34B6BA94FF9F3DE936 /* SnippetImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39FBD397ED1CCDF3120982B /* SnippetImporter.swift */; };
 		876B498FAF9B2921E1251B5E /* SnippetExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EE544FC0CFAF7ADB212E29A /* SnippetExporterTests.swift */; };
 		B5B0E85A3DC87178E69928BA /* SnippetExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0726DA6194BC768FB3E3CEF /* SnippetExporter.swift */; };
 		3164264C7689400F187F3275 /* SnippetArchiveTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F34D7D26165772B2FBCD32A7 /* SnippetArchiveTests.swift */; };
@@ -155,6 +157,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetImporterTests.swift; sourceTree = "<group>"; };
+		D39FBD397ED1CCDF3120982B /* SnippetImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetImporter.swift; sourceTree = "<group>"; };
 		7EE544FC0CFAF7ADB212E29A /* SnippetExporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetExporterTests.swift; sourceTree = "<group>"; };
 		B0726DA6194BC768FB3E3CEF /* SnippetExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetExporter.swift; sourceTree = "<group>"; };
 		F34D7D26165772B2FBCD32A7 /* SnippetArchiveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetArchiveTests.swift; sourceTree = "<group>"; };
@@ -328,6 +332,7 @@
 		1BCA38E9F7E2A72176C796D0 /* Transfer */ = {
 			isa = PBXGroup;
 			children = (
+				D39FBD397ED1CCDF3120982B /* SnippetImporter.swift */,
 				B0726DA6194BC768FB3E3CEF /* SnippetExporter.swift */,
 				BFBEFAF0AE7D681E3B4DFE7D /* SnippetArchive.swift */,
 			);
@@ -337,6 +342,7 @@
 		5E57E5700000000000000003 /* SnippetsTests */ = {
 			isa = PBXGroup;
 			children = (
+				FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */,
 				7EE544FC0CFAF7ADB212E29A /* SnippetExporterTests.swift */,
 				F34D7D26165772B2FBCD32A7 /* SnippetArchiveTests.swift */,
 				A1B2C3D40002TCLIPCAPTURE /* ClipboardCaptureTests.swift */,
@@ -846,6 +852,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5E57E5700000000000000200 /* AppearanceSettingsTests.swift in Sources */,
+				F8C62E3A560D9AC54FF7E392 /* SnippetImporterTests.swift in Sources */,
 				876B498FAF9B2921E1251B5E /* SnippetExporterTests.swift in Sources */,
 				3164264C7689400F187F3275 /* SnippetArchiveTests.swift in Sources */,
 				5E57E5700000000000000201 /* CollectionMoveTreeTests.swift in Sources */,
@@ -886,6 +893,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7F62BEEDE019601A65905EF2 /* AppEnvironment.swift in Sources */,
+				62D6BE34B6BA94FF9F3DE936 /* SnippetImporter.swift in Sources */,
 				B5B0E85A3DC87178E69928BA /* SnippetExporter.swift in Sources */,
 				75BA5AA7792F8E5F50152054 /* SnippetArchive.swift in Sources */,
 				F46B79656507314308974187 /* ThirdPartyNoticesView.swift in Sources */,
