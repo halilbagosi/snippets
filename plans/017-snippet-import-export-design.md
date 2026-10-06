@@ -141,9 +141,12 @@ testable without touching the real media directory. `MediaManager` gains the
 matching two small methods.
 
 Open-from-Finder: `Snippets-Info.plist` gains `UTExportedTypeDeclarations` and
-`CFBundleDocumentTypes`; `AppDelegate.application(_:open:)` picks the first
-`.snippets` URL and calls `SnippetTransferController.shared.importFile(at:)`
-(the same entry point as the File ▸ Import panel).
+`CFBundleDocumentTypes`; the main window's `.onOpenURL` passes each `.snippets`
+URL to `SnippetTransferController.shared.importFile(at:)` (the same entry point
+as the File ▸ Import panel), and `.handlesExternalEvents(preferring:allowing:)`
+routes it to the existing window. This is deliberately not
+`NSApplicationDelegate.application(_:open:)`: implementing that makes a cold
+launch from a file skip the main window entirely (found in runtime testing).
 
 The controller reads and decodes the file off the main actor (a `@concurrent`
 helper that also balances the security-scoped access), so a large archive does

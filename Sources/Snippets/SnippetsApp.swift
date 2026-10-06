@@ -104,12 +104,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// with no window and another app frontmost the menu bar is not ours.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
-    /// A `.snippets` file opened from Finder, AirDrop or the Dock icon.
-    func application(_ application: NSApplication, open urls: [URL]) {
-        guard let url = urls.first(where: { $0.pathExtension.lowercased() == "snippets" }) else { return }
-        SnippetTransferController.shared.importFile(at: url)
-    }
-
 }
 #endif
 
@@ -140,6 +134,7 @@ struct SnippetsApp: App {
                     .environment(previewTrust)
                     .environment(AppIntentNavigator.shared)
                     .modifier(MainWindowOpenerInstaller())
+                    .modifier(ArchiveOpenHandler())
                 // Appearance preference is applied via NSApp.appearance in
                 // AppearanceSettings: preferredColorScheme would pin a per-window
                 // override that AppKit can't clear when following the system.
@@ -161,6 +156,7 @@ struct SnippetsApp: App {
                     .environment(previewTrust)
                     .environment(AppIntentNavigator.shared)
                     .modifier(MainWindowOpenerInstaller())
+                    .modifier(ArchiveOpenHandler())
                 // Appearance preference is applied via NSApp.appearance in
                 // AppearanceSettings: preferredColorScheme would pin a per-window
                 // override that AppKit can't clear when following the system.
@@ -211,6 +207,23 @@ struct SnippetsApp: App {
 }
 
 #if canImport(AppKit)
+/// Imports a `.snippets` file opened from Finder, AirDrop or the Dock icon.
+///
+/// Handled by SwiftUI rather than `NSApplicationDelegate.application(_:open:)`:
+/// implementing that delegate method makes a cold launch from a file skip the
+/// main window entirely. `handlesExternalEvents` routes later opens to the
+/// existing window instead of creating a new one per file.
+private struct ArchiveOpenHandler: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .onOpenURL { url in
+                guard url.isFileURL, url.pathExtension.lowercased() == "snippets" else { return }
+                SnippetTransferController.shared.importFile(at: url)
+            }
+            .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
+    }
+}
+
 /// Parks an `openWindow` closure where `AppDelegate` can reach it, so clicking
 /// the Dock icon can restore a window after the last one was closed.
 private struct MainWindowOpenerInstaller: ViewModifier {
