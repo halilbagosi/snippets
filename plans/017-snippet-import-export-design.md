@@ -1,6 +1,6 @@
 # 017 — Snippet import & export (design)
 
-**Status:** approved design, 2026-10-06 · **Branch:** `feature/snippet-import-export` (off `finalizing`)
+**Status:** implemented, 2026-10-06 · **Branch:** `feature/snippet-import-export` (off `finalizing`)
 
 ## Goal
 
@@ -75,7 +75,7 @@ alert and nothing is written.
 ## File format
 
 UTType `com.halilbagosi.snippets`, extension `.snippets`, conforms to
-`public.json`; exported by the app and registered as an Editor document type so
+`public.json`; exported by the app and registered as a Viewer document type so
 Finder opens it in Snippets.
 
 ```json
@@ -130,9 +130,9 @@ New folder `Sources/Snippets/Features/Transfer/` — no SwiftUI in it.
 |---|---|---|
 | `SnippetArchive.swift` | Codable DTOs (`SnippetArchive`, `.Collection`, `.Snippet`, `.Media`), `UTType.snippetsArchive`, `decode(Data) throws -> SnippetArchive` with the validation above, `encode()` | Foundation, UniformTypeIdentifiers |
 | `SnippetExporter.swift` | `archive(snippets:, collections:, mediaData:) -> SnippetArchive` — closure computation for collections, dependency filtering, uuid assignment | models, `SnippetArchive` |
-| `SnippetImporter.swift` | `plan(_:in:) -> ImportPlan` (new vs conflicts); `apply(_:in:mediaWriter:resolve:) async -> ImportSummary` where `resolve: (Conflict) async -> ConflictChoice` (`.skip/.replace/.stop`, `applyToAll`); calls a `forgetTrust: (UUID) -> Void` hook on replace | models, `SnippetArchive` |
+| `SnippetImporter.swift` | `apply(_:to:resolve:) async throws -> ImportSummary` (planning folded into apply) | models, `SnippetArchive` |
 | `SnippetTransferController.swift` | `@MainActor @Observable` glue: runs panels, reads/writes files, drives the importer, publishes the pending conflict for the dialog and the summary for the toast | the three above, `MediaManager`, `PreviewTrust`, AppKit panels |
-| `Views/Transfer/ImportConflictDialog.swift` | the Stop / Skip / Replace + Apply to all sheet bound to the controller's pending conflict | controller |
+| `Views/Transfer/ImportConflictDialog.swift` | conflict prompt: an `NSAlert` in `SnippetTransferController` (suppression checkbox = Apply to all; Skip default, Escape = Stop) | controller |
 | `App/TransferCommands.swift` | File menu items | controller via focused/environment value |
 
 Media I/O goes through two closures (`mediaData(for: MediaItem) -> Data?`,

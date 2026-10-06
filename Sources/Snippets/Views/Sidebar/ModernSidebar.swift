@@ -257,6 +257,7 @@ struct ModernSidebar: View {
                 )
                 .contextMenu {
                     Button { onEditCollection(collection) } label: { Label("Edit collection", systemImage: "pencil") }
+                    Button { SnippetTransferController.shared.exportCollection(collection) } label: { Label("Export collection…", systemImage: "square.and.arrow.up") }
                     Button(role: .destructive) { onDeleteCollection(collection) } label: { Label("Delete collection", systemImage: "trash") }
                 }
             }
@@ -564,6 +565,7 @@ private struct CollectionTreeRow: View {
             )
             .contextMenu {
                 Button { onEditCollection(collection) } label: { Label("Edit collection", systemImage: "pencil") }
+                Button { SnippetTransferController.shared.exportCollection(collection) } label: { Label("Export collection…", systemImage: "square.and.arrow.up") }
                 Button(role: .destructive) { onDeleteCollection(collection) } label: { Label("Delete collection", systemImage: "trash") }
             }
         }

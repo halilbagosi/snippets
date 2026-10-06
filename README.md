@@ -69,6 +69,17 @@ looks like code in a language it recognizes, offers to save it as a snippet.
 - A candidate is held in memory only. Nothing is written to the store until you
   choose to save it.
 
+### Import and export
+
+File ▸ Export Library… (⇧⌘E) writes every snippet outside Trash to one
+`.snippets` file — collections, connections, saved preview configs and media
+included. Export collection… (sidebar), Export… (snippet menu) and export in
+select mode write just those. File ▸ Import Snippets… (⇧⌘I), or opening a
+`.snippets` file, brings one in; a snippet already in the library asks Skip,
+Replace or Stop, with Apply to all. Preview permissions are never exported,
+and a replaced snippet loses its own. This is also how to move a library into
+the sandboxed App Store build, whose container starts empty.
+
 ## Project Structure
 
 - Sources/Snippets/SnippetsApp.swift: app entry point, SwiftData setup, and app environment configuration
@@ -86,6 +97,7 @@ looks like code in a language it recognizes, offers to save it as a snippet.
 - Sources/Snippets/Features/Gallery: the gallery view model and collection move tree
 - Sources/Snippets/Features/Preview: preview engines, snippet linking, preview parameters, and the preview trust model
 - Sources/Snippets/Features/QuickCapture: clipboard capture policy and the code-shape heuristics behind it
+- Sources/Snippets/Features/Transfer: the `.snippets` archive format, exporter, importer, and the controller that connects them to panels and alerts
 - Sources/Snippets/Features/QuickCopy: quick-copy scopes, results, selection arithmetic, and view model
 - Sources/Snippets/Intents: App Intents, entities, and App Shortcuts for Shortcuts/Siri
 - Sources/Snippets/Services: theme, language detection, media handling, the menu bar controller, the clipboard monitor, and other shared services

@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E44E7EBA63F566394B2FF51F /* TransferCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964AFEF62C5E8FB2F8975326 /* TransferCommands.swift */; };
+		3700B7C43CCFF5DA226AD2EE /* SnippetTransferController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B53A32D2E66FC5F0D76FE7CF /* SnippetTransferController.swift */; };
 		F8C62E3A560D9AC54FF7E392 /* SnippetImporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */; };
 		62D6BE34B6BA94FF9F3DE936 /* SnippetImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39FBD397ED1CCDF3120982B /* SnippetImporter.swift */; };
 		876B498FAF9B2921E1251B5E /* SnippetExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EE544FC0CFAF7ADB212E29A /* SnippetExporterTests.swift */; };
@@ -157,6 +159,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		964AFEF62C5E8FB2F8975326 /* TransferCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferCommands.swift; sourceTree = "<group>"; };
+		B53A32D2E66FC5F0D76FE7CF /* SnippetTransferController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetTransferController.swift; sourceTree = "<group>"; };
 		FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetImporterTests.swift; sourceTree = "<group>"; };
 		D39FBD397ED1CCDF3120982B /* SnippetImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetImporter.swift; sourceTree = "<group>"; };
 		7EE544FC0CFAF7ADB212E29A /* SnippetExporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetExporterTests.swift; sourceTree = "<group>"; };
@@ -332,6 +336,7 @@
 		1BCA38E9F7E2A72176C796D0 /* Transfer */ = {
 			isa = PBXGroup;
 			children = (
+				B53A32D2E66FC5F0D76FE7CF /* SnippetTransferController.swift */,
 				D39FBD397ED1CCDF3120982B /* SnippetImporter.swift */,
 				B0726DA6194BC768FB3E3CEF /* SnippetExporter.swift */,
 				BFBEFAF0AE7D681E3B4DFE7D /* SnippetArchive.swift */,
@@ -547,6 +552,7 @@
 		52340538EFD250B44AE38B68 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				964AFEF62C5E8FB2F8975326 /* TransferCommands.swift */,
 				6CE2410E27F5506076DCBF84 /* AppearanceSettings.swift */,
 				132202CF7B77D71B4D874FF4 /* HelpCommands.swift */,
 				F22332A83990D91C9C3A122D /* AppLinks.swift */,
@@ -893,6 +899,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				7F62BEEDE019601A65905EF2 /* AppEnvironment.swift in Sources */,
+				E44E7EBA63F566394B2FF51F /* TransferCommands.swift in Sources */,
+				3700B7C43CCFF5DA226AD2EE /* SnippetTransferController.swift in Sources */,
 				62D6BE34B6BA94FF9F3DE936 /* SnippetImporter.swift in Sources */,
 				B5B0E85A3DC87178E69928BA /* SnippetExporter.swift in Sources */,
 				75BA5AA7792F8E5F50152054 /* SnippetArchive.swift in Sources */,

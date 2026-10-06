@@ -757,6 +757,11 @@ struct ContentView: View {
             rebuildDerivedCaches()
             drainPendingWork()
         }
+        .onChange(of: SnippetTransferController.shared.notice, initial: true) { _, notice in
+            guard let notice else { return }
+            showToast(notice.message)
+            SnippetTransferController.shared.clearNotice()
+        }
         .onChange(of: searchText) { _, newValue in
             debounceSearch(newValue)
         }

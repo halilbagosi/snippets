@@ -104,6 +104,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// with no window and another app frontmost the menu bar is not ours.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
+    /// A `.snippets` file opened from Finder, AirDrop or the Dock icon.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard let url = urls.first(where: { $0.pathExtension.lowercased() == "snippets" }) else { return }
+        SnippetTransferController.shared.importFile(at: url)
+    }
+
 }
 #endif
 
@@ -114,7 +120,13 @@ struct SnippetsApp: App {
     #endif
     @State private var environment = AppEnvironment()
     @State private var appearanceSettings = AppearanceSettings()
-    @State private var previewTrust = PreviewTrust()
+    @State private var previewTrust: PreviewTrust
+
+    init() {
+        let trust = PreviewTrust()
+        _previewTrust = State(initialValue: trust)
+        SnippetTransferController.shared.previewTrust = trust
+    }
 
     static let mainWindowID = "main"
 
@@ -162,6 +174,7 @@ struct SnippetsApp: App {
         .commands {
             CommandGroup(replacing: .newItem) { }
             HelpCommands()
+            TransferCommands()
             CommandGroup(after: .windowArrangement) {
                 Button("Toggle Full Screen") {
                     NSApp.keyWindow?.toggleFullScreen(nil)
