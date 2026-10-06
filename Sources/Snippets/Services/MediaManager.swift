@@ -146,7 +146,13 @@ struct MediaManager: MediaManaging {
     /// Stores imported bytes under a fresh name. Nothing from the import file
     /// reaches the path except an extension `SnippetArchive` already vetted.
     func storeImported(_ data: Data, fileExtension: String) throws -> String {
-        let name = "\(UUID().uuidString).\(fileExtension.lowercased())"
+        // Defence in depth: the name is built from this, so it must be a bare
+        // extension even if a caller skips `SnippetArchive`'s checks. (The
+        // importer already lowercases it.)
+        guard !fileExtension.isEmpty, fileExtension.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else {
+            throw CocoaError(.fileWriteInvalidFileName)
+        }
+        let name = "\(UUID().uuidString).\(fileExtension)"
         try data.write(to: resolvedURL(for: name), options: .atomic)
         return name
     }

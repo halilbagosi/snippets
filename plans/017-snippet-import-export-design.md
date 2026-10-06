@@ -133,7 +133,7 @@ New folder `Sources/Snippets/Features/Transfer/` — no SwiftUI in it.
 | `SnippetImporter.swift` | `apply(_:to:resolve:) async throws -> ImportSummary` (planning folded into apply) | models, `SnippetArchive` |
 | `SnippetTransferController.swift` | `@MainActor @Observable` glue: runs panels, reads/writes files, drives the importer, publishes the pending conflict for the dialog and the summary for the toast | the three above, `MediaManager`, `PreviewTrust`, AppKit panels |
 | `Views/Transfer/ImportConflictDialog.swift` | conflict prompt: an `NSAlert` in `SnippetTransferController` (suppression checkbox = Apply to all; Skip default, Escape = Stop) | controller |
-| `App/TransferCommands.swift` | File menu items | controller via focused/environment value |
+| `App/TransferCommands.swift` | File menu items | calls the `SnippetTransferController.shared` singleton directly |
 
 Media I/O goes through two closures (`mediaData(for: MediaItem) -> Data?`,
 `writeMedia(Data, ext) throws -> String`) so the exporter and importer stay
@@ -141,8 +141,17 @@ testable without touching the real media directory. `MediaManager` gains the
 matching two small methods.
 
 Open-from-Finder: `Snippets-Info.plist` gains `UTExportedTypeDeclarations` and
-`CFBundleDocumentTypes`; the main `WindowGroup` handles `.onOpenURL` and routes
-to the controller.
+`CFBundleDocumentTypes`; `AppDelegate.application(_:open:)` picks the first
+`.snippets` URL and calls `SnippetTransferController.shared.importFile(at:)`
+(the same entry point as the File ▸ Import panel).
+
+The controller reads and decodes the file off the main actor (a `@concurrent`
+helper that also balances the security-scoped access), so a large archive does
+not freeze the UI; only `SnippetImporter.apply` runs on main. On export the
+save panel comes first and the archive is built only after the user confirms.
+Attachments whose files can't be read are left out of the archive and counted:
+the toast reads “Exported 5 snippets · 2 attachments missing” (singular
+“1 attachment missing”; unchanged when none are missing).
 
 App Store entitlements: `com.apple.security.files.user-selected.read-only` →
 `read-write` (save panel).

@@ -348,4 +348,19 @@ final class SnippetImporterTests: XCTestCase {
         XCTAssertEqual(ImportSummary(added: 2, skipped: 1, stopped: true).message,
                        "Import stopped after 2 snippets · 1 skipped")
     }
+
+    func test_exportMessage_mentionsMissingAttachmentsOnlyWhenThereAreSome() {
+        let message = SnippetTransferController.exportMessage
+        XCTAssertEqual(message(5, 0), "Exported 5 snippets")
+        XCTAssertEqual(message(1, 0), "Exported 1 snippet")
+        XCTAssertEqual(message(5, 2), "Exported 5 snippets · 2 attachments missing")
+        XCTAssertEqual(message(1, 1), "Exported 1 snippet · 1 attachment missing")
+    }
+
+    /// Rejected before anything touches the media directory.
+    func test_storeImported_rejectsUnsafeExtensions() {
+        for ext in ["", "../x", "p/ng", "p.ng", "pn g", "pnġ", "é"] {
+            XCTAssertThrowsError(try MediaManager.shared.storeImported(Data([1]), fileExtension: ext), ext)
+        }
+    }
 }

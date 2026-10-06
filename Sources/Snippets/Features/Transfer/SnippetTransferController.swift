@@ -60,9 +60,9 @@ final class SnippetTransferController {
     }
 
     private func export(snippets: [Snippet], collections: [SnippetCollection], suggestedName: String) {
-        let archive = SnippetExporter.archive(snippets: snippets, collections: collections,
-                                              appVersion: appVersion, mediaData: media.data(for:))
-        guard !archive.snippets.isEmpty || !archive.collections.isEmpty else {
+        // Cheap check first: building the archive reads every attachment, so
+        // it waits until the user has picked a destination.
+        guard snippets.contains(where: { !$0.isDeleted }) || collections.contains(where: { !$0.isDeleted }) else {
             notice = Notice(message: "Nothing to export")
             return
         }
@@ -73,14 +73,37 @@ final class SnippetTransferController {
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
+        var missingAttachments = 0
+        let media = media
+        let archive = SnippetExporter.archive(snippets: snippets, collections: collections,
+                                              appVersion: appVersion) { item in
+            let data = media.data(for: item)
+            if data == nil { missingAttachments += 1 }
+            return data
+        }
+        guard !archive.snippets.isEmpty || !archive.collections.isEmpty else {
+            notice = Notice(message: "Nothing to export")
+            return
+        }
+
         do {
             try context.save()   // keeps any uuid the exporter just assigned
             try archive.encoded().write(to: url, options: .atomic)
-            let count = archive.snippets.count
-            notice = Notice(message: "Exported \(count) \(count == 1 ? "snippet" : "snippets")")
+            notice = Notice(message: Self.exportMessage(snippetCount: archive.snippets.count,
+                                                        missingAttachments: missingAttachments))
         } catch {
             report(error, doing: "export")
         }
+    }
+
+    /// "Exported 5 snippets", plus " · 2 attachments missing" when files the
+    /// library still lists could not be read and so are not in the archive.
+    static func exportMessage(snippetCount: Int, missingAttachments: Int) -> String {
+        var message = "Exported \(snippetCount) \(snippetCount == 1 ? "snippet" : "snippets")"
+        if missingAttachments > 0 {
+            message += " · \(missingAttachments) \(missingAttachments == 1 ? "attachment" : "attachments") missing"
+        }
+        return message
     }
 
     static func fileName(for suggested: String) -> String {
@@ -117,7 +140,7 @@ final class SnippetTransferController {
         Task {
             defer { isImporting = false }
             do {
-                let archive = try SnippetArchive.decode(try Self.read(url))
+                let archive = try await Self.loadArchive(from: url)
                 let importer = SnippetImporter(
                     writeMedia: { data, ext in try media.storeImported(data, fileExtension: ext) },
                     removeMedia: { name in media.deleteFile(named: name) },
@@ -133,13 +156,16 @@ final class SnippetTransferController {
         }
     }
 
-    private static func read(_ url: URL) throws -> Data {
+    /// Reads and validates the file off the main actor: an archive can be
+    /// hundreds of MB, and decoding it on main would freeze the UI.
+    @concurrent
+    private nonisolated static func loadArchive(from url: URL) async throws -> SnippetArchive {
         // Files opened from Finder arrive security-scoped in the sandbox.
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
         guard size <= SnippetArchive.maxByteCount else { throw SnippetArchive.ReadError.tooLarge }
-        return try Data(contentsOf: url, options: .mappedIfSafe)
+        return try SnippetArchive.decode(try Data(contentsOf: url, options: .mappedIfSafe))
     }
 
     /// Finder's "an item named … already exists" prompt. Skip is the default
