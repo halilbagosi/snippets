@@ -176,12 +176,15 @@ struct SnippetArchive: Codable, Equatable {
 
     /// Only image/video attachments whose extension maps to a type the media
     /// picker already accepts. The extension is the only part of an imported
-    /// attachment that ever reaches a file name.
+    /// attachment that ever reaches a file name. The declared kind must also
+    /// match what the app itself would classify that extension as, so a
+    /// "video" record can't point at PNG bytes (or the reverse).
     static func isAcceptable(_ media: MediaRecord) -> Bool {
-        guard MediaKind(rawValue: media.kind) != nil,
+        guard let kind = MediaKind(rawValue: media.kind),
               !media.fileExtension.isEmpty,
               media.fileExtension.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }),
-              let type = UTType(filenameExtension: media.fileExtension.lowercased())
+              let type = UTType(filenameExtension: media.fileExtension.lowercased()),
+              MediaManager.kind(for: URL(fileURLWithPath: "attachment.\(media.fileExtension)")) == kind
         else { return false }
         return MediaManager.allowedTypes.contains { type.conforms(to: $0) }
     }

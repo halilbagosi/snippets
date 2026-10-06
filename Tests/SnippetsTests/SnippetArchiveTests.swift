@@ -119,4 +119,14 @@ final class SnippetArchiveTests: XCTestCase {
             ])]).sanitized()
         XCTAssertEqual(archive.snippets[0].media.map(\.fileExtension), ["png", "mov"])
     }
+
+    func test_sanitized_dropsMediaWhoseKindDisagreesWithItsExtension() {
+        let archive = SnippetArchive(
+            exportedAt: t, appVersion: "1.0", collections: [],
+            snippets: [snippet(media: [
+                media("video", "png"), media("image", "mov"), media("video", "mov"),
+            ])]).sanitized()
+        XCTAssertEqual(archive.snippets[0].media.map(\.kind), ["video"])
+        XCTAssertEqual(archive.snippets[0].media.map(\.fileExtension), ["mov"])
+    }
 }
