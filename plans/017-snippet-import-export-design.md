@@ -154,12 +154,15 @@ testable without touching the real media directory. `MediaManager` gains the
 matching two small methods.
 
 Open-from-Finder: `Snippets-Info.plist` gains `UTExportedTypeDeclarations` and
-`CFBundleDocumentTypes`; the main window's `.onOpenURL` passes each `.snippets`
-URL to `SnippetTransferController.shared.importFile(at:)` (the same entry point
-as the File ▸ Import panel), and `.handlesExternalEvents(preferring:allowing:)`
-routes it to the existing window. This is deliberately not
-`NSApplicationDelegate.application(_:open:)`: implementing that makes a cold
-launch from a file skip the main window entirely (found in runtime testing).
+`CFBundleDocumentTypes`; `AppDelegate.application(_:open:)` queues every
+`.snippets` URL with `SnippetTransferController.shared.importFile(at:)` (the
+same entry point as the File ▸ Import panel), and the main window's
+`.handlesExternalEvents(preferring: ["*"], allowing: ["*"])` claims the open
+event. Found in runtime testing of the sandboxed build: without that modifier a
+cold launch from a file shows no window (or, once one exists, SwiftUI opens a
+new window per file); `.onOpenURL` instead of the delegate delivers only the
+first file of a multi-file open; and `.handlesExternalEvents(matching: [])` on
+the scene hands the event to the Third-Party Notices window.
 
 The controller reads and decodes the file off the main actor (a `@concurrent`
 helper that also balances the security-scoped access), so a large archive does

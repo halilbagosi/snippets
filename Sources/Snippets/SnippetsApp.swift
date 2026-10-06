@@ -104,6 +104,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// with no window and another app frontmost the menu bar is not ours.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
+    /// `.snippets` files opened from Finder, AirDrop or the Dock icon. Handled
+    /// here rather than with `onOpenURL`, which only delivers the first file of
+    /// a multi-file open; every URL is queued. The main window's
+    /// `handlesExternalEvents` is what gives a cold launch its window.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls where url.pathExtension.lowercased() == "snippets" {
+            SnippetTransferController.shared.importFile(at: url)
+        }
+    }
+
 }
 #endif
 
@@ -134,7 +144,10 @@ struct SnippetsApp: App {
                     .environment(previewTrust)
                     .environment(AppIntentNavigator.shared)
                     .modifier(MainWindowOpenerInstaller())
-                    .modifier(ArchiveOpenHandler())
+                // Opened `.snippets` files are imported by AppDelegate; this
+                // window claims the open event so SwiftUI doesn't create a new
+                // window per file (it still creates one on a cold launch).
+                    .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
                 // Appearance preference is applied via NSApp.appearance in
                 // AppearanceSettings: preferredColorScheme would pin a per-window
                 // override that AppKit can't clear when following the system.
@@ -156,7 +169,10 @@ struct SnippetsApp: App {
                     .environment(previewTrust)
                     .environment(AppIntentNavigator.shared)
                     .modifier(MainWindowOpenerInstaller())
-                    .modifier(ArchiveOpenHandler())
+                // Opened `.snippets` files are imported by AppDelegate; this
+                // window claims the open event so SwiftUI doesn't create a new
+                // window per file (it still creates one on a cold launch).
+                    .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
                 // Appearance preference is applied via NSApp.appearance in
                 // AppearanceSettings: preferredColorScheme would pin a per-window
                 // override that AppKit can't clear when following the system.
@@ -207,23 +223,6 @@ struct SnippetsApp: App {
 }
 
 #if canImport(AppKit)
-/// Imports a `.snippets` file opened from Finder, AirDrop or the Dock icon.
-///
-/// Handled by SwiftUI rather than `NSApplicationDelegate.application(_:open:)`:
-/// implementing that delegate method makes a cold launch from a file skip the
-/// main window entirely. `handlesExternalEvents` routes later opens to the
-/// existing window instead of creating a new one per file.
-private struct ArchiveOpenHandler: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .onOpenURL { url in
-                guard url.isFileURL, url.pathExtension.lowercased() == "snippets" else { return }
-                SnippetTransferController.shared.importFile(at: url)
-            }
-            .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
-    }
-}
-
 /// Parks an `openWindow` closure where `AppDelegate` can reach it, so clicking
 /// the Dock icon can restore a window after the last one was closed.
 private struct MainWindowOpenerInstaller: ViewModifier {
