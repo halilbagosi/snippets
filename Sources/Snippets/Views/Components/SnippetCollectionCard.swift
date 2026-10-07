@@ -19,24 +19,6 @@ struct SnippetCollectionCard: View {
     @State private var cardSize: CGSize = .zero
     @State private var didAppear = false
 
-    private var activeSnippetCount: Int {
-        var seenIDs = Set<PersistentIdentifier>()
-
-        func collect(from collection: SnippetCollection) {
-            for snippet in collection.snippets where snippet.deletedAt == nil {
-                guard !seenIDs.contains(snippet.persistentModelID) else { continue }
-                seenIDs.insert(snippet.persistentModelID)
-            }
-
-            for child in collection.children {
-                collect(from: child)
-            }
-        }
-
-        collect(from: collection)
-        return seenIDs.count
-    }
-
     private var hoverCenter: CGPoint {
         CGPoint(x: max(cardSize.width, 1) * 0.5, y: max(cardSize.height, 1) * 0.5)
     }
@@ -67,7 +49,7 @@ struct SnippetCollectionCard: View {
         let effectiveIsHovered = isSelectionMode ? false : isHovered
         let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
         let iconShape = RoundedRectangle(cornerRadius: 10, style: .continuous)
-        let count = activeSnippetCount
+        let count = collection.activeSnippetCount
         let snippetSummary = "\(count) Snippet\(count == 1 ? "" : "s")"
 
         HStack(spacing: 14) {

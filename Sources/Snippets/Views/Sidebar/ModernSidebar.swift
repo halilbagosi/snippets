@@ -52,9 +52,12 @@ struct ModernSidebar: View {
         collections.filter { !$0.isDeleted && ($0.parent == nil || $0.parent?.isDeleted == true) }
     }
 
-    private var languageCounts: [String: Int] {
+    /// Keyed by the resolved language, not the stored text: imports and
+    /// Shortcuts can store "swift " or "Bash", which the gallery filter files
+    /// under Swift and Unknown — the count has to agree with what it shows.
+    static func languageCounts(_ snippets: [Snippet]) -> [SupportedLanguage: Int] {
         snippets.reduce(into: [:]) { counts, snippet in
-            counts[snippet.language, default: 0] += 1
+            counts[SupportedLanguage(stored: snippet.language), default: 0] += 1
         }
     }
 
@@ -180,7 +183,7 @@ struct ModernSidebar: View {
                 } label: {
                     countRow(title: "All Snippets", icon: "square.grid.2x2", iconColor: theme.accent, count: snippets.count, isSelected: selection.wrappedValue == .all, includesChevron: true)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.sidebarRow)
                 .sidebarMatchedSelection(
                     accent: theme.accent,
                     isSelected: selection.wrappedValue == .all,
@@ -248,7 +251,7 @@ struct ModernSidebar: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.sidebarRow)
                 .sidebarMatchedSelection(
                     accent: accent,
                     isSelected: isSelected,
@@ -283,7 +286,7 @@ struct ModernSidebar: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.sidebarRow)
                 .sidebarMatchedSelection(
                     accent: accent,
                     isSelected: isSelected,
@@ -315,9 +318,9 @@ struct ModernSidebar: View {
     @ViewBuilder
     private var languagesSection: some View {
         Section("LANGUAGES", isExpanded: $isLanguagesSectionExpanded) {
-            let counts = languageCounts
+            let counts = Self.languageCounts(snippets)
             ForEach(sidebarFilteredLanguages) { language in
-                let count = counts[language.rawValue, default: 0]
+                let count = counts[language, default: 0]
                 let accent = Color(hex: language.accentHex) ?? Color.accentColor
                 let isSelected = selection.wrappedValue == .language(language.rawValue)
                 Button {
@@ -329,7 +332,7 @@ struct ModernSidebar: View {
                 } label: {
                     countRow(title: language.rawValue, icon: language.symbolName, iconColor: accent, count: count, isSelected: isSelected)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.sidebarRow)
                 .sidebarMatchedSelection(
                     accent: accent,
                     isSelected: isSelected,
@@ -358,7 +361,7 @@ struct ModernSidebar: View {
             } label: {
                 countRow(title: "Recently Deleted", icon: "trash", iconColor: .red, count: trashedItemCount, isSelected: selection.wrappedValue == .trash)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.sidebarRow)
             .sidebarMatchedSelection(
                 accent: .red,
                 isSelected: selection.wrappedValue == .trash,
@@ -395,7 +398,7 @@ struct ModernSidebar: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.sidebarRow)
         .sidebarMatchedSelection(
             accent: accent,
             isSelected: isSelected,
@@ -508,8 +511,8 @@ private struct CollectionTreeRow: View {
     }
 
     var body: some View {
-        // Hoisted so the snippets relationship is faulted and filtered once per
-        // row evaluation (the label's count and the expanded content share it).
+        // The label's count is `activeSnippetCount`, not this list's length:
+        // it includes live subcollections, matching the gallery's card.
         let activeSnippets = self.activeSnippets
         DisclosureGroup(isExpanded: isExpanded) {
             // Skip soft-deleted children: they keep their parent link while in
@@ -552,11 +555,11 @@ private struct CollectionTreeRow: View {
                     title: collection.name,
                     icon: collection.displayIconName,
                     iconColor: collection.displayColor,
-                    count: activeSnippets.count,
+                    count: collection.activeSnippetCount,
                     isSelected: selectionValue == .collection(collection.persistentModelID)
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.sidebarRow)
             .sidebarMatchedSelection(
                 accent: collection.displayColor,
                 isSelected: selectionValue == .collection(collection.persistentModelID),
@@ -599,7 +602,7 @@ private struct CollectionTreeRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.sidebarRow)
         .sidebarMatchedSelection(
             accent: accent,
             isSelected: isSelected,
@@ -672,9 +675,6 @@ private struct SidebarMatchedSelectionModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .padding(.vertical, 4)
-            .padding(.horizontal, 8)
-            .contentShape(Rectangle())
             .listRowBackground(rowBackground)
     }
 
@@ -703,6 +703,24 @@ private struct SidebarMatchedSelectionModifier: ViewModifier {
     private var strokeOpacity: Double {
         isActive ? 0.42 : 0.24
     }
+}
+
+/// A plain row button whose hit area is the whole row, not just its text and
+/// icon. `.plain` only hit-tests the label's drawn content, so the gap between
+/// a row's title and its count — and the padding around both — ignored
+/// clicks. The padding lives here, inside the label, for the same reason: an
+/// outer `contentShape` does not widen a button's own hit area.
+private struct SidebarRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.vertical, 4)
+            .padding(.horizontal, 8)
+            .contentShape(Rectangle())
+    }
+}
+
+private extension ButtonStyle where Self == SidebarRowButtonStyle {
+    static var sidebarRow: SidebarRowButtonStyle { SidebarRowButtonStyle() }
 }
 
 private extension View {

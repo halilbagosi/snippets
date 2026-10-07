@@ -55,6 +55,18 @@ struct ContentView: View {
         case favoriteCollection(PersistentIdentifier)
     }
     @State private var sidebarSelectionContext: SidebarSelectionContext? = .allSnippets
+
+    /// All Snippets opens scoped to snippets outside any collection (the
+    /// collections are shown as cards above them). A language filter is an
+    /// explicit request to see that language wherever it lives, so it lifts
+    /// the scope — otherwise picking a language in the sidebar hides every
+    /// match inside a collection while the row's count still includes them.
+    static func showsUncategorizedOnly(
+        context: SidebarSelectionContext?,
+        selectedLanguages: Set<SupportedLanguage>
+    ) -> Bool {
+        context == .allSnippets && selectedLanguages.isEmpty
+    }
     @State private var selectedCollectionID: PersistentIdentifier? = nil
     @State private var sidebarSearch: String = ""
     @State private var showFavoritesOnly: Bool = false
@@ -778,12 +790,14 @@ struct ContentView: View {
             rebuildDerivedCaches()
         }
         .onChange(of: sidebarSelectionContext) { _, newValue in
-            if newValue == .allSnippets {
-                showUncategorizedOnly = true
-            } else {
-                showUncategorizedOnly = false
-            }
+            showUncategorizedOnly = Self.showsUncategorizedOnly(context: newValue, selectedLanguages: selectedLanguages)
             selectedSearchCollections.removeAll()
+        }
+        .onChange(of: selectedLanguages) { _, newValue in
+            // The sidebar's language rows and its All Snippets row both stay
+            // in `.allSnippets`, so they never pass through the context
+            // change above; only the language set moves.
+            showUncategorizedOnly = Self.showsUncategorizedOnly(context: sidebarSelectionContext, selectedLanguages: newValue)
         }
         .onChange(of: navigator.pendingOpenSnippetUUID) { _, newValue in
             guard let uuid = newValue else { return }

@@ -189,4 +189,55 @@ final class SnippetFilterCacheTests: XCTestCase {
         XCTAssertEqual(derived.map(\.title), scratch.map(\.title))
         XCTAssertEqual(derived.map(\.title), ["Parser fav"])
     }
+
+    // MARK: - Sidebar scope and counts
+
+    func test_uncategorizedScope_appliesOnlyToAllSnippetsWithoutALanguageFilter() {
+        XCTAssertTrue(ContentView.showsUncategorizedOnly(context: .allSnippets, selectedLanguages: []))
+        // Picking a language in the sidebar also lands on `.allSnippets`; the
+        // filter must then reach into collections, as the gallery chip does,
+        // or the sidebar's count promises cards the gallery never draws.
+        XCTAssertFalse(ContentView.showsUncategorizedOnly(context: .allSnippets, selectedLanguages: [.react]))
+        XCTAssertFalse(ContentView.showsUncategorizedOnly(context: .favorites, selectedLanguages: []))
+        XCTAssertFalse(ContentView.showsUncategorizedOnly(context: nil, selectedLanguages: []))
+    }
+
+    func test_sidebarLanguageCounts_groupStoredTextTheWayTheFilterDoes() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let snippets = [
+            Snippet(title: "A", language: "Swift", code: "a"),
+            Snippet(title: "B", language: " swift", code: "b"),
+            Snippet(title: "C", language: "Bash", code: "c"),
+        ]
+        snippets.forEach(context.insert)
+        try context.save()
+
+        let counts = ModernSidebar.languageCounts(snippets)
+
+        XCTAssertEqual(counts, [.swift: 2, .unknown: 1])
+    }
+
+    func test_activeSnippetCount_includesLiveSubcollectionsOnceAndSkipsTrash() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let root = SnippetCollection(name: "Root")
+        let child = SnippetCollection(name: "Child", parent: root)
+        let trashedChild = SnippetCollection(name: "Trashed", deletedAt: .now, parent: root)
+        let direct = Snippet(title: "Direct", language: "Swift", code: "a")
+        let shared = Snippet(title: "Shared", language: "Swift", code: "b")
+        let inTrashedChild = Snippet(title: "Gone", language: "Swift", code: "c")
+        let deleted = Snippet(title: "Deleted", language: "Swift", code: "d")
+        [root, child, trashedChild].forEach(context.insert)
+        [direct, shared, inTrashedChild, deleted].forEach(context.insert)
+        direct.collections = [root]
+        shared.collections = [root, child]
+        inTrashedChild.collections = [trashedChild]
+        deleted.collections = [root]
+        deleted.deletedAt = .now
+        try context.save()
+
+        XCTAssertEqual(root.activeSnippetCount, 2)
+        XCTAssertEqual(child.activeSnippetCount, 1)
+    }
 }
