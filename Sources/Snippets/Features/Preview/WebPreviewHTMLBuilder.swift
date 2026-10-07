@@ -712,6 +712,100 @@ enum WebPreviewHTMLBuilder {
         """
     }
 
+    /// Names bound from the `React` global for snippets that use them without
+    /// importing (CodePen style). Imported names are added on top.
+    static let reactFallbackNames = [
+        "useState", "useEffect", "useRef", "useMemo", "useCallback", "useContext",
+        "useReducer", "useLayoutEffect", "useId", "useTransition", "useDeferredValue",
+        "useImperativeHandle", "useSyncExternalStore", "Fragment", "createElement",
+        "createContext", "forwardRef", "memo", "startTransition", "Children",
+        "cloneElement", "isValidElement"
+    ]
+
+    /// The `const` lines that stand in for the stripped react/react-dom
+    /// imports: what the snippet imports (aliases included) plus the fallback
+    /// names, minus anything the snippet declares itself or another import
+    /// binds. A name declared twice is a SyntaxError that kills the preview.
+    /// `code` is the entry plus its connected helpers.
+    /// Internal (not private) so tests can pin the bindings.
+    static func reactPrelude(for code: String) -> String {
+        var react: [(imported: String, local: String)] = reactFallbackNames.map { ($0, $0) }
+        var reactDOM: [(imported: String, local: String)] = []
+        var aliases: [(local: String, global: String)] = []
+        // Names other imports bind (npm modules via `cdnImportBindings`,
+        // relative imports via connected snippets) must not be re-declared.
+        var boundElsewhere = Set<String>()
+
+        let pattern = #"(?m)^[ \t]*import\s+(?!type\b)([^;'"]*?)\s*from\s*["']([^"'\n]+)["']"#
+        if let regex = try? NSRegularExpression(pattern: pattern) {
+            for match in regex.matches(in: code, range: NSRange(code.startIndex..., in: code)) {
+                guard let clauseRange = Range(match.range(at: 1), in: code),
+                      let specRange = Range(match.range(at: 2), in: code) else { continue }
+                let clause = String(code[clauseRange])
+                let spec = String(code[specRange])
+                let isReact = spec == "react" || spec.hasPrefix("react/")
+                let isReactDOM = spec == "react-dom" || spec.hasPrefix("react-dom/")
+                guard isReact || isReactDOM else {
+                    boundElsewhere.formUnion(importedLocalNames(in: clause))
+                    continue
+                }
+                let global = isReact ? "React" : "ReactDOM"
+                var head = clause
+                if let open = clause.firstIndex(of: "{"), let close = clause.firstIndex(of: "}"), open < close {
+                    head = String(clause[..<open])
+                    for part in clause[clause.index(after: open)..<close].split(separator: ",") {
+                        let entry = part.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !entry.isEmpty, !entry.hasPrefix("type ") else { continue }
+                        let pieces = entry.components(separatedBy: " as ")
+                            .map { $0.trimmingCharacters(in: .whitespaces) }
+                        let binding = (imported: pieces[0], local: pieces.count == 2 ? pieces[1] : pieces[0])
+                        if isReact { react.append(binding) } else { reactDOM.append(binding) }
+                    }
+                }
+                // Default or namespace import (`R`, `* as R`); the global's own
+                // name needs no binding.
+                let name = head.replacingOccurrences(of: "* as", with: "")
+                    .trimmingCharacters(in: CharacterSet(charactersIn: ", \t\n"))
+                if !name.isEmpty, name != global { aliases.append((name, global)) }
+            }
+        }
+
+        var declared = Set<String>()
+        func keep(_ local: String) -> Bool {
+            !boundElsewhere.contains(local) && !declaresBinding(local, in: code)
+                && declared.insert(local).inserted
+        }
+        func destructure(_ bindings: [(imported: String, local: String)], from global: String) -> String? {
+            let entries = bindings.filter { keep($0.local) }
+                .map { $0.imported == $0.local ? $0.local : "\($0.imported): \($0.local)" }
+            return entries.isEmpty ? nil : "const { \(entries.joined(separator: ", ")) } = \(global);"
+        }
+        var lines = aliases.filter { keep($0.local) }.map { "const \($0.local) = \($0.global);" }
+        if let line = destructure(react, from: "React") { lines.append(line) }
+        if let line = destructure(reactDOM, from: "ReactDOM") { lines.append(line) }
+        return lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n\n"
+    }
+
+    /// Local names an import clause binds: `D`, `* as N`, `{ a, b as c }`.
+    static func importedLocalNames(in clause: String) -> [String] {
+        clause.replacingOccurrences(of: "* as", with: ",")
+            .components(separatedBy: CharacterSet(charactersIn: "{},"))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && !$0.hasPrefix("type ") }
+            .compactMap { $0.components(separatedBy: " as ").last?.trimmingCharacters(in: .whitespaces) }
+    }
+
+    /// Whether `code` declares `name` itself: `const/let/var/function/class
+    /// name`, or a destructuring like `const { name } = React`.
+    static func declaresBinding(_ name: String, in code: String) -> Bool {
+        let escaped = NSRegularExpression.escapedPattern(for: name)
+        let patterns = [
+            #"\b(?:const|let|var|function|class)\s+"# + escaped + #"\b"#,
+            #"\b(?:const|let|var)\s*\{[^}]*\b"# + escaped + #"\b[^}]*\}\s*="#
+        ]
+        return patterns.contains { code.range(of: $0, options: .regularExpression) != nil }
+    }
+
     /// The complete evaluated React source (helpers stripped and prepended,
     /// hook bindings, export capture) — shared by document and update paths.
     private static func reactSource(
@@ -760,11 +854,7 @@ enum WebPreviewHTMLBuilder {
                 source = strippedHelper + "\n\n" + source
             }
         }
-        source = bindings + """
-        const { useState, useEffect, useRef, useMemo, useCallback, useContext,
-                useReducer, useLayoutEffect, useId, Fragment, createElement } = React;
-
-        """ + source
+        source = bindings + reactPrelude(for: fullCode) + source
 
         source += usageComponent + """
 

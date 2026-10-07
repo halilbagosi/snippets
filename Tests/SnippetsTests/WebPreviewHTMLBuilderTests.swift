@@ -745,6 +745,54 @@ final class WebPreviewHTMLBuilderTests: XCTestCase {
         XCTAssertTrue(doc.contains("} = React"))
     }
 
+    // MARK: React prelude
+
+    func test_prelude_bindsNamesImportedFromReact() {
+        let prelude = WebPreviewHTMLBuilder.reactPrelude(for:
+            "import { forwardRef, memo, createContext } from \"react\";\nexport default memo(forwardRef(() => null));")
+        for name in ["forwardRef", "memo", "createContext", "useState"] {
+            XCTAssertTrue(prelude.contains(name), "missing \(name)")
+        }
+        XCTAssertTrue(prelude.contains("} = React;"))
+    }
+
+    func test_prelude_bindsReactDOMImportsFromReactDOM() {
+        let prelude = WebPreviewHTMLBuilder.reactPrelude(for:
+            "import { createPortal } from \"react-dom\";\nimport { createRoot } from 'react-dom/client';")
+        XCTAssertTrue(prelude.contains("const { createPortal, createRoot } = ReactDOM;"))
+    }
+
+    func test_prelude_omitsNamesTheSnippetDeclares() {
+        let prelude = WebPreviewHTMLBuilder.reactPrelude(for:
+            "const { useState, useEffect } = React;\nfunction useId() { return 1 }\nfunction App() { return null }")
+        XCTAssertFalse(prelude.contains("useState"))
+        XCTAssertFalse(prelude.contains("useEffect"))
+        XCTAssertFalse(prelude.contains("useId"))
+        XCTAssertTrue(prelude.contains("useRef"))
+    }
+
+    func test_prelude_honorsAliasesAndSkipsTypeImports() {
+        let prelude = WebPreviewHTMLBuilder.reactPrelude(for:
+            "import React, { useState as useS, type FC } from 'react';\nimport type { ReactNode } from 'react';\nimport * as R from 'react';")
+        XCTAssertTrue(prelude.contains("useState: useS"))
+        XCTAssertTrue(prelude.contains("const R = React;"))
+        XCTAssertFalse(prelude.contains("FC"))
+        XCTAssertFalse(prelude.contains("ReactNode"))
+        XCTAssertFalse(prelude.contains("const React ="))
+    }
+
+    func test_prelude_omitsNamesBoundByOtherImports() {
+        let prelude = WebPreviewHTMLBuilder.reactPrelude(for:
+            "import { memo, Children as Kids } from 'some-lib';\nimport { useState } from 'react';")
+        XCTAssertFalse(prelude.contains("memo"))
+        XCTAssertTrue(prelude.contains("Children"))   // only `Kids` is bound by some-lib
+    }
+
+    func test_reactDocument_snippetDestructuringReact_isNotDeclaredTwice() {
+        let doc = document("const { useState } = React;\nexport default function App() { const [n] = useState(0); return <p>{n}</p> }", .react)
+        XCTAssertFalse(doc.contains("const { useState, useEffect"))
+    }
+
     func test_react_capturesExportInsideEvaluatedSource() {
         // Babel output is strict-mode: const/function declarations inside
         // eval() never become globals, so the component must be captured from
