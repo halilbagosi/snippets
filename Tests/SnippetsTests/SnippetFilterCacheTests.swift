@@ -71,6 +71,35 @@ final class SnippetFilterCacheTests: XCTestCase {
         XCTAssertEqual(uncategorized.map(\.title), ["A"])
     }
 
+    func test_unrecognizedLanguage_isFilteredAsUnknown() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let swift = Snippet(title: "A", language: "Swift", code: "a")
+        let bash = Snippet(title: "B", language: "Bash", code: "b")
+        context.insert(swift)
+        context.insert(bash)
+        try context.save()
+
+        func base(_ languages: Set<SupportedLanguage>) -> [String] {
+            GallerySnippetFilter.base(
+                snippets: [swift, bash], selectedLanguages: languages,
+                selectedCollectionID: nil, showUncategorizedOnly: false,
+                selectedSearchCollections: [], showFavoritesOnly: false,
+                lookup: [:], descendantIDs: [:]
+            ).map(\.title)
+        }
+        XCTAssertEqual(base([.swift]), ["A"])
+        XCTAssertEqual(base([.unknown]), ["B"])
+        XCTAssertEqual(searchPool([swift, bash], languages: [.swift]).map(\.title), ["A"])
+        XCTAssertEqual(searchPool([swift, bash], languages: [.unknown]).map(\.title), ["B"])
+    }
+
+    func test_storedLanguage_resolvesUnrecognizedToUnknown() {
+        XCTAssertEqual(SupportedLanguage(stored: "Bash"), .unknown)
+        XCTAssertEqual(SupportedLanguage(stored: " swift "), .swift)
+        XCTAssertEqual(SupportedLanguage(stored: ""), .unknown)
+    }
+
     func test_base_selectedCollection_requiresDirectMembership() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
@@ -108,6 +137,22 @@ final class SnippetFilterCacheTests: XCTestCase {
         let hits = GallerySnippetFilter.searchResults(in: [byTitle, byCode, neither], needle: "parser")
         XCTAssertEqual(Set(hits.map(\.title)), ["Parser", "Other"])
         XCTAssertTrue(GallerySnippetFilter.searchResults(in: [byTitle], needle: "").isEmpty)
+    }
+
+    func test_searchResults_matchWordsAcrossFieldsAndCollections() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let networking = SnippetCollection(name: "Networking")
+        let snippet = Snippet(title: "Retry helper", language: "Swift", code: "func retry() {}")
+        context.insert(networking)
+        context.insert(snippet)
+        snippet.collections = [networking]
+        try context.save()
+
+        // "networking" is only the collection's name, "retry" only the title.
+        XCTAssertEqual(GallerySnippetFilter.searchResults(in: [snippet], needle: "networking retry").map(\.title), ["Retry helper"])
+        XCTAssertTrue(GallerySnippetFilter.searchResults(in: [snippet], needle: "networking delete").isEmpty)
+        XCTAssertEqual(GallerySnippetFilter.searchCollections([networking], needle: "netw", showFavoritesOnly: false).map(\.name), ["Networking"])
     }
 
     func test_searchCollections_excludesDeleted_respectsFavorites() throws {

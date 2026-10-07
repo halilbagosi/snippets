@@ -858,7 +858,7 @@ struct SnippetGalleryView: View {
         }
 
         let grouped = Dictionary(grouping: ordered) { snippet in
-            SupportedLanguage(rawValue: snippet.language) ?? .unknown
+            SupportedLanguage(stored: snippet.language)
         }
         let collectionsByLanguage = selectedSearchCollections.isEmpty
             ? subcollectionsByLanguage(subcollections, favoritesOnly: showFavoritesOnly)
@@ -1034,9 +1034,7 @@ struct SnippetGalleryView: View {
         var result = Set<SupportedLanguage>()
 
         for snippet in collection.snippets where !snippet.isDeleted && (!favoritesOnly || snippet.isFavorite) {
-            if let language = SupportedLanguage(rawValue: snippet.language) {
-                result.insert(language)
-            }
+            result.insert(SupportedLanguage(stored: snippet.language))
         }
 
         for child in collection.children {

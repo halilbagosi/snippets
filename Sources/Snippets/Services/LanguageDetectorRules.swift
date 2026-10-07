@@ -23,7 +23,8 @@ extension LanguageDetector {
         shaderProfiles,
         appleProfiles,
         systemsProfiles,
-        webProfiles
+        webProfiles,
+        unsupportedProfiles
     ].flatMap { $0 }
 
     // MARK: - Shaders
@@ -89,7 +90,15 @@ extension LanguageDetector {
                 marker(#"\blet\s+\w+\s*(:\s*[A-Z\[]|=)"#, Weight.medium, cap: 3),
                 marker(#"\?\?\s|\bnil\s*\)|\.self\b"#, Weight.medium, cap: 2),
                 marker(#"->\s*(Void|Self|Never)\b|\(\s*\)\s*->"#, Weight.medium, cap: 2),
-                marker(#"\bself\.\w"#, Weight.weak, cap: 2)
+                marker(#"\bself\.\w"#, Weight.weak, cap: 2),
+                // Closure shorthand arguments: `{ $0 * 2 }`.
+                marker(#"\{\s*\$\d"#, Weight.strong, cap: 2),
+                // A stored property with a type and no initializer or `;` —
+                // invalid in Kotlin class bodies, absent from TS (no `var`).
+                marker(#"(?m)^\s*(var|let)\s+\w+\s*:\s*[A-Z][\w<>\[\], ]*[?!]?\s*$"#, Weight.strong, cap: 2)
+            ], penalties: [
+                // Kotlin-only keywords.
+                marker(#"\bfun\s+\w|\bval\s+\w"#, Weight.decisive, cap: 1)
             ]),
 
             Profile(language: .kotlin, markers: [
@@ -105,6 +114,10 @@ extension LanguageDetector {
                 marker(#"\b(val|var)\s+\w+\s*(:\s*\w|=)"#, Weight.medium, cap: 3),
                 marker(#"\?:\s|\?\.\w|!!\B"#, Weight.medium, cap: 2),
                 marker(#"\bprintln\s*\(|\bwhen\s*[({]"#, Weight.medium, cap: 2)
+            ], penalties: [
+                // Swift-only declarations; Kotlin has no struct, extension,
+                // protocol, guard or func.
+                marker(#"(?m)^\s*((public|private|internal|fileprivate)\s+)?(struct|extension|protocol|guard)\b|\bfunc\s+\w"#, Weight.decisive, cap: 1)
             ])
         ]
     }
@@ -262,6 +275,43 @@ extension LanguageDetector {
                 marker(#"(?i)</(div|span|p|a|body|html|head|section|h[1-6]|button|ul|ol|li|svg|main|header|footer|form|table|label|pre|code|figure|nav)\s*>"#, Weight.medium, cap: 6),
                 marker(#"\s(href|src|alt|id|type|charset|lang|viewBox|xmlns|stroke|fill|width|height|placeholder|value|role|aria-\w+|data-[\w-]+)\s*=\s*["']"#, Weight.medium, cap: 6),
                 marker(#"<!--|&(nbsp|amp|lt|gt|quot|#\d+);"#, Weight.medium, cap: 2)
+            ])
+        ]
+    }
+
+    // MARK: - Unsupported (decoys)
+
+    /// Languages the app doesn't support still need a profile: without one,
+    /// their code is scored only by the supported profiles and the nearest
+    /// lookalike wins (Java read as Swift and sent to the Swift preview
+    /// compiler). A decoy that wins resolves to `.unknown`.
+    private static var unsupportedProfiles: [Profile] {
+        [
+            // Java
+            Profile(language: .unknown, markers: [
+                marker(#"\bSystem\.(out|err)\.print"#, Weight.decisive),
+                marker(#"\bpublic\s+static\s+void\s+main\s*\("#, Weight.decisive),
+                marker(#"\bString\[\]\s+\w"#, Weight.decisive),
+                // `public List<User> findAll() {` — modifier, type, name, params, brace.
+                // The lookahead keeps Kotlin `fun`, Swift `func`/`var`/`init`
+                // and TS `async` methods out.
+                marker(#"(?m)^\s*(public|private|protected)\s+(static\s+)?(final\s+)?(?!fun\b|func\b|function\b|fn\b|def\b|class\b|interface\b|enum\b|var\b|let\b|val\b|init\b|async\b)[A-Za-z_][\w.]*(<[^>\n]*>)?(\[\])?\s+\w+\s*\([^)\n]*\)\s*(throws\s+[\w., ]+)?\s*\{"#, Weight.decisive, cap: 2),
+                marker(#"(?m)^\s*(private|public|protected)\s+(static\s+)?final\s+\w+(<[^>\n]*>)?\s+\w+\s*[;=]"#, Weight.strong, cap: 2),
+                marker(#"@Override\b|\b(ArrayList|HashMap|HashSet)\s*<"#, Weight.strong, cap: 2)
+            ]),
+            // C#
+            Profile(language: .unknown, markers: [
+                marker(#"(?m)^\s*using\s+System(\.[\w.]+)?\s*;"#, Weight.decisive),
+                marker(#"\{\s*get;\s*(set;|init;)?\s*\}"#, Weight.decisive, cap: 2),
+                marker(#"\bConsole\.Write(Line)?\s*\("#, Weight.decisive),
+                marker(#"\basync\s+Task\b|\bTask<"#, Weight.strong)
+            ]),
+            // PHP
+            Profile(language: .unknown, markers: [
+                marker(#"<\?php\b"#, Weight.decisive),
+                marker(#"\bfunction\s+\w+\s*\(\s*(\??\w+\s+)?\$\w"#, Weight.decisive),
+                marker(#"(?m)^\s*\$\w+\s*(\[[^\]\n]*\])?\s*=[^=>]"#, Weight.strong, cap: 2),
+                marker(#"\$\w+->\w"#, Weight.strong, cap: 2)
             ])
         ]
     }

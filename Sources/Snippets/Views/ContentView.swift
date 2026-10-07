@@ -450,7 +450,7 @@ struct ContentView: View {
     }
 
     private func buildAvailableLanguages() -> [SupportedLanguage] {
-        let used = Set(snippets.compactMap { SupportedLanguage(rawValue: $0.language) })
+        let used = Set(snippets.map { SupportedLanguage(stored: $0.language) })
         return SupportedLanguage.allCases.filter { used.contains($0) }
     }
 
@@ -1608,7 +1608,7 @@ enum GallerySnippetFilter {
         descendantIDs: [PersistentIdentifier: Set<PersistentIdentifier>]
     ) -> [Snippet] {
         snippets.filter { snippet in
-            if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
+            if !selectedLanguages.isEmpty, !selectedLanguages.contains(SupportedLanguage(stored: snippet.language)) { return false }
 
             let belongsDirectlyToCollection = { (colID: PersistentIdentifier) -> Bool in
                 snippet.collections.contains(where: { $0.persistentModelID == colID })
@@ -1647,7 +1647,7 @@ enum GallerySnippetFilter {
         descendantIDs: [PersistentIdentifier: Set<PersistentIdentifier>]
     ) -> [Snippet] {
         snippets.filter { snippet in
-            if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
+            if !selectedLanguages.isEmpty, !selectedLanguages.contains(SupportedLanguage(stored: snippet.language)) { return false }
 
             if showFavoritesOnly && !snippet.isFavorite { return false }
 
@@ -1663,33 +1663,29 @@ enum GallerySnippetFilter {
         }
     }
 
-    /// Case-insensitive substring match without allocating a lowercased copy
-    /// of `haystack` (search runs over every snippet's full code per pass).
-    static func matches(_ haystack: String, _ needle: String) -> Bool {
-        haystack.range(of: needle, options: .caseInsensitive) != nil
-    }
-
     static func searchResults(in pool: [Snippet], needle: String) -> [Snippet] {
-        guard !needle.isEmpty else { return [] }
+        let terms = SnippetSearch.terms(needle)
+        guard !terms.isEmpty else { return [] }
 
         return pool.filter { snippet in
-            matches(snippet.title, needle) ||
-            matches(snippet.snippetDescription, needle) ||
-            matches(snippet.code, needle) ||
-            matches(snippet.language, needle) ||
-            snippet.collections.contains { !$0.isDeleted && matches($0.name, needle) }
+            let collectionNames = snippet.collections.compactMap { $0.isDeleted ? nil : $0.name }
+            return SnippetSearch.matches(
+                terms: terms,
+                in: [snippet.title, snippet.snippetDescription, snippet.code, snippet.language] + collectionNames
+            )
         }
     }
 
     static func searchCollections(
         _ collections: [SnippetCollection], needle: String, showFavoritesOnly: Bool
     ) -> [SnippetCollection] {
-        guard !needle.isEmpty else { return [] }
+        let terms = SnippetSearch.terms(needle)
+        guard !terms.isEmpty else { return [] }
 
         return collections.filter { collection in
             !collection.isDeleted &&
             (!showFavoritesOnly || collection.isFavorite) &&
-            matches(collection.name, needle)
+            SnippetSearch.matches(terms: terms, in: [collection.name])
         }
     }
 }
