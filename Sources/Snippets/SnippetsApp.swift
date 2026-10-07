@@ -79,7 +79,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         ColorPanelCenterer.shared.install()
-        MenuBarController.shared.install()
+        // Creating the status item costs ~45ms of window-server round trips,
+        // all of it ahead of the main window's first frame. A run-loop turn
+        // later the window has already been committed; nothing reads the
+        // status item before the user can click it.
+        DispatchQueue.main.async {
+            MenuBarController.shared.install()
+        }
         ClipboardMonitor.shared.start()
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(50))
