@@ -139,6 +139,22 @@ final class SnippetFilterCacheTests: XCTestCase {
         XCTAssertTrue(GallerySnippetFilter.searchResults(in: [byTitle], needle: "").isEmpty)
     }
 
+    func test_searchResults_matchWordsAcrossFieldsAndCollections() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let networking = SnippetCollection(name: "Networking")
+        let snippet = Snippet(title: "Retry helper", language: "Swift", code: "func retry() {}")
+        context.insert(networking)
+        context.insert(snippet)
+        snippet.collections = [networking]
+        try context.save()
+
+        // "networking" is only the collection's name, "retry" only the title.
+        XCTAssertEqual(GallerySnippetFilter.searchResults(in: [snippet], needle: "networking retry").map(\.title), ["Retry helper"])
+        XCTAssertTrue(GallerySnippetFilter.searchResults(in: [snippet], needle: "networking delete").isEmpty)
+        XCTAssertEqual(GallerySnippetFilter.searchCollections([networking], needle: "netw", showFavoritesOnly: false).map(\.name), ["Networking"])
+    }
+
     func test_searchCollections_excludesDeleted_respectsFavorites() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext
