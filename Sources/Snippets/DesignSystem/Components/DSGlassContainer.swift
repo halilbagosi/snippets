@@ -10,11 +10,7 @@ public struct DSGlassContainer<Content: View>: View {
     }
 
     public var body: some View {
-        if #available(macOS 26.0, *) {
-            GlassEffectContainer(spacing: spacing) {
-                content()
-            }
-        } else {
+        GlassEffectContainer(spacing: spacing) {
             content()
         }
     }
