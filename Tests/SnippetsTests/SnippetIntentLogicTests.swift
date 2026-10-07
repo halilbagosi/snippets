@@ -141,6 +141,30 @@ final class SnippetIntentLogicTests: XCTestCase {
         XCTAssertNotNil(legacy.uuid)
     }
 
+    func test_find_searchesBeyondTheNewest200_andCapsResults() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        // The target is the *oldest* snippet; 250 newer ones bury it.
+        let target = Snippet(title: "Parser", code: "p", updatedAt: .distantPast)
+        context.insert(target)
+        for index in 0..<250 {
+            context.insert(Snippet(title: "Note \(index)", code: "n", updatedAt: .now))
+        }
+        try context.save()
+
+        let found = try FindSnippetsIntent.execute(
+            searchText: "Parser", collectionID: nil, favoritesOnly: false, in: context
+        )
+        XCTAssertEqual(found.map(\.title), ["Parser"])
+
+        // Unfiltered, the result is still capped so Shortcuts never receives
+        // an unbounded array.
+        let all = try FindSnippetsIntent.execute(
+            searchText: nil, collectionID: nil, favoritesOnly: false, in: context
+        )
+        XCTAssertEqual(all.count, 200)
+    }
+
     // MARK: Copy
 
     func test_copy_returnsSnippetAndBumpsCopyCount_unknownThrows() throws {
