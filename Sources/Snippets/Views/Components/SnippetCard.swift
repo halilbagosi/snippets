@@ -176,6 +176,35 @@ struct SnippetCard: View {
         Self.dateFormatter.string(from: snippet.createdAt)
     }
 
+    /// The leading lines of `code` that the card's 10-line preview can show.
+    ///
+    /// `Text` lays out the whole string it is given even under `lineLimit`, so
+    /// handing it a full snippet (tens of KB) doubled the cost of every card
+    /// layout — paid again for every card on each grid reflow and every frame
+    /// of a live window resize. The 11th line is kept so `lineLimit` still
+    /// truncates, and shows its ellipsis, exactly where it did before; the
+    /// character cap covers minified one-line code.
+    static func previewText(of code: String, lines: Int = 11, maxCharacters: Int = 2_400) -> String {
+        var newlines = 0
+        var characters = 0
+        var end = code.endIndex
+        for index in code.indices {
+            characters += 1
+            if characters > maxCharacters {
+                end = index
+                break
+            }
+            if code[index].isNewline {
+                newlines += 1
+                if newlines == lines {
+                    end = index
+                    break
+                }
+            }
+        }
+        return String(code[..<end])
+    }
+
     @MainActor
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -236,7 +265,7 @@ struct SnippetCard: View {
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(snippet.code)
+                        Text(Self.previewText(of: snippet.code))
                             .font(Mono.font(size: 10))
                             .foregroundStyle(theme.text.opacity(0.72))
                             .lineLimit(10)
@@ -650,9 +679,19 @@ private struct CardImagePreview: View {
     @Environment(\.colorScheme) private var colorScheme
     let item: MediaItem
     #if canImport(AppKit)
-    @State private var image: NSImage? = nil
+    @State private var image: NSImage?
     @State private var imageLoadTask: Task<Void, Never>? = nil
     #endif
+
+    init(item: MediaItem) {
+        self.item = item
+        #if canImport(AppKit)
+        // Seeded from the cache so a card scrolled back into view, or a
+        // gallery returned to from a snippet, shows its image on the first
+        // frame instead of flashing the placeholder while it re-decodes.
+        _image = State(initialValue: CardImageFileLoader.cachedThumbnail(for: item.fileName))
+        #endif
+    }
 
     var body: some View {
         let theme = Theme.current(colorScheme)
@@ -691,11 +730,12 @@ private struct CardImagePreview: View {
         #if canImport(AppKit)
         guard image == nil else { return }
         imageLoadTask?.cancel()
-        let url = MediaManager.resolvedURL(for: item.fileName)
+        let fileName = item.fileName
+        let url = MediaManager.resolvedURL(for: fileName)
         imageLoadTask = Task { @MainActor in
             let thumbnail = await CardImageFileLoader.thumbnail(from: url)
             guard !Task.isCancelled else { return }
-            image = thumbnail.map { NSImage(cgImage: $0, size: NSSize(width: $0.width, height: $0.height)) }
+            image = thumbnail.map { CardImageFileLoader.cache($0, for: fileName) }
         }
         #endif
     }
@@ -717,6 +757,27 @@ private enum CardImageFileLoader {
     /// Card preview slots top out around 360pt wide, so 800px covers Retina
     /// without decoding the full-resolution attachment into memory.
     private static let maxThumbnailPixelSize: CGFloat = 800
+
+    /// Decoded thumbnails by media file name. Attachments are stored under
+    /// unique names and never rewritten in place, so an entry cannot go stale.
+    @MainActor
+    private static let thumbnails: NSCache<NSString, NSImage> = {
+        let cache = NSCache<NSString, NSImage>()
+        cache.totalCostLimit = 96 * 1024 * 1024
+        return cache
+    }()
+
+    @MainActor
+    static func cachedThumbnail(for fileName: String) -> NSImage? {
+        thumbnails.object(forKey: fileName as NSString)
+    }
+
+    @MainActor
+    static func cache(_ thumbnail: CGImage, for fileName: String) -> NSImage {
+        let image = NSImage(cgImage: thumbnail, size: NSSize(width: thumbnail.width, height: thumbnail.height))
+        thumbnails.setObject(image, forKey: fileName as NSString, cost: thumbnail.bytesPerRow * thumbnail.height)
+        return image
+    }
 
     static func thumbnail(from url: URL) async -> CGImage? {
         await Task.detached(priority: .userInitiated) {
