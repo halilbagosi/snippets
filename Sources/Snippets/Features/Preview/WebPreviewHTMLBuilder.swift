@@ -925,6 +925,19 @@ enum WebPreviewHTMLBuilder {
 
     // MARK: - GLSL
 
+    /// Whether a fragment-only shader is Shadertoy-style: it defines
+    /// `mainImage` but no `main`, so the preview must supply the entry point.
+    /// Comments are ignored so a commented-out `main` doesn't count.
+    /// Internal (not private) so tests can pin it.
+    static func needsMainImageEntry(_ code: String) -> Bool {
+        let uncommented = code
+            .replacingOccurrences(of: #"/\*[\s\S]*?\*/"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"//[^\n]*"#, with: "", options: .regularExpression)
+        let definesMainImage = uncommented.range(of: #"\bvoid\s+mainImage\s*\("#, options: .regularExpression) != nil
+        let definesMain = uncommented.range(of: #"\bvoid\s+main\s*\("#, options: .regularExpression) != nil
+        return definesMainImage && !definesMain
+    }
+
     private static func glslDocument(code: String, appearance: Appearance) -> String {
         // Fragment-only snippets (shadertoy-style) get a prelude declaring the
         // version, precision, standard uniforms and output; full shaders with
@@ -933,6 +946,11 @@ enum WebPreviewHTMLBuilder {
         if code.contains("#version") {
             fragment = code
         } else {
+            // Shadertoy shaders define `mainImage(out vec4, in vec2)` and rely
+            // on the host for `main`; without one the program fails to link.
+            let entry = needsMainImageEntry(code)
+                ? "\n/*snippet-glsl-main*/\nvoid main() { mainImage(fragColor, gl_FragCoord.xy); }"
+                : ""
             fragment = """
             #version 300 es
             /*snippet-glsl-header*/
@@ -941,7 +959,7 @@ enum WebPreviewHTMLBuilder {
             uniform vec2 iResolution;
             uniform vec4 iMouse;
             out vec4 fragColor;
-            \(code)
+            \(code)\(entry)
             """
         }
         let body = """

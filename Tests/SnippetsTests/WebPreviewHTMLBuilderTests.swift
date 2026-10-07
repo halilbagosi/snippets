@@ -758,6 +758,23 @@ final class WebPreviewHTMLBuilderTests: XCTestCase {
 
     // MARK: GLSL
 
+    func test_glsl_shadertoyMainImage_getsMainEntryPoint() {
+        let shader = "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = vec4(fragCoord / iResolution.xy, 0.5, 1.0);\n}"
+        let doc = document(shader, .glsl)
+        XCTAssertTrue(doc.contains("void main() { mainImage(fragColor, gl_FragCoord.xy); }"))
+    }
+
+    func test_glsl_shaderWithOwnMain_getsNoExtraEntryPoint() {
+        let shader = "void mainImage(out vec4 c, in vec2 p) { c = vec4(1.0); }\nvoid main() { mainImage(fragColor, gl_FragCoord.xy); }"
+        XCTAssertFalse(WebPreviewHTMLBuilder.needsMainImageEntry(shader))
+        XCTAssertFalse(WebPreviewHTMLBuilder.needsMainImageEntry("void main() { fragColor = vec4(1.0); }"))
+    }
+
+    func test_glsl_commentedOutMain_stillGetsEntryPoint() {
+        let shader = "// void main() { }\nvoid mainImage(out vec4 c, in vec2 p) { c = vec4(1.0); }"
+        XCTAssertTrue(WebPreviewHTMLBuilder.needsMainImageEntry(shader))
+    }
+
     func test_glsl_embedsShaderWithWebGLBoilerplateAndUniforms() {
         let shader = "void main() { fragColor = vec4(1.0); }"
         let doc = document(shader, .glsl)
