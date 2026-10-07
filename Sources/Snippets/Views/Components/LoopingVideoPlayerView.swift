@@ -78,11 +78,47 @@ final class LoopingVideoContainerView: NSView {
             newPlayer?.play()
         }
 
-        newPlayer.play()
-
         player = newPlayer
         playerLayer = newLayer
         applyZoom()
+        updatePlayback()
+    }
+
+    /// Looping previews would otherwise keep decoding video for as long as
+    /// the view exists — in a minimized, hidden, or fully covered window, or
+    /// one on another Space. `occlusionState` folds all of those cases into
+    /// one signal, the same one the Metal shader preview pauses on.
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+
+        NotificationCenter.default.removeObserver(
+            self,
+            name: NSWindow.didChangeOcclusionStateNotification,
+            object: nil
+        )
+        if let window {
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(occlusionStateChanged),
+                name: NSWindow.didChangeOcclusionStateNotification,
+                object: window
+            )
+        }
+
+        updatePlayback()
+    }
+
+    @objc private func occlusionStateChanged() {
+        updatePlayback()
+    }
+
+    private func updatePlayback() {
+        guard let player else { return }
+        if window?.occlusionState.contains(.visible) == true {
+            player.play()
+        } else {
+            player.pause()
+        }
     }
 
     func setZoom(scale: CGFloat, offset: CGSize) {
