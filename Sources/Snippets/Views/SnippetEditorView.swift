@@ -744,6 +744,10 @@ struct SnippetEditorView: View {
     private func debounceLanguageDetection(for code: String) {
         languageDetectionTask?.cancel()
 
+        // A hand-picked language wins, so detecting would be wasted work;
+        // `resetManualLanguage()` re-detects when auto-detect comes back.
+        guard viewModel.manualLanguage == nil else { return }
+
         if code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             viewModel.updateDetectedLanguage(for: code)
             return
@@ -752,7 +756,14 @@ struct SnippetEditorView: View {
         languageDetectionTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
-            viewModel.updateDetectedLanguage(for: code)
+            // Detection runs ~170 regexes and takes ~15ms on a large snippet —
+            // off the main thread, so the typing pause that triggered it
+            // can't stall the next keystroke.
+            let detected = await Task.detached(priority: .userInitiated) {
+                LanguageDetector.detect(code: code)
+            }.value
+            guard !Task.isCancelled else { return }
+            viewModel.detectedLanguage = detected
         }
     }
 }
