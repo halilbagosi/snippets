@@ -7,20 +7,29 @@ import SwiftData
 
 struct SnippetCard: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppearanceSettings.self) private var appearanceSettings
+    @Environment(\.modelContext) private var modelContext
     let snippet: Snippet
     var isSelected: Bool = false
     var inTrashView: Bool = false
     var isSelectionMode: Bool = false
     var onRestore: (() -> Void)? = nil
     var onPermanentDelete: (() -> Void)? = nil
+    /// When > 0, renders an inline "N linked" chip in the footer row — the
+    /// gallery's toggle for the connected-snippet stack behind this card.
+    var linkedCount: Int = 0
+    var isStackExpanded: Bool = false
+    var onToggleStack: (() -> Void)? = nil
+    /// Marks a card revealed from another card's connected-snippet stack;
+    /// renders a "connected" chip on the title row.
+    var isConnected: Bool = false
 
     @State private var didCopy: Bool = false
     @State private var copyResetTask: Task<Void, Never>? = nil
     @State private var isHovered: Bool = false
     @State private var hoverLocation: CGPoint = .zero
     @State private var cardSize: CGSize = .zero
-    @State private var didAppear: Bool = false
     @State private var isShowingActionDialog: Bool = false
 
     private var language: SupportedLanguage {
@@ -49,15 +58,19 @@ struct SnippetCard: View {
 
     private func performCopy() {
         Clipboard.copy(snippet.code)
-        snippet.copyCount += 1
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        // Bookkeeping goes through SnippetStore, not inline: `copyCount` feeds
+        // the panel's "Frequent" scope and the sidebar's "Frequently used"
+        // section, and a second definition of "a copy happened" is how those
+        // drift apart from each other.
+        SnippetStore.recordCopy(snippet, in: modelContext)
+        withAnimation(DSToken.Motion.toggle) {
             didCopy = true
         }
         copyResetTask?.cancel()
         copyResetTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 1_400_000_000)
             if !Task.isCancelled {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                withAnimation(DSToken.Motion.toggle) {
                     didCopy = false
                 }
             }
@@ -97,8 +110,99 @@ struct SnippetCard: View {
         .accessibilityLabel(didCopy ? "Copied" : "Copy code")
     }
 
+    /// Footer chip toggling the connected-snippet stack. Same metrics and
+    /// color recipe as `copyButton` so the footer chips read as one family.
+    @ViewBuilder
+    private func linkedChip(theme: Theme, languageAccent: Color) -> some View {
+        let fgColor = colorScheme == .dark ? .white : languageAccent.blended(with: .black, ratio: 0.45)
+        let strokeColor = languageAccent.saturation(3.0).brightness(colorScheme == .dark ? 0.22 : -0.15).opacity(0.50)
+        let fillColor = languageAccent.saturation(2.5).brightness(0.15).opacity(colorScheme == .dark ? 0.20 : 0.12)
+
+        Button { onToggleStack?() } label: {
+            HStack(spacing: 5) {
+                Image(systemName: isStackExpanded ? "chevron.up" : "square.3.layers.3d.down.right")
+                    .symbolRenderingMode(.hierarchical)
+                    .font(Mono.font(size: 9, weight: .semibold))
+                Text(isStackExpanded ? "hide" : "\(linkedCount) linked")
+                    .font(Mono.font(size: 10, weight: .semibold))
+                    // "N linked" is the only footer label with a space in it, so
+                    // it is the one the row breaks when a card narrows (sidebar
+                    // open). Wrapped, the chip grows to two lines and stands
+                    // taller than the copy chip it is supposed to match.
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .foregroundStyle(fgColor)
+            .background {
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(isStackExpanded ? languageAccent.opacity(colorScheme == .dark ? 0.40 : 0.25) : fillColor)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .stroke(isStackExpanded ? languageAccent.opacity(0.8) : strokeColor, lineWidth: 1)
+                    }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(isStackExpanded ? "Hide connected snippets" : "Show the snippets stacked behind this one")
+        .accessibilityLabel("\(linkedCount) connected snippets")
+    }
+
+    /// Title-row chip marking a card revealed from a connected-snippet stack.
+    @ViewBuilder
+    private func connectedChip(theme: Theme) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: "link")
+                .font(Mono.font(size: 9, weight: .semibold))
+            Text("connected")
+                .font(Mono.font(size: 10, weight: .semibold))
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .foregroundStyle(theme.accent)
+        .background {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(theme.accent.opacity(colorScheme == .dark ? 0.20 : 0.12))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .stroke(theme.accent.opacity(0.5), lineWidth: 1)
+                }
+        }
+        .accessibilityLabel("Connected snippet")
+    }
+
     private var formattedDate: String {
         Self.dateFormatter.string(from: snippet.createdAt)
+    }
+
+    /// The leading lines of `code` that the card's 10-line preview can show.
+    ///
+    /// `Text` lays out the whole string it is given even under `lineLimit`, so
+    /// handing it a full snippet (tens of KB) doubled the cost of every card
+    /// layout — paid again for every card on each grid reflow and every frame
+    /// of a live window resize. The 11th line is kept so `lineLimit` still
+    /// truncates, and shows its ellipsis, exactly where it did before; the
+    /// character cap covers minified one-line code.
+    static func previewText(of code: String, lines: Int = 11, maxCharacters: Int = 2_400) -> String {
+        var newlines = 0
+        var characters = 0
+        var end = code.endIndex
+        for index in code.indices {
+            characters += 1
+            if characters > maxCharacters {
+                end = index
+                break
+            }
+            if code[index].isNewline {
+                newlines += 1
+                if newlines == lines {
+                    end = index
+                    break
+                }
+            }
+        }
+        return String(code[..<end])
     }
 
     @MainActor
@@ -113,6 +217,9 @@ struct SnippetCard: View {
         let theme = Theme.current(colorScheme)
         let languageAccent = theme.accentColor(for: language).saturation(10)
         let effectiveIsHovered = (isSelectionMode || appearanceSettings.disableHoverEffects) ? false : isHovered
+        // Reduce Motion keeps the hover glow and accent tint — those are pure
+        // opacity — but drops the parallax tilt, shift and scale.
+        let isTilting = effectiveIsHovered && !reduceMotion
         let mediaItems = snippet.mediaItems.sorted { $0.addedAt < $1.addedAt }
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
@@ -121,8 +228,12 @@ struct SnippetCard: View {
                         .font(Sans.font(size: 15, weight: .semibold))
                         .foregroundStyle(theme.text)
                         .lineLimit(1)
-                    
+
                     Spacer()
+
+                    if isConnected {
+                        connectedChip(theme: theme)
+                    }
                 }
 
                 if !snippet.snippetDescription.isEmpty {
@@ -154,7 +265,7 @@ struct SnippetCard: View {
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(snippet.code)
+                        Text(Self.previewText(of: snippet.code))
                             .font(Mono.font(size: 10))
                             .foregroundStyle(theme.text.opacity(0.72))
                             .lineLimit(10)
@@ -186,7 +297,6 @@ struct SnippetCard: View {
                     .allowsHitTesting(false)
                 }
             }
-            .opacity(didAppear ? 1 : 0)
             .padding(.horizontal, 12)
             .padding(.top, 8)
 
@@ -202,7 +312,7 @@ struct SnippetCard: View {
                 }
                 copyButton(theme: theme, languageAccent: languageAccent)
                 Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    withAnimation(DSToken.Motion.toggle) {
                         snippet.isFavorite.toggle()
                     }
                 } label: {
@@ -218,6 +328,9 @@ struct SnippetCard: View {
                 }
                 .buttonStyle(.plain)
                 .help(snippet.isFavorite ? "Remove from favorites" : "Add to favorites")
+                if linkedCount > 0 {
+                    linkedChip(theme: theme, languageAccent: languageAccent)
+                }
                 Spacer(minLength: 8)
                 if inTrashView {
                     let days = snippet.daysUntilPermanentDeletion
@@ -272,7 +385,7 @@ struct SnippetCard: View {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(languageAccent.opacity(colorScheme == .dark ? 0.13 : 0.09))
                         .opacity(isHovered ? 1 : 0)
-                        .animation(.easeOut(duration: 0.12), value: isHovered)
+                        .animation(DSToken.Motion.hover, value: isHovered)
                 }
                 .overlay {
                     if effectiveIsHovered {
@@ -313,28 +426,21 @@ struct SnippetCard: View {
         }
         .frame(maxWidth: .infinity)
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .scaleEffect(isHovered ? 1.005 : 1.0)
+        .scaleEffect(isTilting ? 1.01 : 1.0)
         .rotation3DEffect(
-            .degrees(effectiveIsHovered ? -Double(hoverVector.dy) * 1.5 : 0),
+            .degrees(isTilting ? -Double(hoverVector.dy) * 1.5 : 0),
             axis: (x: 1, y: 0, z: 0),
             perspective: 0.72
         )
         .rotation3DEffect(
-            .degrees(effectiveIsHovered ? Double(hoverVector.dx) * 2.0 : 0),
+            .degrees(isTilting ? Double(hoverVector.dx) * 2.0 : 0),
             axis: (x: 0, y: 1, z: 0),
             perspective: 0.72
         )
         .offset(
-            x: effectiveIsHovered ? hoverVector.dx * 1.5 : 0,
-            y: effectiveIsHovered ? hoverVector.dy * 1.0 : 0
+            x: isTilting ? hoverVector.dx * 1.5 : 0,
+            y: isTilting ? hoverVector.dy * 1.0 : 0
         )
-        .opacity(didAppear ? 1 : 0)
-        .offset(y: didAppear ? 0 : 10)
-        .onAppear {
-            withAnimation(.spring(response: 0.42, dampingFraction: 0.84)) {
-                didAppear = true
-            }
-        }
         .onContinuousHover { phase in
             guard !isSelectionMode else { return }
             switch phase {
@@ -344,19 +450,22 @@ struct SnippetCard: View {
                     y: min(max(location.y, 0), max(cardSize.height, 1))
                 )
                 if !isHovered {
-                    withAnimation(.easeOut(duration: 0.16)) {
+                    withAnimation(DSToken.Motion.hover) {
                         isHovered = true
                     }
                 }
             case .ended:
-                withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
+                withAnimation(DSToken.Motion.hover) {
                     isHovered = false
                     hoverLocation = hoverCenter
                 }
             }
         }
-        .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isHovered)
-        .animation(.interactiveSpring(response: 0.24, dampingFraction: 0.74), value: hoverLocation)
+        // No `.animation(_:value: isHovered)` here on purpose: it would shadow
+        // the transactions above and flatten the deliberate asymmetry — the
+        // card lifts fast on hover-in (easeOut 0.16) and settles back on a
+        // softer spring when the pointer leaves.
+        .animation(DSToken.Motion.tilt, value: hoverLocation)
         .trashDoubleTap(inTrash: inTrashView) {
             isShowingActionDialog = true
         }
@@ -570,9 +679,19 @@ private struct CardImagePreview: View {
     @Environment(\.colorScheme) private var colorScheme
     let item: MediaItem
     #if canImport(AppKit)
-    @State private var image: NSImage? = nil
+    @State private var image: NSImage?
     @State private var imageLoadTask: Task<Void, Never>? = nil
     #endif
+
+    init(item: MediaItem) {
+        self.item = item
+        #if canImport(AppKit)
+        // Seeded from the cache so a card scrolled back into view, or a
+        // gallery returned to from a snippet, shows its image on the first
+        // frame instead of flashing the placeholder while it re-decodes.
+        _image = State(initialValue: CardImageFileLoader.cachedThumbnail(for: item.fileName))
+        #endif
+    }
 
     var body: some View {
         let theme = Theme.current(colorScheme)
@@ -611,11 +730,12 @@ private struct CardImagePreview: View {
         #if canImport(AppKit)
         guard image == nil else { return }
         imageLoadTask?.cancel()
-        let url = MediaManager.resolvedURL(for: item.fileName)
+        let fileName = item.fileName
+        let url = MediaManager.resolvedURL(for: fileName)
         imageLoadTask = Task { @MainActor in
-            let data = await CardImageFileLoader.data(from: url)
+            let thumbnail = await CardImageFileLoader.thumbnail(from: url)
             guard !Task.isCancelled else { return }
-            image = data.flatMap(NSImage.init(data:))
+            image = thumbnail.map { CardImageFileLoader.cache($0, for: fileName) }
         }
         #endif
     }
@@ -634,9 +754,44 @@ private struct CardVideoPreview: View {
 
 #if canImport(AppKit)
 private enum CardImageFileLoader {
-    static func data(from url: URL) async -> Data? {
+    /// Card preview slots top out around 360pt wide, so 800px covers Retina
+    /// without decoding the full-resolution attachment into memory.
+    private static let maxThumbnailPixelSize: CGFloat = 800
+
+    /// Decoded thumbnails by media file name. Attachments are stored under
+    /// unique names and never rewritten in place, so an entry cannot go stale.
+    @MainActor
+    private static let thumbnails: NSCache<NSString, NSImage> = {
+        let cache = NSCache<NSString, NSImage>()
+        cache.totalCostLimit = 96 * 1024 * 1024
+        return cache
+    }()
+
+    @MainActor
+    static func cachedThumbnail(for fileName: String) -> NSImage? {
+        thumbnails.object(forKey: fileName as NSString)
+    }
+
+    @MainActor
+    static func cache(_ thumbnail: CGImage, for fileName: String) -> NSImage {
+        let image = NSImage(cgImage: thumbnail, size: NSSize(width: thumbnail.width, height: thumbnail.height))
+        thumbnails.setObject(image, forKey: fileName as NSString, cost: thumbnail.bytesPerRow * thumbnail.height)
+        return image
+    }
+
+    static func thumbnail(from url: URL) async -> CGImage? {
         await Task.detached(priority: .userInitiated) {
-            try? Data(contentsOf: url)
+            guard let source = CGImageSourceCreateWithURL(
+                url as CFURL,
+                [kCGImageSourceShouldCache: false] as CFDictionary
+            ) else { return nil }
+            let options = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceShouldCacheImmediately: true,
+                kCGImageSourceThumbnailMaxPixelSize: maxThumbnailPixelSize
+            ] as CFDictionary
+            return CGImageSourceCreateThumbnailAtIndex(source, 0, options)
         }.value
     }
 }
@@ -651,20 +806,4 @@ private extension View {
             self
         }
     }
-}
-
-#Preview("SnippetCard") {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: Snippet.self, SnippetCollection.self, MediaItem.self, configurations: config)
-    let snippet = Snippet(
-        title: "Hello World",
-        snippetDescription: "A simple hello world script.",
-        language: "swift",
-        code: "print(\"Hello World\")"
-    )
-    SnippetCard(snippet: snippet)
-        .padding()
-        .frame(width: 300)
-        .modelContainer(container)
-        .environment(AppearanceSettings())
 }

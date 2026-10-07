@@ -10,9 +10,11 @@ struct SnippetEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let mode: Mode
     let availableCollections: [SnippetCollection]
+    let availableSnippets: [Snippet]
     let onSave: (Snippet) throws -> Void
     var onRequestDismiss: (() -> Void)? = nil
     private let mediaManager: any MediaManaging
@@ -25,18 +27,22 @@ struct SnippetEditorView: View {
     @State private var languageDetectionTask: Task<Void, Never>? = nil
     @State private var showValidationFeedback: Bool = false
     @State private var validationShake: Bool = false
+    @State private var isAddingConnection: Bool = false
+    @State private var connectionSearch: String = ""
 
     enum Field: Hashable { case title, description }
 
     init(
         mode: Mode,
         availableCollections: [SnippetCollection],
+        availableSnippets: [Snippet] = [],
         mediaManager: any MediaManaging = MediaManager.shared,
         onRequestDismiss: (() -> Void)? = nil,
         onSave: @escaping (Snippet) throws -> Void
     ) {
         self.mode = mode
         self.availableCollections = availableCollections
+        self.availableSnippets = availableSnippets
         self.mediaManager = mediaManager
         self.onRequestDismiss = onRequestDismiss
         self.onSave = onSave
@@ -64,6 +70,7 @@ struct SnippetEditorView: View {
                         descriptionSection
                         languageSection
                         collectionsSection
+                        connectionsSection
                         codeSection
                         mediaSection
                     }
@@ -190,10 +197,8 @@ struct SnippetEditorView: View {
                 if canSave {
                     save()
                 } else {
-                    withAnimation { showValidationFeedback = true }
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.2)) {
-                        validationShake.toggle()
-                    }
+                    withAnimation(DSToken.Motion.reveal) { showValidationFeedback = true }
+                    validationShake.toggle()
                     if viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         focus = .title
                     } else if viewModel.code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -249,7 +254,10 @@ struct SnippetEditorView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { focus = .title }
         }
-        .offset(x: validationShake && viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 5 : 0)
+        .validationShake(
+            trigger: validationShake,
+            active: !reduceMotion && viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        )
     }
 
     private var descriptionSection: some View {
@@ -380,7 +388,10 @@ struct SnippetEditorView: View {
                 }
             }
         }
-        .offset(x: validationShake && viewModel.code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 5 : 0)
+        .validationShake(
+            trigger: validationShake,
+            active: !reduceMotion && viewModel.code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        )
     }
 
     private var collectionsSection: some View {
@@ -431,6 +442,208 @@ struct SnippetEditorView: View {
                 }
             }
         }
+    }
+
+    /// How to author snippets so combined previews actually run — written
+    /// from the preview engine's real constraints (see WebPreviewHTMLBuilder).
+    private var connectionsHint: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("connections run before this snippet in one shared preview:")
+            Text("• reference a connection by the name it defines — import lines are ignored")
+            Text("• keep a component's css as its own connected css snippet (import \"./x.css\" is dropped)")
+            Text("• npm packages (framer-motion, gsap…) load on demand from esm.sh")
+            #if APP_STORE
+            Text("• web languages link with web entries; glsl with glsl")
+            #else
+            Text("• web languages link with web entries; swift with swift; glsl with glsl")
+            #endif
+        }
+        .font(Mono.font(size: 10))
+        .foregroundStyle(theme.textMuted)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(theme.surface.opacity(0.6))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(theme.border, lineWidth: 1)
+                }
+        }
+    }
+
+    private func connectionLanguage(_ snippet: Snippet) -> SupportedLanguage {
+        SupportedLanguage(rawValue: snippet.language) ?? .unknown
+    }
+
+    private func connectionContributes(_ snippet: Snippet) -> Bool {
+        SnippetLinker.canContribute(connectionLanguage(snippet), toEntry: viewModel.effectiveLanguage)
+    }
+
+    /// What each connection does in this snippet's combined preview.
+    private func connectionRole(_ snippet: Snippet) -> String {
+        let entry = viewModel.effectiveLanguage
+        let dep = connectionLanguage(snippet)
+        guard SnippetLinker.canContribute(dep, toEntry: entry) else {
+            return "won't join the preview (\(dep.rawValue.lowercased()) ↛ \(entry.rawValue.lowercased()))"
+        }
+        switch dep {
+        case .css: return entry == .css ? "layers in as extra styles" : "injected as styles"
+        case .html: return entry == .css ? "used as the preview markup" : "prepended as markup"
+        case .javascript, .typescript, .react: return "runs before this snippet"
+        case .swift: return "compiled together with this snippet"
+        case .glsl, .metal: return "concatenated into the shader"
+        default: return "included in the preview"
+        }
+    }
+
+    /// Explains, per connection, its role in the preview — and flags when a
+    /// connection looks more like the preview root than the edited snippet,
+    /// so users learn which side should own the connection.
+    private var connectionRolesInfo: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("this snippet is the preview root (\(viewModel.effectiveLanguage.rawValue.lowercased())):")
+            ForEach(viewModel.dependencies) { dependency in
+                Text("• \(dependency.title.lowercased()) — \(connectionRole(dependency))")
+            }
+            if let better = SnippetLinker.strongerEntry(
+                thanEntryOf: viewModel.effectiveLanguage, among: viewModel.dependencies
+            ) {
+                Label(
+                    "“\(better.title.lowercased())” (\(better.language.lowercased())) looks like the better preview root — consider opening it and connecting this snippet there instead",
+                    systemImage: "arrow.triangle.swap"
+                )
+                .foregroundStyle(Color.orange)
+            }
+        }
+        .font(Mono.font(size: 10))
+        .foregroundStyle(theme.textMuted)
+        .padding(.horizontal, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Snippets this one depends on for combined previews (see SnippetLinker).
+    private var connectionsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeader("connections") {
+                Text("optional")
+                    .font(Mono.font(size: 10, weight: .medium))
+                    .foregroundStyle(theme.textMuted)
+            }
+
+            if !viewModel.dependencies.isEmpty {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
+                    ForEach(viewModel.dependencies) { dependency in
+                        let accent = connectionContributes(dependency) ? theme.accent : Color.orange
+                        Button {
+                            viewModel.removeDependency(dependency)
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: connectionContributes(dependency) ? "link" : "exclamationmark.triangle")
+                                    .font(Mono.font(size: 9, weight: .semibold))
+                                Text(dependency.title.lowercased())
+                                    .lineLimit(1)
+                                Text(dependency.language.lowercased())
+                                    .font(Mono.font(size: 9))
+                                    .opacity(0.7)
+                                Spacer(minLength: 0)
+                                Image(systemName: "xmark")
+                                    .font(Mono.font(size: 8, weight: .bold))
+                            }
+                            .font(Mono.font(size: 11, weight: .semibold))
+                            .foregroundStyle(accent)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(accent.opacity(colorScheme == .dark ? 0.22 : 0.12))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .strokeBorder(accent.opacity(0.4), lineWidth: 1)
+                                    }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .help(connectionContributes(dependency)
+                            ? "Remove connection"
+                            : "Won't join the preview — \(dependency.language.lowercased()) can't feed a \(viewModel.effectiveLanguage.rawValue.lowercased()) preview. Click to remove.")
+                    }
+                }
+                connectionRolesInfo
+            }
+
+            if isAddingConnection {
+                VStack(alignment: .leading, spacing: 6) {
+                    connectionsHint
+                    TextField("search snippets", text: $connectionSearch)
+                        .textFieldStyle(.plain)
+                        .font(Mono.font(size: 12))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(theme.surface)
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .strokeBorder(theme.border, lineWidth: 1)
+                                }
+                        }
+                    if connectionCandidates.isEmpty {
+                        Text("no matching snippets")
+                            .font(Mono.font(size: 11))
+                            .foregroundStyle(theme.textMuted)
+                            .padding(.horizontal, 4)
+                    } else {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 2) {
+                                ForEach(connectionCandidates.prefix(20)) { candidate in
+                                    Button {
+                                        viewModel.addDependency(candidate)
+                                        connectionSearch = ""
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "plus.circle")
+                                                .foregroundStyle(theme.accent)
+                                            Text(candidate.title)
+                                                .lineLimit(1)
+                                            Spacer(minLength: 8)
+                                            Text(candidate.language.lowercased())
+                                                .foregroundStyle(theme.textMuted)
+                                        }
+                                        .font(Mono.font(size: 11))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 6)
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 160)
+                    }
+                }
+            }
+
+            Button {
+                isAddingConnection.toggle()
+                if !isAddingConnection { connectionSearch = "" }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: isAddingConnection ? "chevron.up" : "plus")
+                    Text(isAddingConnection ? "done" : "add connection")
+                }
+                .font(Mono.font(size: 11, weight: .semibold))
+                .foregroundStyle(theme.textMuted)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var connectionCandidates: [Snippet] {
+        let base = availableSnippets.filter { viewModel.isDependencyCandidate($0, mode: mode) }
+        guard !connectionSearch.isEmpty else { return base }
+        return base.filter { $0.title.localizedCaseInsensitiveContains(connectionSearch) }
     }
 
     private var mediaSection: some View {
@@ -531,6 +744,10 @@ struct SnippetEditorView: View {
     private func debounceLanguageDetection(for code: String) {
         languageDetectionTask?.cancel()
 
+        // A hand-picked language wins, so detecting would be wasted work;
+        // `resetManualLanguage()` re-detects when auto-detect comes back.
+        guard viewModel.manualLanguage == nil else { return }
+
         if code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             viewModel.updateDetectedLanguage(for: code)
             return
@@ -539,7 +756,14 @@ struct SnippetEditorView: View {
         languageDetectionTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
-            viewModel.updateDetectedLanguage(for: code)
+            // Detection runs ~170 regexes and takes ~15ms on a large snippet —
+            // off the main thread, so the typing pause that triggered it
+            // can't stall the next keystroke.
+            let detected = await Task.detached(priority: .userInitiated) {
+                LanguageDetector.detect(code: code)
+            }.value
+            guard !Task.isCancelled else { return }
+            viewModel.detectedLanguage = detected
         }
     }
 }
@@ -637,10 +861,10 @@ private struct MediaThumbnail: View {
         loadFailed = false
         let url = MediaManager.resolvedURL(for: item.fileName)
         imageLoadTask = Task { @MainActor in
-            let data = await EditorImageFileLoader.data(from: url)
+            let cgImage = await EditorImageFileLoader.thumbnail(from: url)
             guard !Task.isCancelled else { return }
-            if let data, let nsImage = NSImage(data: data) {
-                image = nsImage
+            if let cgImage {
+                image = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
             } else {
                 loadFailed = true
             }
@@ -651,11 +875,59 @@ private struct MediaThumbnail: View {
     }
 }
 
+private extension View {
+    /// Nudges the view side to side once and returns it to rest.
+    ///
+    /// The previous implementation animated a static `offset(x: 5)` with an
+    /// underdamped spring, which oscillated and then *settled* at 5pt — the
+    /// field stayed visibly displaced until the next failed save flipped it
+    /// back. A keyframe track plays the full shake and always lands on zero.
+    func validationShake(trigger: Bool, active: Bool) -> some View {
+        modifier(ValidationShakeModifier(trigger: trigger, active: active))
+    }
+}
+
+/// A `ViewModifier` rather than a method body on `View`: writing the keyframe
+/// closure directly in a generic `View` extension captures `Self.Type` in an
+/// isolated closure, which the compiler warns about.
+private struct ValidationShakeModifier: ViewModifier {
+    let trigger: Bool
+    let active: Bool
+
+    func body(content: Content) -> some View {
+        content.keyframeAnimator(
+            initialValue: CGFloat.zero,
+            trigger: trigger
+        ) { view, offset in
+            view.offset(x: active ? offset : 0)
+        } keyframes: { _ in
+            KeyframeTrack {
+                CubicKeyframe(-6, duration: 0.06)
+                CubicKeyframe(6, duration: 0.09)
+                CubicKeyframe(-4, duration: 0.08)
+                CubicKeyframe(0, duration: 0.07)
+            }
+        }
+    }
+}
+
 #if canImport(AppKit)
 private enum EditorImageFileLoader {
-    static func data(from url: URL) async -> Data? {
+    /// Editor attachment tiles are small; 600px covers them at Retina without
+    /// decoding the full-resolution file.
+    static func thumbnail(from url: URL) async -> CGImage? {
         await Task.detached(priority: .userInitiated) {
-            try? Data(contentsOf: url)
+            guard let source = CGImageSourceCreateWithURL(
+                url as CFURL,
+                [kCGImageSourceShouldCache: false] as CFDictionary
+            ) else { return nil }
+            let options = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceShouldCacheImmediately: true,
+                kCGImageSourceThumbnailMaxPixelSize: 600
+            ] as CFDictionary
+            return CGImageSourceCreateThumbnailAtIndex(source, 0, options)
         }.value
     }
 }

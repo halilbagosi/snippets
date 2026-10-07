@@ -19,24 +19,6 @@ struct SnippetCollectionCard: View {
     @State private var cardSize: CGSize = .zero
     @State private var didAppear = false
 
-    private var activeSnippetCount: Int {
-        var seenIDs = Set<PersistentIdentifier>()
-
-        func collect(from collection: SnippetCollection) {
-            for snippet in collection.snippets where snippet.deletedAt == nil {
-                guard !seenIDs.contains(snippet.persistentModelID) else { continue }
-                seenIDs.insert(snippet.persistentModelID)
-            }
-
-            for child in collection.children {
-                collect(from: child)
-            }
-        }
-
-        collect(from: collection)
-        return seenIDs.count
-    }
-
     private var hoverCenter: CGPoint {
         CGPoint(x: max(cardSize.width, 1) * 0.5, y: max(cardSize.height, 1) * 0.5)
     }
@@ -67,7 +49,7 @@ struct SnippetCollectionCard: View {
         let effectiveIsHovered = isSelectionMode ? false : isHovered
         let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
         let iconShape = RoundedRectangle(cornerRadius: 10, style: .continuous)
-        let count = activeSnippetCount
+        let count = collection.activeSnippetCount
         let snippetSummary = "\(count) Snippet\(count == 1 ? "" : "s")"
 
         HStack(spacing: 14) {
@@ -112,7 +94,7 @@ struct SnippetCollectionCard: View {
                 } else {
                     HStack(spacing: 8) {
                         Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            withAnimation(DSToken.Motion.toggle) {
                                 collection.isFavorite.toggle()
                             }
                         } label: {
@@ -202,7 +184,7 @@ struct SnippetCollectionCard: View {
                     shape
                         .fill(accent.opacity(colorScheme == .dark ? 0.10 : 0.07))
                         .opacity(effectiveIsHovered ? 1 : 0)
-                        .animation(.easeOut(duration: 0.14), value: effectiveIsHovered)
+                        .animation(DSToken.Motion.hover, value: effectiveIsHovered)
                 }
         }
         .overlay {
@@ -251,7 +233,7 @@ struct SnippetCollectionCard: View {
             onOpen()
         }
         .onAppear {
-            withAnimation(.spring(response: 0.30, dampingFraction: 0.94)) {
+            withAnimation(DSToken.Motion.hover) {
                 didAppear = true
             }
         }
@@ -264,19 +246,19 @@ struct SnippetCollectionCard: View {
                     y: min(max(location.y, 0), max(cardSize.height, 1))
                 )
                 if !isHovered {
-                    withAnimation(.easeOut(duration: 0.16)) {
+                    withAnimation(DSToken.Motion.hover) {
                         isHovered = true
                     }
                 }
             case .ended:
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.94)) {
+                withAnimation(DSToken.Motion.hover) {
                     isHovered = false
                     hoverLocation = hoverCenter
                 }
             }
         }
-        .animation(.spring(response: 0.26, dampingFraction: 0.94), value: isHovered)
-        .animation(.interactiveSpring(response: 0.20, dampingFraction: 0.86), value: hoverLocation)
+        .animation(DSToken.Motion.hover, value: isHovered)
+        .animation(DSToken.Motion.tilt, value: hoverLocation)
         .accessibilityLabel("\(collection.name), \(snippetSummary)")
         .accessibilityAddTraits(.isButton)
         .accessibilityAction {
@@ -299,23 +281,5 @@ struct SnippetCollectionCard: View {
                 }
             }
         }
-    }
-}
-
-#Preview("SnippetCollectionCard") {
-    do {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try ModelContainer(for: Snippet.self, SnippetCollection.self, MediaItem.self, configurations: config)
-        let collection = SnippetCollection(
-            name: "Favorites",
-            colorHex: "#FF0000",
-            iconName: "star.fill"
-        )
-        return SnippetCollectionCard(collection: collection, onOpen: {})
-            .padding()
-            .frame(width: 300)
-            .modelContainer(container)
-    } catch {
-        return Text("Failed to create preview container")
     }
 }

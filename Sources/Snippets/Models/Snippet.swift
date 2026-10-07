@@ -15,11 +15,24 @@ final class Snippet {
     var deletedAt: Date?
     var uuid: UUID?
 
+    /// Saved preview parameter configurations. Both properties carry defaults
+    /// so existing rows migrate without intervention.
+    var paramConfigs: [PreviewParamConfig] = []
+    var activeParamConfigID: UUID?
+
     @Relationship(deleteRule: .cascade, inverse: \MediaItem.snippet)
     var mediaItems: [MediaItem]
 
     @Relationship(inverse: \SnippetCollection.snippets)
     var collections: [SnippetCollection]
+
+    /// Snippets this snippet needs to build a combined live preview.
+    /// The order is the one the app last wrote, but SwiftData does not
+    /// guarantee to-many order across saves.
+    @Relationship(inverse: \Snippet.dependents)
+    var dependencies: [Snippet] = []
+
+    var dependents: [Snippet] = []
 
     var isDeleted: Bool {
         deletedAt != nil

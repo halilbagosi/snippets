@@ -313,20 +313,3 @@ final class LineNumberRulerView: NSRulerView {
     }
 }
 #endif
-
-#Preview("CodeEditor") {
-    struct PreviewWrapper: View {
-        @State private var text = "func hello() {\n    print(\"Hello\")\n}"
-        @State private var isFocused = false
-        var body: some View {
-            CodeEditor(
-                text: $text,
-                isFocused: $isFocused,
-                language: .swift,
-                theme: Theme.current(.dark)
-            )
-            .padding()
-        }
-    }
-    return PreviewWrapper()
-}

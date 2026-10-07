@@ -37,11 +37,3 @@ extension SectionHeader where Trailing == EmptyView {
         self.trailing = EmptyView()
     }
 }
-
-#Preview("SectionHeader") {
-    VStack(spacing: 20) {
-        SectionHeader("Files")
-        SectionHeader(prefix: "///", "Documentation")
-    }
-    .padding()
-}

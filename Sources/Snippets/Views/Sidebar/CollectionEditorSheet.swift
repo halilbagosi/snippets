@@ -49,34 +49,34 @@ struct CollectionEditorSheet: View {
     ]
 
     private static let symbolSections: [SymbolSection] = [
-        .init(title: "Code", symbols: [
+        .init(title: "Development", symbols: [
             "curlybraces", "terminal", "chevron.left.forwardslash.chevron.right", "command",
-            "apple.terminal", "doc.plaintext", "doc.text", "doc.on.doc",
-            "text.alignleft", "number", "function", "sum",
+            "apple.terminal", "function", "number", "sum",
             "at", "cpu", "memorychip", "server.rack",
-            "externaldrive", "internaldrive", "network", "point.3.connected.trianglepath.dotted"
+            "desktopcomputer", "laptopcomputer", "keyboard", "display",
+            "apple.logo", "swift", "gearshape.2", "wrench.and.screwdriver",
+            "hammer", "ant", "ladybug", "testtube.2"
         ]),
-        .init(title: "Objects", symbols: [
-            "tag", "bookmark", "paperclip", "link",
-            "pin", "archivebox", "tray.full", "shippingbox",
-            "lock", "key", "hammer", "wrench.and.screwdriver",
-            "paintpalette", "wand.and.stars", "camera", "photo",
-            "video", "play.rectangle", "music.note", "waveform"
+        .init(title: "Cloud & Data", symbols: [
+            "externaldrive", "internaldrive", "network", "point.3.connected.trianglepath.dotted",
+            "cloud", "cloud.fill", "icloud", "arrow.up.arrow.down",
+            "doc.plaintext", "doc.text", "doc.on.doc", "folder",
+            "folder.badge.gearshape", "tray.full", "archivebox", "cylinder",
+            "cylinder.split.1x2", "opticaldiscsymbol", "sdcard", "filemenu.and.selection"
         ]),
-        .init(title: "People", symbols: [
-            "person", "person.fill", "person.2", "person.2.fill",
-            "person.crop.circle", "person.crop.circle.fill", "figure.stand", "figure.walk",
-            "figure.wave", "figure.2.and.child.holdinghands", "person.3", "person.3.fill",
-            "brain.head.profile", "eye", "eyes", "ear",
-            "hand.raised", "hand.thumbsup", "hand.thumbsdown", "hand.tap",
-            "hand.point.up.left", "hand.point.right", "hand.wave", "face.smiling"
+        .init(title: "Design & Media", symbols: [
+            "paintbrush", "paintpalette", "wand.and.stars", "sparkles",
+            "camera", "photo", "rectangle.3.group", "square.grid.3x3",
+            "eyedropper", "ruler", "pencil.and.ruler", "scissors",
+            "play.rectangle", "waveform", "music.note", "video",
+            "rectangle.on.rectangle", "square.on.square", "circle.grid.3x3", "aspectratio"
         ]),
-        .init(title: "Animals & Nature", symbols: [
-            "hare", "tortoise", "dog", "cat",
-            "bird", "fish", "pawprint", "ladybug",
-            "leaf", "tree", "globe.americas", "globe.europe.africa",
-            "sun.max", "sunrise", "sunset", "moon",
-            "sparkles", "cloud", "flame", "drop"
+        .init(title: "Security & Networking", symbols: [
+            "lock", "lock.shield", "key", "lock.circle",
+            "wifi", "antenna.radiowaves.left.and.right", "globe", "globe.americas",
+            "link", "personalhotspot", "bolt.horizontal", "arrow.triangle.branch",
+            "tag", "bookmark", "pin", "flag",
+            "bell", "paperclip", "scope", "eye"
         ])
     ]
 
@@ -221,7 +221,7 @@ struct CollectionEditorSheet: View {
                 colorScheme == .light ? (collectionColorDark ?? collectionColor) : collectionColor
             },
             set: { newColor in
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                withAnimation(DSToken.Motion.toggle) {
                     if colorScheme == .light {
                         collectionColorDark = newColor
                     } else {
@@ -245,7 +245,7 @@ struct CollectionEditorSheet: View {
             HStack(spacing: 8) {
                 // Auto-suggested color button
                 Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    withAnimation(DSToken.Motion.toggle) {
                         action()
                     }
                 } label: {
@@ -398,7 +398,7 @@ struct CollectionEditorSheet: View {
                         }
                     }
                     Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        withAnimation(DSToken.Motion.toggle) {
                             collectionColorDark = nil
                         }
                     } label: {
@@ -424,7 +424,7 @@ struct CollectionEditorSheet: View {
                     ))
             }
             }
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: collectionColorDark)
+            .animation(DSToken.Motion.toggle, value: collectionColorDark)
 
             TextField("Collection name", text: $collectionName)
                 .textFieldStyle(.plain)
@@ -452,7 +452,7 @@ struct CollectionEditorSheet: View {
             ForEach(palette) { choice in
                 let isSelected = selectedColorHex == choice.hex.lowercased()
                 Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    withAnimation(DSToken.Motion.toggle) {
                         if let newColor = Color(hex: choice.hex) {
                             // Palette colors set a single color for both modes
                             collectionColor = newColor
@@ -478,7 +478,7 @@ struct CollectionEditorSheet: View {
                     }
                     .frame(width: 38, height: 38)
                     .scaleEffect(isSelected ? 1.08 : 1.0)
-                    .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isSelected)
+                    .animation(DSToken.Motion.toggle, value: isSelected)
                 }
                 .buttonStyle(.plain)
                 .help(choice.name)
@@ -613,7 +613,7 @@ struct CollectionEditorSheet: View {
 
     private func glassSymbolButton(_ symbolName: String) -> some View {
         Button {
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+            withAnimation(DSToken.Motion.toggle) {
                 collectionIconName = symbolName
             }
         } label: {
@@ -643,7 +643,7 @@ struct CollectionEditorSheet: View {
                         )
                 }
                 .scaleEffect(isSelected ? 1.1 : 1.0)
-                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isSelected)
+                .animation(DSToken.Motion.toggle, value: isSelected)
         }
         .buttonStyle(.plain)
         .help(symbolName)
@@ -663,7 +663,7 @@ struct CollectionEditorSheet: View {
                         .foregroundStyle(activeColor)
                 }
                 Spacer()
-                Toggle("", isOn: $isSubcollection.animation(.spring(response: 0.35, dampingFraction: 0.8)))
+                Toggle("", isOn: $isSubcollection.animation(DSToken.Motion.toggle))
                     .labelsHidden()
                     .toggleStyle(.switch)
                     .tint(activeColor)
@@ -696,7 +696,7 @@ struct CollectionEditorSheet: View {
             shadowRadius: 8,
             shadowY: 4
         )
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isSubcollection)
+        .animation(DSToken.Motion.toggle, value: isSubcollection)
     }
 
     private var availableParentCollections: [SnippetCollection] {
@@ -724,7 +724,7 @@ struct CollectionEditorSheet: View {
     private var glassSnippetMembershipSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
-                withAnimation(.spring(response: 0.40, dampingFraction: 0.82)) {
+                withAnimation(DSToken.Motion.reveal) {
                     isSnippetPickerExpanded.toggle()
                 }
             } label: {
@@ -787,7 +787,7 @@ struct CollectionEditorSheet: View {
 
     private func glassSnippetToggleRow(_ snippet: Snippet) -> some View {
         Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            withAnimation(DSToken.Motion.toggle) {
                 if selectedSnippetIDs.contains(snippet.persistentModelID) {
                     selectedSnippetIDs.remove(snippet.persistentModelID)
                 } else {

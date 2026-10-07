@@ -3,7 +3,10 @@ import Observation
 import SwiftData
 
 enum SnippetEditorMode {
-    case create(preselectedCollectionID: PersistentIdentifier? = nil)
+    /// `draftCode` seeds a new snippet from captured clipboard code. It stays
+    /// unsaved: the user still has to name it and press save, so a bad capture
+    /// leaves nothing behind.
+    case create(preselectedCollectionID: PersistentIdentifier? = nil, draftCode: String? = nil)
     case edit(Snippet)
 }
 
@@ -23,6 +26,8 @@ final class SnippetEditorViewModel {
     var manualLanguage: SupportedLanguage?
     var mediaItems: [MediaItem] = []
     var selectedCollectionIDs: Set<PersistentIdentifier> = []
+    /// Snippets this one depends on for combined previews, in user order.
+    var dependencies: [Snippet] = []
     var saveErrorMessage: String?
 
     private var hasLoaded = false
@@ -52,6 +57,7 @@ final class SnippetEditorViewModel {
                 || snippetDescription != original.snippetDescription
                 || code != original.code
                 || mediaItems != original.mediaItems
+                || dependencies.map(\.persistentModelID) != original.dependencies.map(\.persistentModelID)
         }
     }
 
@@ -65,6 +71,7 @@ final class SnippetEditorViewModel {
             code = snippet.code
             mediaItems = snippet.mediaItems
             selectedCollectionIDs = Set(snippet.collections.map(\.persistentModelID))
+            dependencies = snippet.dependencies
 
             if let language = SupportedLanguage(rawValue: snippet.language) {
                 manualLanguage = language
@@ -73,9 +80,12 @@ final class SnippetEditorViewModel {
                 detectedLanguage = LanguageDetector.detect(code: snippet.code)
             }
         } else {
-            if case .create(let preselectedCollectionID) = mode, let id = preselectedCollectionID {
-                selectedCollectionIDs.insert(id)
+            if case .create(let preselectedCollectionID, let draftCode) = mode {
+                if let id = preselectedCollectionID { selectedCollectionIDs.insert(id) }
+                if let draftCode { code = draftCode }
             }
+            // Derived from `code` below, so a captured language needs no
+            // separate channel — the detector reaches the same answer.
             detectedLanguage = LanguageDetector.detect(code: code)
         }
     }
@@ -90,6 +100,9 @@ final class SnippetEditorViewModel {
 
     func resetManualLanguage() {
         manualLanguage = nil
+        // Typing doesn't re-detect while a language is picked by hand, so
+        // `detectedLanguage` may be stale by now.
+        detectedLanguage = LanguageDetector.detect(code: code)
     }
 
     func toggleCollection(_ collection: SnippetCollection) {
@@ -99,6 +112,25 @@ final class SnippetEditorViewModel {
         } else {
             selectedCollectionIDs.insert(id)
         }
+    }
+
+    func addDependency(_ snippet: Snippet) {
+        guard !dependencies.contains(where: { $0.persistentModelID == snippet.persistentModelID }) else { return }
+        dependencies.append(snippet)
+    }
+
+    func removeDependency(_ snippet: Snippet) {
+        dependencies.removeAll { $0.persistentModelID == snippet.persistentModelID }
+    }
+
+    /// Whether `snippet` can be offered in the connections picker: not the
+    /// snippet being edited and not already a dependency.
+    func isDependencyCandidate(_ snippet: Snippet, mode: SnippetEditorMode) -> Bool {
+        if case .edit(let original) = mode,
+           original.persistentModelID == snippet.persistentModelID {
+            return false
+        }
+        return !dependencies.contains { $0.persistentModelID == snippet.persistentModelID }
     }
 
     func attachMedia(using mediaManager: any MediaManaging) {
@@ -147,6 +179,7 @@ final class SnippetEditorViewModel {
             for collection in selectedCollections {
                 collection.updatedAt = .now
             }
+            snippet.dependencies = dependencies
 
             do {
                 try onSave(snippet)
@@ -180,6 +213,7 @@ final class SnippetEditorViewModel {
                 collection.updatedAt = .now
             }
             snippet.collections = selectedCollections
+            snippet.dependencies = dependencies
 
             do {
                 try modelContext.save()

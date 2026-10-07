@@ -10,7 +10,29 @@ struct GallerySection<Content: View>: View {
     var actionIcon: String? = nil
     var action: (() -> Void)? = nil
     @Binding var isExpanded: Bool
-    var animation: Animation = .interactiveSpring(response: 0.42, dampingFraction: 0.9, blendDuration: 0.12)
+    var animation: Animation = DSToken.Motion.collapse
+    /// Whether to draw the header above the content.
+    ///
+    /// A caller that wants the bare content **must** hide the header here
+    /// rather than branching to the content on its own:
+    ///
+    /// ```swift
+    /// if filtered { grid() } else { GallerySection { grid() } }   // ← wrong
+    /// ```
+    ///
+    /// The two arms of an `if` are separate cases of `_ConditionalContent`, so
+    /// SwiftUI treats them as different views: flipping the condition destroys
+    /// the section and builds the grid again from nothing. A rebuilt grid has
+    /// no previous frame, so every `.animation(_:value:)` inside it is dead on
+    /// that transition and the change lands as a hard cut.
+    ///
+    /// Hiding the header keeps one identity for the content, which is what
+    /// lets the cards underneath reflow instead of being replaced.
+    var showsHeader: Bool = true
+    /// Identity for the header's glass inside the gallery's
+    /// `GlassEffectContainer`. See ``GallerySectionHeader``.
+    var glassID: String? = nil
+    var glassNamespace: Namespace.ID? = nil
     let content: Content
 
     init(
@@ -21,7 +43,10 @@ struct GallerySection<Content: View>: View {
         actionIcon: String? = nil,
         action: (() -> Void)? = nil,
         isExpanded: Binding<Bool>,
-        animation: Animation = .interactiveSpring(response: 0.42, dampingFraction: 0.9, blendDuration: 0.12),
+        animation: Animation = DSToken.Motion.collapse,
+        showsHeader: Bool = true,
+        glassID: String? = nil,
+        glassNamespace: Namespace.ID? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
@@ -32,25 +57,49 @@ struct GallerySection<Content: View>: View {
         self.action = action
         self._isExpanded = isExpanded
         self.animation = animation
+        self.showsHeader = showsHeader
+        self.glassID = glassID
+        self.glassNamespace = glassNamespace
         self.content = content()
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            GallerySectionHeader(
-                title: title,
-                count: count,
-                icon: icon,
-                tint: tint,
-                actionIcon: actionIcon,
-                action: action,
-                isExpanded: $isExpanded
-            )
+        VStack(alignment: .leading, spacing: showsHeader ? 12 : 0) {
+            if showsHeader {
+                GallerySectionHeader(
+                    title: title,
+                    count: count,
+                    icon: icon,
+                    tint: tint,
+                    actionIcon: actionIcon,
+                    action: action,
+                    isExpanded: $isExpanded,
+                    glassID: glassID,
+                    glassNamespace: glassNamespace
+                )
+                // Leaves upward, into the space it occupies, so the content
+                // below reads as rising to take its place rather than as the
+                // header dissolving and everything then jumping.
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
 
-            CollapsibleSectionContent(isExpanded: isExpanded, animation: animation) {
+            // Forced open with the header hidden: the chevron is the only way
+            // to expand a section, so a collapsed section whose header just
+            // disappeared would be content the user cannot get back.
+            CollapsibleSectionContent(isExpanded: showsHeader ? isExpanded : true) {
                 content
             }
         }
+        // The collapse animation has to be owned here, by the view that holds
+        // the `if`. Inside `CollapsibleSectionContent` the flag is always true,
+        // so an `.animation(_:value: isExpanded)` down there never fires and
+        // the caller's `animation:` argument was silently ignored.
+        .animation(animation, value: isExpanded)
+        // `gridReflow`, not `animation`: the header leaving and the cards
+        // below reflowing are one movement, and the grid inside declares
+        // `gridReflow` for itself. Giving the header the section's collapse
+        // curve instead would split the two apart mid-flight.
+        .animation(DSToken.Motion.gridReflow, value: showsHeader)
     }
 }
 
@@ -64,15 +113,28 @@ struct GallerySectionHeader: View {
     var actionIcon: String? = nil
     var action: (() -> Void)? = nil
     @Binding var isExpanded: Bool
+    /// Identity for this header's glass within the gallery's
+    /// `GlassEffectContainer`.
+    ///
+    /// Section headers are inserted and removed on every language-filter click.
+    /// Without an ID the system treats each one as a brand-new shape and
+    /// resolves its material on its own schedule, while the rim, the tint fills
+    /// and the shadow below are drawn by SwiftUI on the very first frame. The
+    /// result is a crisp empty outline with the dot grid showing through it for
+    /// a beat before the glass arrives — the frame and the glass visibly coming
+    /// apart. With an ID the container morphs the member as one piece.
+    var glassID: String? = nil
+    var glassNamespace: Namespace.ID? = nil
 
     private var theme: Theme { Theme.current(colorScheme) }
 
     var body: some View {
         HStack(spacing: 9) {
             Button {
-                withAnimation(.interactiveSpring(response: 0.28, dampingFraction: 0.96, blendDuration: 0.06)) {
-                    isExpanded.toggle()
-                }
+                // No `withAnimation` here — the owning `GallerySection`
+                // applies the caller-supplied collapse animation, so hardcoding
+                // one here would override whatever the caller asked for.
+                isExpanded.toggle()
             } label: {
                 HStack(spacing: 9) {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
@@ -93,6 +155,13 @@ struct GallerySectionHeader: View {
                         .font(Mono.font(size: 11, weight: .semibold))
                         .foregroundStyle(theme.textMuted)
                         .monospacedDigit()
+                        // The header now survives a filter change instead of
+                        // being replaced, so the count animates rather than
+                        // arriving with the view. A plain cross-fade draws both
+                        // numbers on top of each other — 14 over 6 reads as
+                        // "16" for a beat — where the numeric transition rolls
+                        // the digits it actually shares.
+                        .contentTransition(.numericText(value: Double(count)))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background {
@@ -133,7 +202,9 @@ struct GallerySectionHeader: View {
             interactive: true,
             borderOpacity: colorScheme == .dark ? 0.14 : 0.30,
             shadowRadius: 5,
-            shadowY: 2
+            shadowY: 2,
+            glassID: glassID,
+            glassNamespace: glassNamespace
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title), \(count), \(isExpanded ? "expanded" : "collapsed")")
@@ -141,46 +212,118 @@ struct GallerySectionHeader: View {
     }
 }
 
-struct CollapsibleSectionContent<Content: View>: View {
-    let isExpanded: Bool
-    let animation: Animation
-    let content: Content
+/// Signals to a section's descendants that the section is folding shut, so they
+/// can play their own exit before the section takes them out of the hierarchy.
+///
+/// A `.transition` cannot do this job: when a container is removed, SwiftUI
+/// applies that container's transition to the whole subtree and never consults
+/// the children's, so per-child stagger is not expressible as a transition.
+private struct SectionCollapsingKey: EnvironmentKey {
+    static let defaultValue = false
+}
 
-    init(
-        isExpanded: Bool,
-        animation: Animation,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.isExpanded = isExpanded
-        self.animation = animation
-        self.content = content()
-    }
-
-    var body: some View {
-        if isExpanded {
-            content
-                .transition(.opacity)
-                .animation(animation, value: isExpanded)
-        }
+extension EnvironmentValues {
+    var isSectionCollapsing: Bool {
+        get { self[SectionCollapsingKey.self] }
+        set { self[SectionCollapsingKey.self] = newValue }
     }
 }
 
-#Preview("GallerySection") {
-    struct PreviewWrapper: View {
-        @State private var isExpanded = true
-        var body: some View {
-            GallerySection(
-                title: "Files",
-                count: 5,
-                icon: "folder",
-                tint: .blue,
-                isExpanded: $isExpanded
-            ) {
-                Text("Item 1")
-                Text("Item 2")
-            }
-            .padding()
-        }
+struct CollapsibleSectionContent<Content: View>: View {
+    let isExpanded: Bool
+    let content: Content
+
+    /// Stays true through the exit animation, after `isExpanded` goes false, so
+    /// the cards are still on screen to animate out.
+    @State private var isMounted: Bool
+    @State private var unmountTask: Task<Void, Never>? = nil
+
+    init(
+        isExpanded: Bool,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.isExpanded = isExpanded
+        self.content = content()
+        _isMounted = State(initialValue: isExpanded)
     }
-    return PreviewWrapper()
+
+    var body: some View {
+        Group {
+            if isMounted {
+                content
+                    .environment(\.isSectionCollapsing, !isExpanded)
+                    // Collapsing content is on its way out; it should not take
+                    // clicks or show up in the accessibility tree meanwhile.
+                    .allowsHitTesting(isExpanded)
+                    .accessibilityHidden(!isExpanded)
+            }
+        }
+        .onChange(of: isExpanded) { _, expanded in
+            unmountTask?.cancel()
+            guard !expanded else {
+                withAnimation(DSToken.Motion.collapse) { isMounted = true }
+                return
+            }
+            unmountTask = Task { @MainActor in
+                try? await Task.sleep(for: .seconds(DSToken.Motion.staggeredExitWindow))
+                guard !Task.isCancelled else { return }
+                // The height has to animate on `isMounted`, not `isExpanded`:
+                // by now the exit stagger has finished and the section's own
+                // `.animation(_:value: isExpanded)` is long since done, so
+                // without this the layout below would snap shut.
+                withAnimation(DSToken.Motion.collapse) { isMounted = false }
+            }
+        }
+        .onDisappear { unmountTask?.cancel() }
+    }
+}
+
+/// Wraps one card in a collapsible section so the grid empties card by card
+/// instead of the whole slab cross-fading at once.
+///
+/// Entry and exit share a single visibility flag, so there is one opacity gate
+/// rather than two multiplying, and re-expanding mid-collapse retargets from
+/// wherever the card currently is instead of restarting from zero.
+///
+/// `hasEntered` is supplied by the grid rather than read from an `onAppear`
+/// here: inside a `LazyVGrid`, `onAppear` fires every time a cell scrolls into
+/// view, which would replay the entrance on every scroll.
+struct CollapsingSectionItem<Content: View>: View {
+    @Environment(\.isSectionCollapsing) private var isSectionCollapsing
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Position in the grid, in reading order.
+    let index: Int
+    /// Total items, so the exit can run in reverse.
+    let count: Int
+    /// Whether the gallery has played its one-time entrance.
+    let hasEntered: Bool
+    let content: Content
+
+    init(index: Int, count: Int, hasEntered: Bool, @ViewBuilder content: () -> Content) {
+        self.index = index
+        self.count = count
+        self.hasEntered = hasEntered
+        self.content = content()
+    }
+
+    private var isVisible: Bool { hasEntered && !isSectionCollapsing }
+
+    private var animation: Animation {
+        guard !reduceMotion else { return DSToken.Motion.collapse }
+        return isVisible
+            ? DSToken.Motion.staggeredEntrance(index: index)
+            // Reversed: the furthest card leaves first, so the grid empties
+            // toward the header it is folding into.
+            : DSToken.Motion.staggeredCollapse(index: max(count - 1 - index, 0))
+    }
+
+    var body: some View {
+        content
+            .opacity(isVisible ? 1 : 0)
+            // 0.96, never 0 — the card recedes like an object rather than
+            // vanishing into nothing. Reduce Motion keeps the fade only.
+            .scaleEffect(isVisible || reduceMotion ? 1 : 0.96)
+            .animation(animation, value: isVisible)
+    }
 }

@@ -145,10 +145,3 @@ private struct DotGridLayer: View {
         }
     }
 }
-
-#Preview("DotGridBackground") {
-    DotGridBackground(
-        gradientPalette: [.red, .blue, .green],
-        lightModeStrength: 1.0
-    )
-}

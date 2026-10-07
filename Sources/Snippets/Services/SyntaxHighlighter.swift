@@ -66,6 +66,14 @@ enum SyntaxHighlighter {
         return color
     }
 
+    private static func cachedTextColor(theme: Theme) -> NSColor {
+        let key = "text_\(schemeCacheKey(for: theme))"
+        if let color = cachedColors[key] { return color }
+        let color = NSColor(theme.text)
+        cachedColors[key] = color
+        return color
+    }
+
     private static func schemeCacheKey(for theme: Theme) -> String {
         theme.scheme == .dark ? "dark" : "light"
     }
@@ -89,24 +97,58 @@ enum SyntaxHighlighter {
         fontSize: CGFloat = 13
     ) {
         let source = storage.string
-        let fullRange = NSRange(location: 0, length: (source as NSString).length)
+        let length = (source as NSString).length
+        let fullRange = NSRange(location: 0, length: length)
 
         let baseFont = cachedFont(size: fontSize)
-        let baseColor = NSColor(theme.text)
-
-        storage.beginEditing()
-        storage.setAttributes([
-            .font: baseFont,
-            .foregroundColor: baseColor
-        ], range: fullRange)
+        let baseColor = cachedTextColor(theme: theme)
 
         let langRules = rules(for: language)
         let tokens = CodeTokenizer(source: source, rules: langRules).tokenize()
+
+        // Only write runs whose color actually changes. Every attribute write
+        // invalidates layout for its range, and with contiguous layout the
+        // text system must then re-lay out everything up to the visible
+        // region — rewriting the whole document on each keystroke cost ~18ms
+        // with the caret at the end of a 27KB snippet. A keystroke usually
+        // recolors a single token, so the diff keeps the invalidation local
+        // while the result stays identical to a full repaint.
+        storage.beginEditing()
+        setFont(baseFont, in: storage, range: fullRange)
+
+        // Tokens are emitted in order and never overlap; gaps between them
+        // take the base text color.
+        var cursor = 0
         for token in tokens {
-            let color = cachedColor(for: token.kind, theme: theme)
-            storage.addAttribute(.foregroundColor, value: color, range: token.range)
+            if token.range.location > cursor {
+                setColor(baseColor, in: storage, range: NSRange(location: cursor, length: token.range.location - cursor))
+            }
+            setColor(cachedColor(for: token.kind, theme: theme), in: storage, range: token.range)
+            cursor = NSMaxRange(token.range)
+        }
+        if cursor < length {
+            setColor(baseColor, in: storage, range: NSRange(location: cursor, length: length - cursor))
         }
         storage.endEditing()
+    }
+
+    /// Repairs only the runs whose font differs — typed text can carry a stale
+    /// typing font, and repainting the whole document for one character would
+    /// throw away the point of diffing the colors.
+    private static func setFont(_ font: NSFont, in storage: NSTextStorage, range: NSRange) {
+        guard range.length > 0 else { return }
+        storage.enumerateAttribute(.font, in: range) { value, runRange, _ in
+            if let current = value as? NSFont, current === font || current.isEqual(font) { return }
+            storage.addAttribute(.font, value: font, range: runRange)
+        }
+    }
+
+    private static func setColor(_ color: NSColor, in storage: NSTextStorage, range: NSRange) {
+        guard range.length > 0 else { return }
+        var effective = NSRange()
+        let current = storage.attribute(.foregroundColor, at: range.location, longestEffectiveRange: &effective, in: range) as? NSColor
+        if effective == range, let current, current === color || current.isEqual(color) { return }
+        storage.addAttribute(.foregroundColor, value: color, range: range)
     }
 
     static func attributedString(
