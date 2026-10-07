@@ -380,6 +380,17 @@ enum LanguageDetector {
                 continue
             }
 
+            // `#` comments (Python, shell, Ruby, YAML): a `#` followed by a
+            // space or the end of the line, at a line start or after
+            // whitespace. `#include`, `#version`, `#[derive]`, `#!` and
+            // `#Preview` have no space after the `#` and survive.
+            if byte == .hash,
+               index + 1 == bytes.count || bytes[index + 1] == .space || bytes[index + 1] == .tab || bytes[index + 1] == .newline,
+               index == 0 || bytes[index - 1] == .space || bytes[index - 1] == .tab || bytes[index - 1] == .newline {
+                while index < bytes.count, bytes[index] != .newline { index += 1 }
+                continue
+            }
+
             if byte == .slash, index + 1 < bytes.count {
                 if bytes[index + 1] == .slash {
                     while index < bytes.count, bytes[index] != .newline { index += 1 }
@@ -458,5 +469,7 @@ private extension UInt8 {
     static let star: UInt8 = 0x2A
     static let backslash: UInt8 = 0x5C
     static let newline: UInt8 = 0x0A
+    static let hash: UInt8 = 0x23
+    static let tab: UInt8 = 0x09
     static let space: UInt8 = 0x20
 }

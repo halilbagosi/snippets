@@ -69,6 +69,26 @@ final class LanguageDetectorHardeningTests: XCTestCase {
         XCTAssertNil(LanguageDetector.detect(code: code).previewKind)
     }
 
+    func test_javaClass_isUnknown() {
+        let code = "public class Main {\n    public static void main(String[] args) {\n        List<String> names = new ArrayList<>();\n        System.out.println(\"Hello\");\n    }\n}"
+        XCTAssertEqual(LanguageDetector.detect(code: code), .unknown)
+    }
+
+    func test_javaServiceWithoutMain_isUnknown() {
+        let code = "@Service\npublic class UserService {\n    private final UserRepository repo;\n    public List<User> findAll() {\n        return repo.findAll();\n    }\n}"
+        XCTAssertEqual(LanguageDetector.detect(code: code), .unknown)
+    }
+
+    func test_csharpClass_isUnknown() {
+        let code = "using System;\nusing System.Linq;\nnamespace App {\n    public class Greeter {\n        public string Name { get; set; }\n        public void Greet() => Console.WriteLine($\"Hi {Name}\");\n    }\n}"
+        XCTAssertEqual(LanguageDetector.detect(code: code), .unknown)
+    }
+
+    func test_php_isUnknown() {
+        XCTAssertEqual(LanguageDetector.detect(code: "<?php\nfunction greet($name) {\n    echo \"Hello, \" . $name;\n}\n$items = array_map(fn($x) => $x * 2, $list);"), .unknown)
+        XCTAssertEqual(LanguageDetector.detect(code: "function greet($name) {\n    return \"Hello \" . $name;\n}\n$user->save();"), .unknown)
+    }
+
     // MARK: Markup that borrows JSX-looking syntax
 
     func test_alpineAndHtmxAttributes_stayHTML() {
@@ -244,5 +264,42 @@ final class LanguageDetectorHardeningTests: XCTestCase {
         </section>
         """
         XCTAssertEqual(LanguageDetector.detect(code: code), .html)
+    }
+
+    // MARK: Misfires fixed in plan 023
+
+    func test_swiftStructWithTypedProperties_detectsSwift() {
+        XCTAssertEqual(LanguageDetector.detect(code: "struct Point {\n  var x: Double\n  var y: Double\n}"), .swift)
+    }
+
+    func test_swiftClosureShorthand_detectsSwift() {
+        XCTAssertEqual(LanguageDetector.detect(code: "let x = [1, 2, 3].map { $0 * 2 }"), .swift)
+    }
+
+    func test_pythonHashCommentsQuotingJSX_doNotDetectReact() {
+        let code = "# const x = () => { console.log(document.querySelector('a')) }\n# export default function App() { return <div className=\"x\"/> }\nx = 1\nprint(x)"
+        XCTAssertNotEqual(LanguageDetector.detect(code: code), .react)
+        XCTAssertNotEqual(LanguageDetector.detect(code: code), .javascript)
+    }
+
+    // Controls: things the new rules must not disturb.
+    func test_kotlinPrivateFun_staysKotlin() {
+        XCTAssertEqual(LanguageDetector.detect(code: "class Repo {\n    private fun load(id: Int): User? {\n        return cache[id]\n    }\n}"), .kotlin)
+    }
+
+    func test_cssIdSelector_staysCSS() {
+        XCTAssertEqual(LanguageDetector.detect(code: "#header {\n  color: red;\n}\n.nav a:hover { color: blue; }"), .css)
+    }
+
+    func test_jQueryDollarAssignments_stayJavaScript() {
+        XCTAssertEqual(LanguageDetector.detect(code: "$(function() {\n  $el = $('#x');\n  $el.on('click', () => console.log('hi'));\n});"), .javascript)
+    }
+
+    func test_pythonInlineHashComment_staysPython() {
+        XCTAssertEqual(LanguageDetector.detect(code: "def add(a, b):  # returns sum\n    return a + b"), .python)
+    }
+
+    func test_swiftPublicAsyncFunc_staysSwift() {
+        XCTAssertEqual(LanguageDetector.detect(code: "public struct Api {\n    public func fetch(_ id: Int) async throws -> User {\n        try await client.get(id)\n    }\n}"), .swift)
     }
 }
