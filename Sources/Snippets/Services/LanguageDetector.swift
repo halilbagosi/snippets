@@ -32,6 +32,14 @@ enum SupportedLanguage: String, CaseIterable, Identifiable, Hashable {
         self = language
     }
 
+    /// The language a stored snippet belongs to. Free text that names no
+    /// supported language (Shortcuts and imports can store anything) is
+    /// `.unknown` — the same bucket the gallery groups it under — so filters
+    /// and sections never disagree about where a snippet is.
+    init(stored rawValue: String) {
+        self = SupportedLanguage(rawValue: rawValue) ?? .unknown
+    }
+
     var id: String { rawValue }
 
     var symbolName: String {

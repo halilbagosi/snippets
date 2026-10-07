@@ -450,7 +450,7 @@ struct ContentView: View {
     }
 
     private func buildAvailableLanguages() -> [SupportedLanguage] {
-        let used = Set(snippets.compactMap { SupportedLanguage(rawValue: $0.language) })
+        let used = Set(snippets.map { SupportedLanguage(stored: $0.language) })
         return SupportedLanguage.allCases.filter { used.contains($0) }
     }
 
@@ -1608,7 +1608,7 @@ enum GallerySnippetFilter {
         descendantIDs: [PersistentIdentifier: Set<PersistentIdentifier>]
     ) -> [Snippet] {
         snippets.filter { snippet in
-            if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
+            if !selectedLanguages.isEmpty, !selectedLanguages.contains(SupportedLanguage(stored: snippet.language)) { return false }
 
             let belongsDirectlyToCollection = { (colID: PersistentIdentifier) -> Bool in
                 snippet.collections.contains(where: { $0.persistentModelID == colID })
@@ -1647,7 +1647,7 @@ enum GallerySnippetFilter {
         descendantIDs: [PersistentIdentifier: Set<PersistentIdentifier>]
     ) -> [Snippet] {
         snippets.filter { snippet in
-            if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
+            if !selectedLanguages.isEmpty, !selectedLanguages.contains(SupportedLanguage(stored: snippet.language)) { return false }
 
             if showFavoritesOnly && !snippet.isFavorite { return false }
 
