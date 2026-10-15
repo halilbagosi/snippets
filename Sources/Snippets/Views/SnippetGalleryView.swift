@@ -104,13 +104,16 @@ struct SnippetGalleryView: View {
         for language in selectedLanguages.map(\.rawValue).sorted() {
             hasher.combine(language)
         }
+        // A collection filter now splits the grid into language strips, so
+        // picking or clearing one adds or removes whole strips as well.
+        hasher.combine(selectedSearchCollections)
         return hasher.finalize()
     }
     private var hasVisibleSubcollections: Bool {
         searchQuery.isEmpty && !subcollections.isEmpty && selectedLanguages.isEmpty && selectedSearchCollections.isEmpty
     }
     private var hasAnyGalleryContent: Bool {
-        hasAnyResults || hasVisibleSubcollections || (!subcollections.isEmpty && !selectedLanguages.isEmpty)
+        hasAnyResults || hasVisibleSubcollections
     }
     private var hasAnyResults: Bool {
         viewModel.hasAnyResults(
@@ -606,7 +609,8 @@ struct SnippetGalleryView: View {
                         linkedCount: item.connectedCount,
                         isStackExpanded: expandedStacks.contains(item.snippet.persistentModelID),
                         onToggleStack: { toggleStack(item.snippet.persistentModelID) },
-                        isConnected: item.isConnected
+                        isConnected: item.isConnected,
+                        collectionTags: collectionTags(for: item.snippet)
                     )
                     .overlay {
                         // Revealed stack members read as part of the group via
@@ -639,7 +643,8 @@ struct SnippetGalleryView: View {
         linkedCount: Int = 0,
         isStackExpanded: Bool = false,
         onToggleStack: (() -> Void)? = nil,
-        isConnected: Bool = false
+        isConnected: Bool = false,
+        collectionTags: [SnippetCollection] = []
     ) -> some View {
         ZStack {
                     SnippetCard(
@@ -651,7 +656,8 @@ struct SnippetGalleryView: View {
                         linkedCount: linkedCount,
                         isStackExpanded: isStackExpanded,
                         onToggleStack: onToggleStack,
-                        isConnected: isConnected
+                        isConnected: isConnected,
+                        collectionTags: collectionTags
                     )
 
                     if viewModel.isSelectMode {
@@ -824,10 +830,8 @@ struct SnippetGalleryView: View {
         let title: String
         let icon: String
         let tint: Color
-        let showsHeader: Bool
         let isExpanded: Binding<Bool>
         let snippets: [Snippet]
-        let collections: [SnippetCollection]
 
         /// Stable for the lifetime of this strip, so the glass container can
         /// preserve it while neighboring strips are inserted or removed.
@@ -839,58 +843,52 @@ struct SnippetGalleryView: View {
         }
     }
 
+    /// The collections a card names beside its title. Only a language filter
+    /// pulls snippets out of their collections and mixes them in one strip, so
+    /// that is the only time the card has to say where each one lives — and not
+    /// inside a collection, where every card would carry the same tag.
+    private func collectionTags(for snippet: Snippet) -> [SnippetCollection] {
+        guard !selectedLanguages.isEmpty, onBack == nil, !isTrashMode else { return [] }
+        return snippet.collections
+            .filter { !$0.isDeleted }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
     private func snippetSectionSpecs(_ source: [Snippet]) -> [SnippetSectionSpec] {
         let ordered = viewModel.ordered(source)
 
-        guard !selectedLanguages.isEmpty else {
+        // Strips split by language whenever either filter is on: a language
+        // filter asks for them directly, and a collection filter would
+        // otherwise be one undifferentiated grid.
+        guard !selectedLanguages.isEmpty || !selectedSearchCollections.isEmpty else {
             return [
                 SnippetSectionSpec(
                     id: .primary,
                     title: "Snippets",
                     icon: "square.stack.3d.up",
                     tint: theme.textMuted,
-                    showsHeader: selectedSearchCollections.isEmpty,
                     isExpanded: $isSnippetsSectionExpanded,
-                    snippets: ordered,
-                    collections: []
+                    snippets: ordered
                 )
             ]
         }
 
-        let grouped = Dictionary(grouping: ordered) { snippet in
-            SupportedLanguage(stored: snippet.language)
-        }
-        let collectionsByLanguage = selectedSearchCollections.isEmpty
-            ? subcollectionsByLanguage(subcollections, favoritesOnly: showFavoritesOnly)
-            : [:]
-        let orderedLanguages = orderedSelectedLanguages
-
-        var specs: [SnippetSectionSpec] = []
-        for language in orderedLanguages {
-            let langSnippets = grouped[language] ?? []
-            let langCollections = collectionsByLanguage[language] ?? []
-            guard !langSnippets.isEmpty || !langCollections.isEmpty else { continue }
-
+        return viewModel.languageGroups(ordered, preferredOrder: orderedSelectedLanguages).map { group in
+            let language = group.language
             let baseAccent = Color(hex: language.accentHex) ?? theme.accent
             let accent = colorScheme == .dark
                 ? baseAccent.saturation(3.0).brightness(0.22)
                 : baseAccent.saturation(3.0).brightness(-0.15)
 
-            specs.append(
-                SnippetSectionSpec(
-                    id: .language(language),
-                    title: "lang:\(language.rawValue.lowercased())",
-                    icon: language.symbolName,
-                    tint: accent,
-                    showsHeader: true,
-                    isExpanded: languageSectionExpansion(language),
-                    snippets: langSnippets,
-                    collections: langCollections
-                )
+            return SnippetSectionSpec(
+                id: .language(language),
+                title: "lang:\(language.rawValue.lowercased())",
+                icon: language.symbolName,
+                tint: accent,
+                isExpanded: languageSectionExpansion(language),
+                snippets: group.snippets
             )
         }
-
-        return specs
     }
 
     private func languageSectionExpansion(_ language: SupportedLanguage) -> Binding<Bool> {
@@ -981,67 +979,23 @@ struct SnippetGalleryView: View {
 
     @ViewBuilder
     private func snippetSections(_ source: [Snippet]) -> some View {
-        ForEach(snippetSectionSpecs(source)) { spec in
+        let specs = snippetSectionSpecs(source)
+        ForEach(specs) { spec in
             GallerySection(
                 title: spec.title,
-                count: spec.snippets.count + spec.collections.count,
+                count: spec.snippets.count,
                 icon: spec.icon,
                 tint: spec.tint,
                 isExpanded: spec.isExpanded,
                 animation: DSToken.Motion.collapse,
-                showsHeader: spec.showsHeader,
                 glassID: spec.glassID,
                 glassNamespace: sectionGlass
             ) {
-                // One `VStack` in every case, including the unfiltered strip
-                // that has no collections to show: the wrapper is part of the
-                // view identity, so omitting it in one state would undo the
-                // continuity supplied by the stable section IDs.
-                VStack(alignment: .leading, spacing: 0) {
-                    if !spec.collections.isEmpty {
-                        subcollectionGrid(spec.collections)
-                            .padding(.bottom, 16)
-                    }
-                    if !spec.snippets.isEmpty {
-                        snippetGrid(spec.snippets)
-                    }
-                }
+                snippetGrid(spec.snippets)
             }
             .transition(sectionStripTransition)
         }
-        .animation(DSToken.Motion.filterReflow, value: orderedSelectedLanguages)
-    }
-
-    private func subcollectionsByLanguage(
-        _ collections: [SnippetCollection],
-        favoritesOnly: Bool
-    ) -> [SupportedLanguage: [SnippetCollection]] {
-        var result: [SupportedLanguage: [SnippetCollection]] = [:]
-
-        for collection in collections {
-            for language in languages(in: collection, favoritesOnly: favoritesOnly) {
-                result[language, default: []].append(collection)
-            }
-        }
-
-        return result
-    }
-
-    private func languages(
-        in collection: SnippetCollection,
-        favoritesOnly: Bool
-    ) -> Set<SupportedLanguage> {
-        var result = Set<SupportedLanguage>()
-
-        for snippet in collection.snippets where !snippet.isDeleted && (!favoritesOnly || snippet.isFavorite) {
-            result.insert(SupportedLanguage(stored: snippet.language))
-        }
-
-        for child in collection.children {
-            result.formUnion(languages(in: child, favoritesOnly: favoritesOnly))
-        }
-
-        return result
+        .animation(DSToken.Motion.filterReflow, value: specs.map(\.id))
     }
 
     private var topBar: some View {

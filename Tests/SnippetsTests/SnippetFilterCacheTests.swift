@@ -202,6 +202,43 @@ final class SnippetFilterCacheTests: XCTestCase {
         XCTAssertFalse(ContentView.showsUncategorizedOnly(context: nil, selectedLanguages: []))
     }
 
+    func test_search_liftsAutomaticAllSnippetsScope_keepsUserPickedOne() {
+        // Browsing All Snippets: the automatic scope applies.
+        XCTAssertTrue(ContentView.effectiveUncategorizedOnly(
+            showUncategorizedOnly: true, isAutomaticScope: true, isSearching: false))
+        // Searching is global, so the automatic scope is lifted…
+        XCTAssertFalse(ContentView.effectiveUncategorizedOnly(
+            showUncategorizedOnly: true, isAutomaticScope: true, isSearching: true))
+        // …but a "No collection" filter the user picked still applies.
+        XCTAssertTrue(ContentView.effectiveUncategorizedOnly(
+            showUncategorizedOnly: true, isAutomaticScope: false, isSearching: true))
+        XCTAssertFalse(ContentView.effectiveUncategorizedOnly(
+            showUncategorizedOnly: false, isAutomaticScope: true, isSearching: true))
+    }
+
+    func test_searchFromAllSnippets_findsSnippetsInsideCollections() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let parent = SnippetCollection(name: "Parent")
+        let child = SnippetCollection(name: "Child", parent: parent)
+        let loose = Snippet(title: "Parser loose", code: "a")
+        let nested = Snippet(title: "Parser nested", code: "b")
+        [parent, child].forEach(context.insert)
+        [loose, nested].forEach(context.insert)
+        nested.collections = [child]
+        try context.save()
+
+        let scope = ContentView.effectiveUncategorizedOnly(
+            showUncategorizedOnly: ContentView.showsUncategorizedOnly(context: .allSnippets, selectedLanguages: []),
+            isAutomaticScope: true,
+            isSearching: true
+        )
+        let hits = GallerySnippetFilter.searchResults(
+            in: searchPool([loose, nested], uncategorizedOnly: scope), needle: "parser"
+        )
+        XCTAssertEqual(Set(hits.map(\.title)), ["Parser loose", "Parser nested"])
+    }
+
     func test_sidebarLanguageCounts_groupStoredTextTheWayTheFilterDoes() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext

@@ -116,6 +116,7 @@ final class PreviewTrust {
 /// user starts with a policy they picked instead of one they have to discover.
 private struct PreviewTrustPrompt: ViewModifier {
     @Environment(PreviewTrust.self) private var trust
+    @Environment(Onboarding.self) private var onboarding
 
     /// Real state, deliberately.
     ///
@@ -130,12 +131,12 @@ private struct PreviewTrustPrompt: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .task {
-                // Seeded once per launch, after the view is in the window —
-                // presenting during the first layout pass is what the alert
-                // machinery mishandles.
-                if !trust.hasPromptedForPolicy { isPresented = true }
-            }
+            // Seeded once per launch, after the view is in the window —
+            // presenting during the first layout pass is what the alert
+            // machinery mishandles. On a first launch the welcome tour goes
+            // first; the question lands once its sheet has gone.
+            .task { presentIfDue() }
+            .onChange(of: onboarding.hasCompleted) { presentIfDue() }
             .alert("Previews run snippet code", isPresented: $isPresented) {
                 // Which button is *default* is a security decision, so it is
                 // stated outright rather than left to declaration order —
@@ -165,6 +166,10 @@ private struct PreviewTrustPrompt: ViewModifier {
                 You can change this any time in Settings → Preferences.
                 """)
             }
+    }
+
+    private func presentIfDue() {
+        if !trust.hasPromptedForPolicy && onboarding.hasCompleted { isPresented = true }
     }
 }
 

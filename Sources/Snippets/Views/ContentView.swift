@@ -67,10 +67,45 @@ struct ContentView: View {
     ) -> Bool {
         context == .allSnippets && selectedLanguages.isEmpty
     }
+
+    /// Search is global: the automatic All Snippets scope above only shapes
+    /// the browsing grid, so it is lifted while a query is active. A
+    /// "No collection" filter the user picked themselves still applies.
+    static func effectiveUncategorizedOnly(
+        showUncategorizedOnly: Bool,
+        isAutomaticScope: Bool,
+        isSearching: Bool
+    ) -> Bool {
+        showUncategorizedOnly && !(isSearching && isAutomaticScope)
+    }
     @State private var selectedCollectionID: PersistentIdentifier? = nil
     @State private var sidebarSearch: String = ""
     @State private var showFavoritesOnly: Bool = false
     @State private var showUncategorizedOnly: Bool = true
+    /// True while `showUncategorizedOnly` holds the value navigation set, not
+    /// one the user picked from the collection filter.
+    @State private var uncategorizedScopeIsAutomatic: Bool = true
+
+    private var effectiveUncategorizedOnly: Bool {
+        Self.effectiveUncategorizedOnly(
+            showUncategorizedOnly: showUncategorizedOnly,
+            isAutomaticScope: uncategorizedScopeIsAutomatic,
+            isSearching: !trimmedSearchText.isEmpty
+        )
+    }
+
+    /// The gallery's view of the filter: shows the effective state (so the
+    /// chip reads "collections:all" during a global search), and any change
+    /// made through it is the user's own choice.
+    private var uncategorizedOnlyBinding: Binding<Bool> {
+        Binding(
+            get: { effectiveUncategorizedOnly },
+            set: { newValue in
+                showUncategorizedOnly = newValue
+                uncategorizedScopeIsAutomatic = false
+            }
+        )
+    }
     @State private var isLibrarySectionExpanded: Bool = true
     @State private var isFavoritesSectionExpanded: Bool = true
     @State private var isFrequentlyUsedSectionExpanded: Bool = true
@@ -279,7 +314,7 @@ struct ContentView: View {
         }
         hasher.combine(selectedLanguages)
         hasher.combine(selectedCollectionID)
-        hasher.combine(showUncategorizedOnly)
+        hasher.combine(effectiveUncategorizedOnly)
         hasher.combine(selectedSearchCollections)
         hasher.combine(showFavoritesOnly)
         hasher.combine(trimmedSearchText)
@@ -298,7 +333,7 @@ struct ContentView: View {
             snippets: snippets,
             selectedLanguages: selectedLanguages,
             selectedCollectionID: selectedCollectionID,
-            showUncategorizedOnly: showUncategorizedOnly,
+            showUncategorizedOnly: effectiveUncategorizedOnly,
             selectedSearchCollections: selectedSearchCollections,
             showFavoritesOnly: showFavoritesOnly,
             lookup: lookup,
@@ -307,7 +342,7 @@ struct ContentView: View {
         let pool = GallerySnippetFilter.searchPool(
             snippets: snippets,
             selectedLanguages: selectedLanguages,
-            showUncategorizedOnly: showUncategorizedOnly,
+            showUncategorizedOnly: effectiveUncategorizedOnly,
             selectedSearchCollections: selectedSearchCollections,
             showFavoritesOnly: showFavoritesOnly,
             lookup: lookup,
@@ -538,7 +573,7 @@ struct ContentView: View {
                             showFavoritesOnly: $showFavoritesOnly,
                             selectedLanguages: $selectedLanguages,
                             selectedSearchCollections: $selectedSearchCollections,
-                            showUncategorizedOnly: $showUncategorizedOnly,
+                            showUncategorizedOnly: uncategorizedOnlyBinding,
                             availableLanguages: availableLanguages,
                             availableCollections: collections,
                             subcollections: gallerySubcollections,
@@ -574,6 +609,7 @@ struct ContentView: View {
                                 withAnimation(DSToken.Motion.overlay) {
                                     selectedSearchCollections.removeAll()
                                     showUncategorizedOnly = false
+                                    uncategorizedScopeIsAutomatic = false
                                     if selectedCollectionID == nil {
                                         sidebarSelectionContext = .allSnippets
                                     }
@@ -791,6 +827,7 @@ struct ContentView: View {
         }
         .onChange(of: sidebarSelectionContext) { _, newValue in
             showUncategorizedOnly = Self.showsUncategorizedOnly(context: newValue, selectedLanguages: selectedLanguages)
+            uncategorizedScopeIsAutomatic = true
             selectedSearchCollections.removeAll()
         }
         .onChange(of: selectedLanguages) { _, newValue in
@@ -798,6 +835,7 @@ struct ContentView: View {
             // in `.allSnippets`, so they never pass through the context
             // change above; only the language set moves.
             showUncategorizedOnly = Self.showsUncategorizedOnly(context: sidebarSelectionContext, selectedLanguages: newValue)
+            uncategorizedScopeIsAutomatic = true
         }
         .onChange(of: navigator.pendingOpenSnippetUUID) { _, newValue in
             guard let uuid = newValue else { return }

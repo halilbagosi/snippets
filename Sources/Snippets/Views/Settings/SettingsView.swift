@@ -13,17 +13,43 @@ struct SettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     private static let windowWidth: CGFloat = 520
+    /// The panes outgrew a window sized to its content — the last card
+    /// (Debug) ended up below the bottom of the screen — so the height is the
+    /// user's, down to this, with the panes scrolling. The scene opens it at
+    /// `SnippetsApp.settingsDefaultHeight`.
+    static let minimumHeight: CGFloat = 320
     private var accent: Color { appearanceSettings.themeColor }
 
+    /// Whether the panes have scrolled away from the top, which is when they
+    /// start sliding under the titlebar and its traffic lights.
+    @State private var isScrolled = false
+
     var body: some View {
-        // No ScrollView: the window is exactly as tall as its controls, so
-        // nothing ever needs scrolling.
         DSGlassContainer(spacing: 20) {
-            AppearanceView()
-                .padding(.horizontal, 24)
-                // Clears the (transparent) titlebar strip and its traffic lights.
-                .padding(.top, 44)
-                .padding(.bottom, 28)
+            ScrollView {
+                AppearanceView()
+                    .padding(.horizontal, 24)
+                    // Clears the (transparent) titlebar strip and its traffic lights.
+                    .padding(.top, 44)
+                    .padding(.bottom, 28)
+            }
+            .scrollIndicators(.automatic)
+            .scrollBounceBehavior(.basedOnSize)
+            // The titlebar's default edge is the hard style: a rule and a
+            // flat band the panes cut off against. Soft drops both and lets
+            // the panes pass under the traffic lights, where the veil below
+            // blurs and fades them.
+            .scrollEdgeEffectStyle(.soft, for: .top)
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                geometry.contentOffset.y + geometry.contentInsets.top > 1
+            } action: { _, scrolled in
+                withAnimation(DSToken.Motion.hover) { isScrolled = scrolled }
+            }
+        }
+        .overlay(alignment: .top) {
+            ScrollEdgeVeil()
+                .opacity(isScrolled ? 1 : 0)
+                .allowsHitTesting(false)
         }
         .background {
             ZStack {
@@ -33,11 +59,49 @@ struct SettingsView: View {
                     .ignoresSafeArea()
             }
         }
-        .frame(width: Self.windowWidth)
-        .fixedSize(horizontal: false, vertical: true)
+        // Resizable both ways: the cards stretch with the width, and the
+        // panes scroll once the height is shorter than they are.
+        .frame(minWidth: Self.windowWidth, maxWidth: .infinity, minHeight: Self.minimumHeight, maxHeight: .infinity)
         #if canImport(AppKit)
         .background(SettingsWindowConfigurator())
         #endif
+    }
+}
+
+// MARK: - Scroll edge
+
+/// Blurs and fades the panes as they scroll under the transparent titlebar,
+/// so a card passing behind the traffic lights softens away instead of
+/// colliding with them. Material for the blur, the window colour for the
+/// fade, both dissolving downward.
+private struct ScrollEdgeVeil: View {
+    /// The titlebar strip plus room for the fade to finish below it.
+    private static let height: CGFloat = 64
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .mask {
+                    LinearGradient(
+                        stops: [
+                            .init(color: .black, location: 0),
+                            .init(color: .black, location: 0.45),
+                            .init(color: .clear, location: 1),
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+
+            LinearGradient(
+                colors: [Color(nsColor: .windowBackgroundColor).opacity(0.75), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .frame(height: Self.height)
+        .ignoresSafeArea(edges: .top)
     }
 }
 
@@ -45,7 +109,12 @@ struct SettingsView: View {
 
 #if canImport(AppKit)
 /// De-chromes the hosting Settings window — hidden title, transparent titlebar,
-/// content extending under it — same treatment as the main window.
+/// content extending under it — same treatment as the main window — and
+/// makes it resizable.
+///
+/// SwiftUI owns this window's sizing. The scene supplies the default and
+/// minimum size; setting a `contentMaxSize` or calling `setFrame` from here
+/// makes it drop `.resizable` again, so nothing else is set.
 private struct SettingsWindowConfigurator: NSViewRepresentable {
     func makeNSView(context: Context) -> ChromeView { ChromeView() }
 
@@ -76,9 +145,9 @@ private struct SettingsWindowConfigurator: NSViewRepresentable {
             window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = true
             window.styleMask.insert(.fullSizeContentView)
-            // The root view owns one stable size, so the settings window should
-            // not be dragged to a different size underneath it.
-            window.styleMask.remove(.resizable)
+            // Settings windows come up fixed-size whatever the scene's
+            // resizability says.
+            window.styleMask.insert(.resizable)
         }
     }
 }

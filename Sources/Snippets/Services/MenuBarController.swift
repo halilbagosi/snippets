@@ -108,11 +108,26 @@ final class MenuBarController: NSObject, NSWindowDelegate {
         // alive across order-out/order-front, so without this neither the
         // entrance animation nor the search-field focus would fire a second
         // time — the panel would open dead on its second use.
-        panel.contentView = NSHostingView(
+        let hosting = NSHostingView(
             rootView: makeRoot(model: model, panel: panel, openedByCapture: capture != nil)
         )
+        // Clip to the panel's rounded shape at the layer level. The glass
+        // material leaves faint pixels in the square corners, and AppKit
+        // derives the window shadow from the content's alpha — so without a
+        // hard mask the shadow traces a square outline around the panel.
+        hosting.wantsLayer = true
+        hosting.layer?.cornerRadius = DSToken.Radius.md
+        hosting.layer?.cornerCurve = .continuous
+        hosting.layer?.masksToBounds = true
+        panel.contentView = hosting
 
         panel.orderFront(nil)
+        // AppKit computes a borderless window's shadow from its alpha at order
+        // time — here the first, fully transparent frame of the entrance. Redo
+        // it once the panel has faded in, or the shadow misses the rounded shape.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak panel] in
+            panel?.invalidateShadow()
+        }
         if capture == nil {
             // Clicking a status item does not activate the app, and a panel
             // that is key inside an inactive app still receives no keystrokes —

@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0B0A2D010000000000000001 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D010000000000000002 /* Onboarding.swift */; };
+		0B0A2D010000000000000003 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D010000000000000004 /* OnboardingView.swift */; };
+		0B0A2D010000000000000005 /* OnboardingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D010000000000000006 /* OnboardingTests.swift */; };
 		E44E7EBA63F566394B2FF51F /* TransferCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964AFEF62C5E8FB2F8975326 /* TransferCommands.swift */; };
 		3700B7C43CCFF5DA226AD2EE /* SnippetTransferController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B53A32D2E66FC5F0D76FE7CF /* SnippetTransferController.swift */; };
 		F8C62E3A560D9AC54FF7E392 /* SnippetImporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */; };
@@ -17,6 +20,12 @@
 		75BA5AA7792F8E5F50152054 /* SnippetArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFBEFAF0AE7D681E3B4DFE7D /* SnippetArchive.swift */; };
 		05C84AB0AD5549D7F7069E6E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 757E7F34577C563AEFCB24FA /* PrivacyInfo.xcprivacy */; };
 		98B128D9E36B123A4D976EB8 /* ThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = 18B912223FDE5C2A7CC856B3 /* ThirdPartyNotices.txt */; };
+		C5A1D0E2B7F94C3A8E6D2011 /* OnboardingPreview-dark.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = C5A1D0E2B7F94C3A8E6D2012 /* OnboardingPreview-dark.mp4 */; };
+		C5A1D0E2B7F94C3A8E6D2013 /* OnboardingPreview-light.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = C5A1D0E2B7F94C3A8E6D2014 /* OnboardingPreview-light.mp4 */; };
+		C5A1D0E2B7F94C3A8E6D2001 /* OnboardingOrganize-dark.mov in Resources */ = {isa = PBXBuildFile; fileRef = C5A1D0E2B7F94C3A8E6D2002 /* OnboardingOrganize-dark.mov */; };
+		C5A1D0E2B7F94C3A8E6D2003 /* OnboardingOrganize-light.mov in Resources */ = {isa = PBXBuildFile; fileRef = C5A1D0E2B7F94C3A8E6D2004 /* OnboardingOrganize-light.mov */; };
+		C5A1D0E2B7F94C3A8E6D2005 /* OnboardingParameters-dark.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = C5A1D0E2B7F94C3A8E6D2006 /* OnboardingParameters-dark.mp4 */; };
+		C5A1D0E2B7F94C3A8E6D2007 /* OnboardingParameters-light.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = C5A1D0E2B7F94C3A8E6D2008 /* OnboardingParameters-light.mp4 */; };
 		F46B79656507314308974187 /* ThirdPartyNoticesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 271373FECC71F698C4601723 /* ThirdPartyNoticesView.swift */; };
 		40D4ED353970535DB11DCF63 /* HelpCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132202CF7B77D71B4D874FF4 /* HelpCommands.swift */; };
 		CF9418FAE91E4369C97CBFF2 /* AppLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = F22332A83990D91C9C3A122D /* AppLinks.swift */; };
@@ -159,6 +168,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0B0A2D010000000000000002 /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
+		0B0A2D010000000000000004 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		0B0A2D010000000000000006 /* OnboardingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingTests.swift; path = OnboardingTests.swift; sourceTree = "<group>"; };
 		964AFEF62C5E8FB2F8975326 /* TransferCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferCommands.swift; sourceTree = "<group>"; };
 		B53A32D2E66FC5F0D76FE7CF /* SnippetTransferController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetTransferController.swift; sourceTree = "<group>"; };
 		FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetImporterTests.swift; sourceTree = "<group>"; };
@@ -170,6 +182,12 @@
 		A4D3F65EC1966AF5DF35CA28 /* Snippets-AppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Snippets-AppStore.entitlements"; sourceTree = SOURCE_ROOT; };
 		757E7F34577C563AEFCB24FA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		18B912223FDE5C2A7CC856B3 /* ThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThirdPartyNotices.txt; sourceTree = "<group>"; };
+		C5A1D0E2B7F94C3A8E6D2012 /* OnboardingPreview-dark.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = OnboardingPreview-dark.mp4; sourceTree = "<group>"; };
+		C5A1D0E2B7F94C3A8E6D2014 /* OnboardingPreview-light.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = OnboardingPreview-light.mp4; sourceTree = "<group>"; };
+		C5A1D0E2B7F94C3A8E6D2002 /* OnboardingOrganize-dark.mov */ = {isa = PBXFileReference; lastKnownFileType = file; path = OnboardingOrganize-dark.mov; sourceTree = "<group>"; };
+		C5A1D0E2B7F94C3A8E6D2004 /* OnboardingOrganize-light.mov */ = {isa = PBXFileReference; lastKnownFileType = file; path = OnboardingOrganize-light.mov; sourceTree = "<group>"; };
+		C5A1D0E2B7F94C3A8E6D2006 /* OnboardingParameters-dark.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = OnboardingParameters-dark.mp4; sourceTree = "<group>"; };
+		C5A1D0E2B7F94C3A8E6D2008 /* OnboardingParameters-light.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = OnboardingParameters-light.mp4; sourceTree = "<group>"; };
 		271373FECC71F698C4601723 /* ThirdPartyNoticesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThirdPartyNoticesView.swift; sourceTree = "<group>"; };
 		132202CF7B77D71B4D874FF4 /* HelpCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpCommands.swift; sourceTree = "<group>"; };
 		F22332A83990D91C9C3A122D /* AppLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLinks.swift; sourceTree = "<group>"; };
@@ -333,6 +351,22 @@
 /* End PBXTargetDependency section */
 
 /* Begin PBXGroup section */
+		0B0A2D010000000000000007 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				0B0A2D010000000000000002 /* Onboarding.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		0B0A2D010000000000000008 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				0B0A2D010000000000000004 /* OnboardingView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
 		1BCA38E9F7E2A72176C796D0 /* Transfer */ = {
 			isa = PBXGroup;
 			children = (
@@ -379,6 +413,7 @@
 				5E57E5700000000000000115 /* TrashLifecycleTests.swift */,
 				5E57E5700000000000000116 /* UUIDBackfillTests.swift */,
 				5E57E5700000000000000A16 /* PreviewTrustTests.swift */,
+				0B0A2D010000000000000006 /* OnboardingTests.swift */,
 				5E57E5700000000000000816 /* MediaFileNameTests.swift */,
 				5E57E5700000000000000117 /* WebPreviewHTMLBuilderTests.swift */,
 			);
@@ -400,6 +435,12 @@
 				77AF4491E0E2EED462C1D90D /* Assets.xcassets */,
 				B2E5F8806A5B4C785DC1EC71 /* WebPreview */,
 				757E7F34577C563AEFCB24FA /* PrivacyInfo.xcprivacy */,
+				C5A1D0E2B7F94C3A8E6D2012 /* OnboardingPreview-dark.mp4 */,
+				C5A1D0E2B7F94C3A8E6D2014 /* OnboardingPreview-light.mp4 */,
+				C5A1D0E2B7F94C3A8E6D2002 /* OnboardingOrganize-dark.mov */,
+				C5A1D0E2B7F94C3A8E6D2004 /* OnboardingOrganize-light.mov */,
+				C5A1D0E2B7F94C3A8E6D2006 /* OnboardingParameters-dark.mp4 */,
+				C5A1D0E2B7F94C3A8E6D2008 /* OnboardingParameters-light.mp4 */,
 				18B912223FDE5C2A7CC856B3 /* ThirdPartyNotices.txt */,
 			);
 			path = Resources;
@@ -633,6 +674,7 @@
 		B5991E14D22A43A53A83D5F4 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				0B0A2D010000000000000008 /* Onboarding */,
 				A1B2C3D40003VIEWSQUICKCOPY /* QuickCopy */,
 				527137D235CE709BA5106BD6 /* ContentView.swift */,
 				B3AFA46BF758F60544FD944C /* SnippetDetailView.swift */,
@@ -712,6 +754,7 @@
 		D162801B5F6E0AE5BCE07169 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				0B0A2D010000000000000007 /* Onboarding */,
 				1BCA38E9F7E2A72176C796D0 /* Transfer */,
 				A1B2C3D448A6474682646B42 /* QuickCapture */,
 				A1B2C3D4364B5CA722DD5D13 /* QuickCopy */,
@@ -838,6 +881,12 @@
 			files = (
 				18842E040399CB803941F5F9 /* Assets.xcassets in Resources */,
 				05C84AB0AD5549D7F7069E6E /* PrivacyInfo.xcprivacy in Resources */,
+				C5A1D0E2B7F94C3A8E6D2011 /* OnboardingPreview-dark.mp4 in Resources */,
+				C5A1D0E2B7F94C3A8E6D2013 /* OnboardingPreview-light.mp4 in Resources */,
+				C5A1D0E2B7F94C3A8E6D2001 /* OnboardingOrganize-dark.mov in Resources */,
+				C5A1D0E2B7F94C3A8E6D2003 /* OnboardingOrganize-light.mov in Resources */,
+				C5A1D0E2B7F94C3A8E6D2005 /* OnboardingParameters-dark.mp4 in Resources */,
+				C5A1D0E2B7F94C3A8E6D2007 /* OnboardingParameters-light.mp4 in Resources */,
 				98B128D9E36B123A4D976EB8 /* ThirdPartyNotices.txt in Resources */,
 				C124BF522FFA5675008B595C /* SnippetsIcon.icon in Resources */,
 				5F83E4E6DBEBBC102F4EE2BD /* DisintegrationShaders.metal.txt in Resources */,
@@ -889,6 +938,7 @@
 				5E57E5700000000000000215 /* TrashLifecycleTests.swift in Sources */,
 				5E57E5700000000000000216 /* UUIDBackfillTests.swift in Sources */,
 				5E57E5700000000000000B16 /* PreviewTrustTests.swift in Sources */,
+				0B0A2D010000000000000005 /* OnboardingTests.swift in Sources */,
 				5E57E5700000000000000916 /* MediaFileNameTests.swift in Sources */,
 				5E57E5700000000000000217 /* WebPreviewHTMLBuilderTests.swift in Sources */,
 			);
@@ -983,6 +1033,8 @@
 				A1B2C3D40001QUICKPANEL /* QuickCopyPanel.swift in Sources */,
 				A1B2C3D40001QUICKROW /* QuickCopyRow.swift in Sources */,
 				A1B2C3D40001CLIPCAPTURE /* ClipboardCapture.swift in Sources */,
+				0B0A2D010000000000000001 /* Onboarding.swift in Sources */,
+				0B0A2D010000000000000003 /* OnboardingView.swift in Sources */,
 				A1B2C3D40001CODESHAPE /* CodeShapeHeuristics.swift in Sources */,
 				A1B2C3D40001QUICKVM /* QuickCopyViewModel.swift in Sources */,
 				A1B2C3D40001QUICKSELECT /* QuickCopySelection.swift in Sources */,

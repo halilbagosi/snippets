@@ -498,9 +498,9 @@ private struct CollectionTreeRow: View {
             get: { expandedCollections.contains(collection.persistentModelID) },
             set: {
                 if $0 {
-                    expandedCollections.insert(collection.persistentModelID)
+                    _ = expandedCollections.insert(collection.persistentModelID)
                 } else {
-                    expandedCollections.remove(collection.persistentModelID)
+                    _ = expandedCollections.remove(collection.persistentModelID)
                 }
             }
         )
@@ -574,7 +574,9 @@ private struct CollectionTreeRow: View {
         }
         // Match the disclosure chevron to the collection's color.
         .tint(collection.displayColor)
-        .dropDestination(for: String.self) { items, _ in onHandleDrop(items, collection) }
+        // The macOS 26 overload's action returns Void; the drop's acceptance
+        // is decided by the handler, not reported back here.
+        .dropDestination(for: String.self) { items, _ in _ = onHandleDrop(items, collection) }
     }
 
     private func snippetRow(_ snippet: Snippet) -> some View {
