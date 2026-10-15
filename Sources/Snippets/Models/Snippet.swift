@@ -27,7 +27,8 @@ final class Snippet {
     var collections: [SnippetCollection]
 
     /// Snippets this snippet needs to build a combined live preview.
-    /// Array order is the user's arranged order and is preserved.
+    /// The order is the one the app last wrote, but SwiftData does not
+    /// guarantee to-many order across saves.
     @Relationship(inverse: \Snippet.dependents)
     var dependencies: [Snippet] = []
 

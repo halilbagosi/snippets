@@ -125,12 +125,35 @@ struct MediaManager: MediaManaging {
     }
 
     func deleteFile(for item: MediaItem) {
-        let url = resolvedURL(for: item.fileName)
+        deleteFile(named: item.fileName)
+    }
+
+    func deleteFile(named fileName: String) {
+        let url = resolvedURL(for: fileName)
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         do {
             try FileManager.default.removeItem(at: url)
         } catch {
             Self.logger.error("Failed to delete media file \(url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    /// An attachment's bytes for export; nil when the file is gone.
+    func data(for item: MediaItem) -> Data? {
+        try? Data(contentsOf: resolvedURL(for: item.fileName))
+    }
+
+    /// Stores imported bytes under a fresh name. Nothing from the import file
+    /// reaches the path except an extension `SnippetArchive` already vetted.
+    func storeImported(_ data: Data, fileExtension: String) throws -> String {
+        // Defence in depth: the name is built from this, so it must be a bare
+        // extension even if a caller skips `SnippetArchive`'s checks. (The
+        // importer already lowercases it.)
+        guard !fileExtension.isEmpty, fileExtension.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else {
+            throw CocoaError(.fileWriteInvalidFileName)
+        }
+        let name = "\(UUID().uuidString).\(fileExtension)"
+        try data.write(to: resolvedURL(for: name), options: .atomic)
+        return name
     }
 }

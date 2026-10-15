@@ -100,6 +100,9 @@ final class SnippetEditorViewModel {
 
     func resetManualLanguage() {
         manualLanguage = nil
+        // Typing doesn't re-detect while a language is picked by hand, so
+        // `detectedLanguage` may be stale by now.
+        detectedLanguage = LanguageDetector.detect(code: code)
     }
 
     func toggleCollection(_ collection: SnippetCollection) {

@@ -20,6 +20,7 @@ graphify-out/
 # Local agent skills and working docs
 .agents/
 Docs/
+plans/
 
 # design-sync scaffolding (regenerated) / build output / machine state
 .ds-sync/

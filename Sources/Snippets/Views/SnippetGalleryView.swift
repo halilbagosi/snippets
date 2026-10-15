@@ -706,6 +706,9 @@ struct SnippetGalleryView: View {
                             } label: {
                                 Label("Move to", systemImage: "folder")
                             }
+                            Button { SnippetTransferController.shared.exportSnippets([snippet]) } label: {
+                                Label("Export…", systemImage: "square.and.arrow.up")
+                            }
                             Divider()
                             Button(role: .destructive) { requestDelete(snippet) } label: {
                                 Label("Delete snippet", systemImage: "trash")
@@ -855,7 +858,7 @@ struct SnippetGalleryView: View {
         }
 
         let grouped = Dictionary(grouping: ordered) { snippet in
-            SupportedLanguage(rawValue: snippet.language) ?? .unknown
+            SupportedLanguage(stored: snippet.language)
         }
         let collectionsByLanguage = selectedSearchCollections.isEmpty
             ? subcollectionsByLanguage(subcollections, favoritesOnly: showFavoritesOnly)
@@ -1031,9 +1034,7 @@ struct SnippetGalleryView: View {
         var result = Set<SupportedLanguage>()
 
         for snippet in collection.snippets where !snippet.isDeleted && (!favoritesOnly || snippet.isFavorite) {
-            if let language = SupportedLanguage(rawValue: snippet.language) {
-                result.insert(language)
-            }
+            result.insert(SupportedLanguage(stored: snippet.language))
         }
 
         for child in collection.children {
@@ -1127,6 +1128,23 @@ struct SnippetGalleryView: View {
                                     isSelected: false
                                 ) {
                                     showMoveSheet = true
+                                }
+                                .disabled(viewModel.selectedForAction.isEmpty)
+                                .opacity(viewModel.selectedForAction.isEmpty ? 0.5 : 1.0)
+                                .transition(.opacity)
+                            }
+
+                            if !isTrashMode {
+                                FilterTag(
+                                    label: "export (\(viewModel.selectedForAction.count))",
+                                    icon: "square.and.arrow.up",
+                                    accent: theme.accent,
+                                    isSelected: false
+                                ) {
+                                    SnippetTransferController.shared.exportSnippets(
+                                        viewModel.selectedSnippets(from: displaySnippets),
+                                        collections: viewModel.selectedCollections(from: subcollections)
+                                    )
                                 }
                                 .disabled(viewModel.selectedForAction.isEmpty)
                                 .opacity(viewModel.selectedForAction.isEmpty ? 0.5 : 1.0)

@@ -13,23 +13,18 @@ struct SettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     private static let windowWidth: CGFloat = 520
-    /// A stable window frame: the ScrollView below owns overflow instead of
-    /// asking AppKit to resize during a SwiftUI layout pass.
-    private static let windowHeight: CGFloat = 720
-
     private var accent: Color { appearanceSettings.themeColor }
 
     var body: some View {
-        ScrollView {
-            DSGlassContainer(spacing: 20) {
-                AppearanceView()
-                    .padding(.horizontal, 24)
-                    // Clears the (transparent) titlebar strip and its traffic lights.
-                    .padding(.top, 44)
-                    .padding(.bottom, 28)
-            }
+        // No ScrollView: the window is exactly as tall as its controls, so
+        // nothing ever needs scrolling.
+        DSGlassContainer(spacing: 20) {
+            AppearanceView()
+                .padding(.horizontal, 24)
+                // Clears the (transparent) titlebar strip and its traffic lights.
+                .padding(.top, 44)
+                .padding(.bottom, 28)
         }
-        .frame(maxHeight: .infinity)
         .background {
             ZStack {
                 Color.clear.ignoresSafeArea()
@@ -38,7 +33,8 @@ struct SettingsView: View {
                     .ignoresSafeArea()
             }
         }
-        .frame(width: Self.windowWidth, height: Self.windowHeight, alignment: .top)
+        .frame(width: Self.windowWidth)
+        .fixedSize(horizontal: false, vertical: true)
         #if canImport(AppKit)
         .background(SettingsWindowConfigurator())
         #endif

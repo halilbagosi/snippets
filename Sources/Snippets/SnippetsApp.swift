@@ -79,7 +79,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         ColorPanelCenterer.shared.install()
-        MenuBarController.shared.install()
+        // Creating the status item costs ~45ms of window-server round trips,
+        // all of it ahead of the main window's first frame. A run-loop turn
+        // later the window has already been committed; nothing reads the
+        // status item before the user can click it.
+        DispatchQueue.main.async {
+            MenuBarController.shared.install()
+        }
         ClipboardMonitor.shared.start()
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(50))
@@ -104,6 +110,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// with no window and another app frontmost the menu bar is not ours.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
+    /// `.snippets` files opened from Finder, AirDrop or the Dock icon. Handled
+    /// here rather than with `onOpenURL`, which only delivers the first file of
+    /// a multi-file open; every URL is queued. The main window's
+    /// `handlesExternalEvents` is what gives a cold launch its window.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls where url.pathExtension.lowercased() == "snippets" {
+            SnippetTransferController.shared.importFile(at: url)
+        }
+    }
+
 }
 #endif
 
@@ -114,46 +130,42 @@ struct SnippetsApp: App {
     #endif
     @State private var environment = AppEnvironment()
     @State private var appearanceSettings = AppearanceSettings()
-    @State private var previewTrust = PreviewTrust()
+    @State private var previewTrust: PreviewTrust
+
+    init() {
+        let trust = PreviewTrust()
+        _previewTrust = State(initialValue: trust)
+        SnippetTransferController.shared.previewTrust = trust
+    }
 
     static let mainWindowID = "main"
 
     var body: some Scene {
         WindowGroup(id: SnippetsApp.mainWindowID) {
-            if #available(macOS 15.0, *) {
-                ContentView()
-                    .previewTrustPrompt()
-                    .environment(environment)
-                    .environment(appearanceSettings)
-                    .environment(previewTrust)
-                    .environment(AppIntentNavigator.shared)
-                    .modifier(MainWindowOpenerInstaller())
+            ContentView()
+                .previewTrustPrompt()
+                .environment(environment)
+                .environment(appearanceSettings)
+                .environment(previewTrust)
+                .environment(AppIntentNavigator.shared)
+                .modifier(MainWindowOpenerInstaller())
+                // Opened `.snippets` files are imported by AppDelegate; this
+                // window claims the open event so SwiftUI doesn't create a new
+                // window per file (it still creates one on a cold launch).
+                .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
                 // Appearance preference is applied via NSApp.appearance in
                 // AppearanceSettings: preferredColorScheme would pin a per-window
                 // override that AppKit can't clear when following the system.
-                    .frame(minWidth: 1100, minHeight: 720)
+                .frame(minWidth: 1100, minHeight: 720)
                 // Without this the window can be zoom-only (green button shows
                 // "+"); this makes it a real full-screen-capable window.
-                    .windowFullScreenBehavior(.enabled)
+                .windowFullScreenBehavior(.enabled)
                 // The gallery draws its own glass bar under the toolbar area;
                 // hide the system toolbar background so it doesn't stack a
                 // darker adaptive layer on top (visible on hover / when the
                 // sidebar is collapsed).
-                    .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-                    .task { SnippetsApp.backfillUUIDs() }
-            } else {
-                ContentView()
-                    .previewTrustPrompt()
-                    .environment(environment)
-                    .environment(appearanceSettings)
-                    .environment(previewTrust)
-                    .environment(AppIntentNavigator.shared)
-                    .modifier(MainWindowOpenerInstaller())
-                // Appearance preference is applied via NSApp.appearance in
-                // AppearanceSettings: preferredColorScheme would pin a per-window
-                // override that AppKit can't clear when following the system.
-                    .frame(minWidth: 1100, minHeight: 720)
-                    .task { SnippetsApp.backfillUUIDs() }            }
+                .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+                .task { SnippetsApp.backfillUUIDs() }
         }
         #if os(macOS)
         // Hides the "Snippets" title in the toolbar via the supported API.
@@ -162,6 +174,7 @@ struct SnippetsApp: App {
         .commands {
             CommandGroup(replacing: .newItem) { }
             HelpCommands()
+            TransferCommands()
             CommandGroup(after: .windowArrangement) {
                 Button("Toggle Full Screen") {
                     NSApp.keyWindow?.toggleFullScreen(nil)

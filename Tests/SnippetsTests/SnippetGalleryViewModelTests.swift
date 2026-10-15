@@ -104,3 +104,34 @@ final class SnippetGalleryViewModelTests: XCTestCase {
         XCTAssertEqual(result, .deleteImmediately(deleteCollectionContents: false))
     }
 }
+
+@MainActor
+final class SnippetCardPreviewTextTests: XCTestCase {
+    func test_previewText_whenCodeIsShort_returnsItUnchanged() {
+        let code = "let a = 1\nlet b = 2"
+
+        XCTAssertEqual(SnippetCard.previewText(of: code), code)
+    }
+
+    func test_previewText_whenCodeHasManyLines_keepsElevenSoTheCardStillTruncates() {
+        let code = (1...40).map { "line \($0)" }.joined(separator: "\n")
+
+        let preview = SnippetCard.previewText(of: code)
+
+        XCTAssertEqual(preview, (1...11).map { "line \($0)" }.joined(separator: "\n"))
+    }
+
+    func test_previewText_countsCRLFLineEndings() {
+        let code = (1...20).map { "line \($0)" }.joined(separator: "\r\n")
+
+        let preview = SnippetCard.previewText(of: code)
+
+        XCTAssertEqual(preview.components(separatedBy: "\r\n").count, 11)
+    }
+
+    func test_previewText_whenCodeIsOneLongLine_capsTheCharacterCount() {
+        let code = String(repeating: "x", count: 50_000)
+
+        XCTAssertEqual(SnippetCard.previewText(of: code).count, 2_400)
+    }
+}

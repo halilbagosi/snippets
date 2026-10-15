@@ -55,6 +55,18 @@ struct ContentView: View {
         case favoriteCollection(PersistentIdentifier)
     }
     @State private var sidebarSelectionContext: SidebarSelectionContext? = .allSnippets
+
+    /// All Snippets opens scoped to snippets outside any collection (the
+    /// collections are shown as cards above them). A language filter is an
+    /// explicit request to see that language wherever it lives, so it lifts
+    /// the scope — otherwise picking a language in the sidebar hides every
+    /// match inside a collection while the row's count still includes them.
+    static func showsUncategorizedOnly(
+        context: SidebarSelectionContext?,
+        selectedLanguages: Set<SupportedLanguage>
+    ) -> Bool {
+        context == .allSnippets && selectedLanguages.isEmpty
+    }
     @State private var selectedCollectionID: PersistentIdentifier? = nil
     @State private var sidebarSearch: String = ""
     @State private var showFavoritesOnly: Bool = false
@@ -450,7 +462,7 @@ struct ContentView: View {
     }
 
     private func buildAvailableLanguages() -> [SupportedLanguage] {
-        let used = Set(snippets.compactMap { SupportedLanguage(rawValue: $0.language) })
+        let used = Set(snippets.map { SupportedLanguage(stored: $0.language) })
         return SupportedLanguage.allCases.filter { used.contains($0) }
     }
 
@@ -757,6 +769,11 @@ struct ContentView: View {
             rebuildDerivedCaches()
             drainPendingWork()
         }
+        .onChange(of: SnippetTransferController.shared.notice, initial: true) { _, notice in
+            guard let notice else { return }
+            showToast(notice.message)
+            SnippetTransferController.shared.clearNotice()
+        }
         .onChange(of: searchText) { _, newValue in
             debounceSearch(newValue)
         }
@@ -773,12 +790,14 @@ struct ContentView: View {
             rebuildDerivedCaches()
         }
         .onChange(of: sidebarSelectionContext) { _, newValue in
-            if newValue == .allSnippets {
-                showUncategorizedOnly = true
-            } else {
-                showUncategorizedOnly = false
-            }
+            showUncategorizedOnly = Self.showsUncategorizedOnly(context: newValue, selectedLanguages: selectedLanguages)
             selectedSearchCollections.removeAll()
+        }
+        .onChange(of: selectedLanguages) { _, newValue in
+            // The sidebar's language rows and its All Snippets row both stay
+            // in `.allSnippets`, so they never pass through the context
+            // change above; only the language set moves.
+            showUncategorizedOnly = Self.showsUncategorizedOnly(context: sidebarSelectionContext, selectedLanguages: newValue)
         }
         .onChange(of: navigator.pendingOpenSnippetUUID) { _, newValue in
             guard let uuid = newValue else { return }
@@ -1603,7 +1622,7 @@ enum GallerySnippetFilter {
         descendantIDs: [PersistentIdentifier: Set<PersistentIdentifier>]
     ) -> [Snippet] {
         snippets.filter { snippet in
-            if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
+            if !selectedLanguages.isEmpty, !selectedLanguages.contains(SupportedLanguage(stored: snippet.language)) { return false }
 
             let belongsDirectlyToCollection = { (colID: PersistentIdentifier) -> Bool in
                 snippet.collections.contains(where: { $0.persistentModelID == colID })
@@ -1642,7 +1661,7 @@ enum GallerySnippetFilter {
         descendantIDs: [PersistentIdentifier: Set<PersistentIdentifier>]
     ) -> [Snippet] {
         snippets.filter { snippet in
-            if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
+            if !selectedLanguages.isEmpty, !selectedLanguages.contains(SupportedLanguage(stored: snippet.language)) { return false }
 
             if showFavoritesOnly && !snippet.isFavorite { return false }
 
@@ -1658,33 +1677,29 @@ enum GallerySnippetFilter {
         }
     }
 
-    /// Case-insensitive substring match without allocating a lowercased copy
-    /// of `haystack` (search runs over every snippet's full code per pass).
-    static func matches(_ haystack: String, _ needle: String) -> Bool {
-        haystack.range(of: needle, options: .caseInsensitive) != nil
-    }
-
     static func searchResults(in pool: [Snippet], needle: String) -> [Snippet] {
-        guard !needle.isEmpty else { return [] }
+        let terms = SnippetSearch.terms(needle)
+        guard !terms.isEmpty else { return [] }
 
         return pool.filter { snippet in
-            matches(snippet.title, needle) ||
-            matches(snippet.snippetDescription, needle) ||
-            matches(snippet.code, needle) ||
-            matches(snippet.language, needle) ||
-            snippet.collections.contains { !$0.isDeleted && matches($0.name, needle) }
+            let collectionNames = snippet.collections.compactMap { $0.isDeleted ? nil : $0.name }
+            return SnippetSearch.matches(
+                terms: terms,
+                in: [snippet.title, snippet.snippetDescription, snippet.code, snippet.language] + collectionNames
+            )
         }
     }
 
     static func searchCollections(
         _ collections: [SnippetCollection], needle: String, showFavoritesOnly: Bool
     ) -> [SnippetCollection] {
-        guard !needle.isEmpty else { return [] }
+        let terms = SnippetSearch.terms(needle)
+        guard !terms.isEmpty else { return [] }
 
         return collections.filter { collection in
             !collection.isDeleted &&
             (!showFavoritesOnly || collection.isFavorite) &&
-            matches(collection.name, needle)
+            SnippetSearch.matches(terms: terms, in: [collection.name])
         }
     }
 }

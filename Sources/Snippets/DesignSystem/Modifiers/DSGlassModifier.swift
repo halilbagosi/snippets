@@ -27,22 +27,11 @@ public struct DSGlassModifier<S: Shape>: ViewModifier {
         let isDark = colorScheme == .dark
         let resolvedBorderOpacity = borderOpacity ?? (isDark ? 0.18 : 0.42)
 
-        if #available(macOS 26.0, *) {
-            // Assume glassEffect is available in this future OS version.
-            // Using AnyView to bypass compile error if this modifier does not exist locally.
-            // Actually, we keep it as it was in GlassCard.swift.
-            decorated(
-                identified(content.glassEffect(interactive ? .regular.interactive() : .regular, in: shape)),
-                borderOpacity: resolvedBorderOpacity,
-                isDark: isDark
-            )
-        } else {
-            decorated(
-                content.background(shape.fill(.ultraThinMaterial)),
-                borderOpacity: resolvedBorderOpacity,
-                isDark: isDark
-            )
-        }
+        return decorated(
+            identified(content.glassEffect(interactive ? .regular.interactive() : .regular, in: shape)),
+            borderOpacity: resolvedBorderOpacity,
+            isDark: isDark
+        )
     }
 
     /// Give the glass a stable identity inside its `GlassEffectContainer`.
@@ -53,7 +42,6 @@ public struct DSGlassModifier<S: Shape>: ViewModifier {
     /// immediately. The two land on different frames and the rim shows up
     /// before the material fills it in. With an ID the container morphs the
     /// member as one piece.
-    @available(macOS 26.0, *)
     @ViewBuilder
     private func identified<V: View>(_ view: V) -> some View {
         if let glassID, let glassNamespace {
@@ -151,22 +139,17 @@ public struct DSGlassWellModifier<S: Shape>: ViewModifier {
 
     @ViewBuilder
     private func material(isDark: Bool) -> some View {
-        Group {
-            if #available(macOS 26.0, *) {
-                Color.clear.glassEffect(.regular, in: shape)
-            } else {
-                shape.fill(.ultraThinMaterial)
+        Color.clear
+            .glassEffect(.regular, in: shape)
+            .overlay {
+                shape.fill(DSToken.Color.LiquidGlass.fill(isDark: isDark))
             }
-        }
-        .overlay {
-            shape.fill(DSToken.Color.LiquidGlass.fill(isDark: isDark))
-        }
-        .overlay {
-            if let tint {
-                shape.fill(DSToken.Color.LiquidGlass.tintFill(tint: tint, isDark: isDark))
+            .overlay {
+                if let tint {
+                    shape.fill(DSToken.Color.LiquidGlass.tintFill(tint: tint, isDark: isDark))
+                }
             }
-        }
-        .allowsHitTesting(false)
+            .allowsHitTesting(false)
     }
 }
 
@@ -199,26 +182,16 @@ public struct DSGlassBarModifier: ViewModifier {
 
     @ViewBuilder
     private var barSurface: some View {
-        Group {
-            if #available(macOS 26.0, *) {
-                Rectangle()
-                    .fill(.clear)
-                    .glassEffect(.regular.tint(barTint), in: Rectangle())
-            } else {
-                Rectangle()
-                    .fill(.bar)
-                    .overlay {
-                        Rectangle().fill(barTint)
-                    }
+        Rectangle()
+            .fill(.clear)
+            .glassEffect(.regular.tint(barTint), in: Rectangle())
+            .overlay(alignment: dividerEdge == .top ? .top : .bottom) {
+                if dividerEdge != nil {
+                    Rectangle()
+                        .fill(Color(nsColor: .separatorColor))
+                        .frame(height: 1)
+                }
             }
-        }
-        .overlay(alignment: dividerEdge == .top ? .top : .bottom) {
-            if dividerEdge != nil {
-                Rectangle()
-                    .fill(Color(nsColor: .separatorColor))
-                    .frame(height: 1)
-            }
-        }
     }
 
     /// Darker tint, similar to the bottom bar in Xcode or the path bar in Finder.

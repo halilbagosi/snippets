@@ -7,6 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E44E7EBA63F566394B2FF51F /* TransferCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964AFEF62C5E8FB2F8975326 /* TransferCommands.swift */; };
+		3700B7C43CCFF5DA226AD2EE /* SnippetTransferController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B53A32D2E66FC5F0D76FE7CF /* SnippetTransferController.swift */; };
+		F8C62E3A560D9AC54FF7E392 /* SnippetImporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */; };
+		62D6BE34B6BA94FF9F3DE936 /* SnippetImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39FBD397ED1CCDF3120982B /* SnippetImporter.swift */; };
+		876B498FAF9B2921E1251B5E /* SnippetExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EE544FC0CFAF7ADB212E29A /* SnippetExporterTests.swift */; };
+		B5B0E85A3DC87178E69928BA /* SnippetExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0726DA6194BC768FB3E3CEF /* SnippetExporter.swift */; };
+		3164264C7689400F187F3275 /* SnippetArchiveTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F34D7D26165772B2FBCD32A7 /* SnippetArchiveTests.swift */; };
+		75BA5AA7792F8E5F50152054 /* SnippetArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFBEFAF0AE7D681E3B4DFE7D /* SnippetArchive.swift */; };
 		05C84AB0AD5549D7F7069E6E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 757E7F34577C563AEFCB24FA /* PrivacyInfo.xcprivacy */; };
 		98B128D9E36B123A4D976EB8 /* ThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = 18B912223FDE5C2A7CC856B3 /* ThirdPartyNotices.txt */; };
 		F46B79656507314308974187 /* ThirdPartyNoticesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 271373FECC71F698C4601723 /* ThirdPartyNoticesView.swift */; };
@@ -151,6 +159,14 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		964AFEF62C5E8FB2F8975326 /* TransferCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferCommands.swift; sourceTree = "<group>"; };
+		B53A32D2E66FC5F0D76FE7CF /* SnippetTransferController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetTransferController.swift; sourceTree = "<group>"; };
+		FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetImporterTests.swift; sourceTree = "<group>"; };
+		D39FBD397ED1CCDF3120982B /* SnippetImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetImporter.swift; sourceTree = "<group>"; };
+		7EE544FC0CFAF7ADB212E29A /* SnippetExporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetExporterTests.swift; sourceTree = "<group>"; };
+		B0726DA6194BC768FB3E3CEF /* SnippetExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetExporter.swift; sourceTree = "<group>"; };
+		F34D7D26165772B2FBCD32A7 /* SnippetArchiveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetArchiveTests.swift; sourceTree = "<group>"; };
+		BFBEFAF0AE7D681E3B4DFE7D /* SnippetArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetArchive.swift; sourceTree = "<group>"; };
 		A4D3F65EC1966AF5DF35CA28 /* Snippets-AppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Snippets-AppStore.entitlements"; sourceTree = SOURCE_ROOT; };
 		757E7F34577C563AEFCB24FA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		18B912223FDE5C2A7CC856B3 /* ThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThirdPartyNotices.txt; sourceTree = "<group>"; };
@@ -317,9 +333,23 @@
 /* End PBXTargetDependency section */
 
 /* Begin PBXGroup section */
+		1BCA38E9F7E2A72176C796D0 /* Transfer */ = {
+			isa = PBXGroup;
+			children = (
+				B53A32D2E66FC5F0D76FE7CF /* SnippetTransferController.swift */,
+				D39FBD397ED1CCDF3120982B /* SnippetImporter.swift */,
+				B0726DA6194BC768FB3E3CEF /* SnippetExporter.swift */,
+				BFBEFAF0AE7D681E3B4DFE7D /* SnippetArchive.swift */,
+			);
+			path = Transfer;
+			sourceTree = "<group>";
+		};
 		5E57E5700000000000000003 /* SnippetsTests */ = {
 			isa = PBXGroup;
 			children = (
+				FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */,
+				7EE544FC0CFAF7ADB212E29A /* SnippetExporterTests.swift */,
+				F34D7D26165772B2FBCD32A7 /* SnippetArchiveTests.swift */,
 				A1B2C3D40002TCLIPCAPTURE /* ClipboardCaptureTests.swift */,
 				A1B2C3D40002TCODESHAPE /* CodeShapeHeuristicsTests.swift */,
 				A1B2C3D40002TQUICKVM /* QuickCopyViewModelTests.swift */,
@@ -522,6 +552,7 @@
 		52340538EFD250B44AE38B68 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				964AFEF62C5E8FB2F8975326 /* TransferCommands.swift */,
 				6CE2410E27F5506076DCBF84 /* AppearanceSettings.swift */,
 				132202CF7B77D71B4D874FF4 /* HelpCommands.swift */,
 				F22332A83990D91C9C3A122D /* AppLinks.swift */,
@@ -681,6 +712,7 @@
 		D162801B5F6E0AE5BCE07169 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				1BCA38E9F7E2A72176C796D0 /* Transfer */,
 				A1B2C3D448A6474682646B42 /* QuickCapture */,
 				A1B2C3D4364B5CA722DD5D13 /* QuickCopy */,
 				32F8FA0F9162B95586F72B95 /* Editor */,
@@ -826,6 +858,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				5E57E5700000000000000200 /* AppearanceSettingsTests.swift in Sources */,
+				F8C62E3A560D9AC54FF7E392 /* SnippetImporterTests.swift in Sources */,
+				876B498FAF9B2921E1251B5E /* SnippetExporterTests.swift in Sources */,
+				3164264C7689400F187F3275 /* SnippetArchiveTests.swift in Sources */,
 				5E57E5700000000000000201 /* CollectionMoveTreeTests.swift in Sources */,
 				5E57E5700000000000000202 /* LanguageDetectorCorpusTests.swift in Sources */,
 				5E57E5700000000000000203 /* LanguageDetectorHardeningTests.swift in Sources */,
@@ -864,6 +899,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				7F62BEEDE019601A65905EF2 /* AppEnvironment.swift in Sources */,
+				E44E7EBA63F566394B2FF51F /* TransferCommands.swift in Sources */,
+				3700B7C43CCFF5DA226AD2EE /* SnippetTransferController.swift in Sources */,
+				62D6BE34B6BA94FF9F3DE936 /* SnippetImporter.swift in Sources */,
+				B5B0E85A3DC87178E69928BA /* SnippetExporter.swift in Sources */,
+				75BA5AA7792F8E5F50152054 /* SnippetArchive.swift in Sources */,
 				F46B79656507314308974187 /* ThirdPartyNoticesView.swift in Sources */,
 				40D4ED353970535DB11DCF63 /* HelpCommands.swift in Sources */,
 				CF9418FAE91E4369C97CBFF2 /* AppLinks.swift in Sources */,
