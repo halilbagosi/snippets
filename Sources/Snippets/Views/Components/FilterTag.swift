@@ -67,7 +67,7 @@ struct FilterTag: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(FilterTagButtonStyle(isSelected: isSelected, accent: selectedFillAccent ?? accent))
-        .animation(.snappy(duration: 0.12), value: isSelected)
+        .animation(DSToken.Motion.selection, value: isSelected)
     }
 }
 
@@ -79,6 +79,6 @@ private struct FilterTagButtonStyle: ButtonStyle {
         configuration.label
             .shadow(color: isSelected || configuration.isPressed ? accent.opacity(0.40) : .clear, radius: 8, x: 0, y: 0)
             .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
-            .animation(.spring(response: 0.22, dampingFraction: 0.72), value: configuration.isPressed)
+            .animation(DSToken.Motion.press, value: configuration.isPressed)
     }
 }

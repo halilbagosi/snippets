@@ -6,6 +6,9 @@ struct FindSnippetsIntent: AppIntent {
     static let description = IntentDescription("Finds snippets by text, collection, or favorites.")
     static let openAppWhenRun = false
 
+    /// Bounds what Shortcuts receives, however large the library is.
+    static let resultLimit = 200
+
     @Parameter(title: "Search Text")
     var searchText: String?
 
@@ -25,20 +28,35 @@ struct FindSnippetsIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<[SnippetEntity]> {
         let context = SnippetsData.sharedModelContainer.mainContext
-        var descriptor = FetchDescriptor<Snippet>(
+        let matched = try Self.execute(
+            searchText: searchText, collectionID: collection?.id,
+            favoritesOnly: favoritesOnly, in: context
+        )
+        return .result(value: matched.map(SnippetEntity.init))
+    }
+
+    /// Core logic, context-injected for tests.
+    @MainActor
+    static func execute(
+        searchText: String?, collectionID: UUID?, favoritesOnly: Bool,
+        in context: ModelContext
+    ) throws -> [Snippet] {
+        let descriptor = FetchDescriptor<Snippet>(
             predicate: #Predicate { $0.deletedAt == nil },
             sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
-        descriptor.fetchLimit = 200
         let snippets = try context.fetch(descriptor)
         if UUIDBackfill.assign(snippets: snippets, collections: []) > 0 {
             try? context.save()
         }
 
+        // Filter the whole library, then cap. Capping the fetch instead made
+        // anything older than the 200 most recently edited snippets
+        // unfindable, with no error to say so.
         let matched = SnippetQueryFilter.filter(
             snippets,
             query: searchText,
-            collectionUUID: collection?.id,
+            collectionUUID: collectionID,
             favoritesOnly: favoritesOnly,
             projection: { snippet in
                 SnippetQueryFilter.Candidate(
@@ -50,6 +68,6 @@ struct FindSnippetsIntent: AppIntent {
                 )
             }
         )
-        return .result(value: matched.map(SnippetEntity.init))
+        return Array(matched.prefix(Self.resultLimit))
     }
 }

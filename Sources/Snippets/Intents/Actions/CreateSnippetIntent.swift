@@ -29,7 +29,21 @@ struct CreateSnippetIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<SnippetEntity> & ProvidesDialog {
         let context = SnippetsData.sharedModelContainer.mainContext
+        let snippet = try Self.execute(
+            title: title, code: code, language: language,
+            collectionID: collection?.id, in: context
+        )
 
+        let name = title.isEmpty ? "Untitled" : title
+        return .result(value: SnippetEntity(snippet), dialog: "Created \(name).")
+    }
+
+    /// Core logic, context-injected for tests.
+    @MainActor
+    static func execute(
+        title: String, code: String, language: String,
+        collectionID: UUID?, in context: ModelContext
+    ) throws -> Snippet {
         let snippet = Snippet(
             title: title,
             language: language,
@@ -37,16 +51,14 @@ struct CreateSnippetIntent: AppIntent {
         )
         context.insert(snippet)
 
-        if let collection {
-            guard let target = try SnippetStore.collection(uuid: collection.id, in: context) else {
+        if let collectionID {
+            guard let target = try SnippetStore.collection(uuid: collectionID, in: context) else {
                 throw SnippetIntentError.collectionNotFound
             }
             snippet.collections.append(target)
             target.updatedAt = .now
         }
         try context.save()
-
-        let name = title.isEmpty ? "Untitled" : title
-        return .result(value: SnippetEntity(snippet), dialog: "Created \(name).")
+        return snippet
     }
 }

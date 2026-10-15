@@ -4,6 +4,8 @@ import SwiftUI
 /// Controls colour scheme, focused mode, hover effects, and theme accent colour.
 struct AppearanceView: View {
     @Environment(AppearanceSettings.self) private var appearanceSettings
+    @Environment(PreviewTrust.self) private var previewTrust
+    @Environment(Onboarding.self) private var onboarding
     @Environment(\.colorScheme) private var colorScheme
 
     private var theme: Theme { Theme.current(colorScheme) }
@@ -42,6 +44,9 @@ struct AppearanceView: View {
             schemeCard
             behaviorCard
             accentCard
+            #if DEBUG
+            debugCard
+            #endif
         }
     }
 
@@ -85,7 +90,7 @@ struct AppearanceView: View {
     private func schemeTile(_ option: SchemeOption) -> some View {
         let isSelected = appearanceSettings.preferredColorScheme == option.rawValue
         return Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            withAnimation(DSToken.Motion.toggle) {
                 appearanceSettings.preferredColorScheme = option.rawValue
             }
         } label: {
@@ -169,6 +174,8 @@ struct AppearanceView: View {
 
     private var behaviorCard: some View {
         @Bindable var settings = appearanceSettings
+        @Bindable var trust = previewTrust
+        @Bindable var capture = ClipboardMonitor.shared
 
         return glassCard {
             sectionLabel("Behavior")
@@ -205,6 +212,26 @@ struct AppearanceView: View {
                 title: "Collection Deletion Behavior",
                 caption: "What to delete when deleting a collection",
                 selection: $settings.collectionDeletionBehavior
+            )
+
+            Divider().opacity(0.5)
+
+            behaviorRow(
+                icon: "play.rectangle",
+                title: "Run Previews Automatically",
+                caption: "Off, a preview waits for Run instead of executing when you open a snippet",
+                isOn: $trust.autoRunPreviews
+            )
+
+            Divider().opacity(0.5)
+
+            // The caption is the user's only notice that the app reads the
+            // clipboard, so it says so plainly.
+            behaviorRow(
+                icon: "doc.on.clipboard",
+                title: "Offer to Save Copied Code",
+                caption: "Watch the clipboard and offer to save code you copy elsewhere",
+                isOn: $capture.isEnabled
             )
         }
     }
@@ -277,6 +304,49 @@ struct AppearanceView: View {
         }
     }
 
+    // MARK: - Debug
+
+    #if DEBUG
+    /// Debug builds only: the tour otherwise shows once per install, so
+    /// iterating on it would mean clearing defaults between every look.
+    private var debugCard: some View {
+        glassCard {
+            sectionLabel("Debug")
+
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles.rectangle.stack")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(theme.safeAccentText(accent))
+                    .frame(width: 30, height: 30)
+                    .liquidGlassSurface(
+                        in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+                        tint: accent.opacity(0.12),
+                        shadowRadius: 3,
+                        shadowY: 1
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Replay Onboarding")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(theme.text)
+                    Text("Show the welcome tour again over the main window")
+                        .font(.system(size: 11))
+                        .foregroundStyle(theme.textMuted)
+                }
+
+                Spacer(minLength: 12)
+
+                Button("Replay") {
+                    MainWindowOpener.activate()
+                    onboarding.present()
+                }
+                .buttonStyle(.glass)
+                .controlSize(.small)
+            }
+        }
+    }
+    #endif
+
     // MARK: - Accent Color
 
     private var accentCard: some View {
@@ -298,7 +368,7 @@ struct AppearanceView: View {
         let swatchColor = Color(hex: preset.hex) ?? theme.accent
         let isActive = appearanceSettings.themeColorHex.lowercased() == preset.hex.lowercased()
         return Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            withAnimation(DSToken.Motion.toggle) {
                 appearanceSettings.themeColorHex = preset.hex
             }
         } label: {
@@ -320,7 +390,7 @@ struct AppearanceView: View {
             }
             .frame(width: 38, height: 38)
             .scaleEffect(isActive ? 1.08 : 1.0)
-            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isActive)
+            .animation(DSToken.Motion.toggle, value: isActive)
         }
         .buttonStyle(.plain)
         .help(preset.name)
@@ -379,7 +449,7 @@ struct AppearanceView: View {
         }
         .frame(width: 38, height: 38)
         .scaleEffect(isCustomActive ? 1.08 : 1.0)
-        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isCustomActive)
+        .animation(DSToken.Motion.toggle, value: isCustomActive)
         .help("Custom color")
         .accessibilityLabel("Custom theme color")
     }

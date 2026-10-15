@@ -21,11 +21,11 @@ struct StatusBar: View {
                         if let icon = segment.icon {
                             Image(systemName: icon)
                                 .font(Mono.font(size: 10, weight: .semibold))
-                                .foregroundStyle(segment.tint ?? theme.textMuted)
+                                .foregroundStyle(foreground(for: segment, theme: theme))
                         }
                         Text(segment.label)
                             .font(Mono.font(size: 11, weight: .medium))
-                            .foregroundStyle(segment.tint ?? theme.textMuted)
+                            .foregroundStyle(foreground(for: segment, theme: theme))
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
                     }
@@ -39,5 +39,14 @@ struct StatusBar: View {
         .scrollClipDisabled()
         .frame(maxWidth: .infinity, alignment: .leading)
         .liquidGlassBar(divider: .top)
+    }
+
+    /// Tints are accent colours — a language's, a collection's — picked to
+    /// read on dark glass. On light glass the pale ones (React's cyan,
+    /// JavaScript's yellow) wash out at this size, so they are darkened the
+    /// same way `LanguageBadge` darkens its text.
+    private func foreground(for segment: Segment, theme: Theme) -> Color {
+        guard let tint = segment.tint else { return theme.textMuted }
+        return colorScheme == .dark ? tint : tint.blended(with: .black, ratio: 0.45)
     }
 }

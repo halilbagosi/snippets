@@ -6,57 +6,50 @@ import AppKit
 /// Top-level settings view, displayed as the macOS Settings window.
 ///
 /// De-chromed Liquid Glass window matching the app's modal family: transparent
-/// titlebar, dot-grid backdrop, a centered glass tab switcher instead of the
-/// stock preferences toolbar, and glass-card panes instead of grouped forms.
+/// titlebar, dot-grid backdrop, and glass-card panes instead of grouped forms.
+/// App info lives in the standard About panel (Snippets ▸ About Snippets).
 struct SettingsView: View {
     @Environment(AppearanceSettings.self) private var appearanceSettings
     @Environment(\.colorScheme) private var colorScheme
 
-    private enum SettingsTab: String, CaseIterable, Identifiable {
-        case appearance = "Preferences"
-        case about = "About"
-
-        var id: String { rawValue }
-
-        var icon: String {
-            switch self {
-            case .appearance: return "gear"
-            case .about: return "info.circle.fill"
-            }
-        }
-    }
-
-    @Namespace private var tabNamespace
-    @State private var selectedTab: SettingsTab = .appearance
-
-    private var theme: Theme { Theme.current(colorScheme) }
+    private static let windowWidth: CGFloat = 520
+    /// The panes outgrew a window sized to its content — the last card
+    /// (Debug) ended up below the bottom of the screen — so the height is the
+    /// user's, down to this, with the panes scrolling. The scene opens it at
+    /// `SnippetsApp.settingsDefaultHeight`.
+    static let minimumHeight: CGFloat = 320
     private var accent: Color { appearanceSettings.themeColor }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            settingsHeader
+    /// Whether the panes have scrolled away from the top, which is when they
+    /// start sliding under the titlebar and its traffic lights.
+    @State private var isScrolled = false
 
-            Group {
-                if selectedTab == .appearance {
-                    DSGlassContainer(spacing: 20) {
-                        AppearanceView()
-                            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .center)))
-                            .padding(.horizontal, 24)
-                            .padding(.top, 8)
-                            .padding(.bottom, 28)
-                    }
-                } else if selectedTab == .about {
-                    ScrollView {
-                        DSGlassContainer(spacing: 20) {
-                            AboutView()
-                                .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .center)))
-                                .padding(.horizontal, 24)
-                                .padding(.top, 8)
-                                .padding(.bottom, 28)
-                        }
-                    }
-                }
+    var body: some View {
+        DSGlassContainer(spacing: 20) {
+            ScrollView {
+                AppearanceView()
+                    .padding(.horizontal, 24)
+                    // Clears the (transparent) titlebar strip and its traffic lights.
+                    .padding(.top, 44)
+                    .padding(.bottom, 28)
             }
+            .scrollIndicators(.automatic)
+            .scrollBounceBehavior(.basedOnSize)
+            // The titlebar's default edge is the hard style: a rule and a
+            // flat band the panes cut off against. Soft drops both and lets
+            // the panes pass under the traffic lights, where the veil below
+            // blurs and fades them.
+            .scrollEdgeEffectStyle(.soft, for: .top)
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                geometry.contentOffset.y + geometry.contentInsets.top > 1
+            } action: { _, scrolled in
+                withAnimation(DSToken.Motion.hover) { isScrolled = scrolled }
+            }
+        }
+        .overlay(alignment: .top) {
+            ScrollEdgeVeil()
+                .opacity(isScrolled ? 1 : 0)
+                .allowsHitTesting(false)
         }
         .background {
             ZStack {
@@ -66,76 +59,65 @@ struct SettingsView: View {
                     .ignoresSafeArea()
             }
         }
-        .frame(width: 520, height: 680)
+        // Resizable both ways: the cards stretch with the width, and the
+        // panes scroll once the height is shorter than they are.
+        .frame(minWidth: Self.windowWidth, maxWidth: .infinity, minHeight: Self.minimumHeight, maxHeight: .infinity)
         #if canImport(AppKit)
         .background(SettingsWindowConfigurator())
         #endif
     }
+}
 
-    // MARK: - Glass Tab Switcher
+// MARK: - Scroll edge
 
-    private var settingsHeader: some View {
-        HStack {
-            Spacer()
-            HStack(spacing: 4) {
-                ForEach(SettingsTab.allCases) { tab in
-                    tabButton(tab)
+/// Blurs and fades the panes as they scroll under the transparent titlebar,
+/// so a card passing behind the traffic lights softens away instead of
+/// colliding with them. Material for the blur, the window colour for the
+/// fade, both dissolving downward.
+private struct ScrollEdgeVeil: View {
+    /// The titlebar strip plus room for the fade to finish below it.
+    private static let height: CGFloat = 64
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .mask {
+                    LinearGradient(
+                        stops: [
+                            .init(color: .black, location: 0),
+                            .init(color: .black, location: 0.45),
+                            .init(color: .clear, location: 1),
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
                 }
-            }
-            .padding(4)
-            .liquidGlassSurface(
-                in: Capsule(style: .continuous),
-                shadowRadius: 6,
-                shadowY: 3
+
+            LinearGradient(
+                colors: [Color(nsColor: .windowBackgroundColor).opacity(0.75), .clear],
+                startPoint: .top,
+                endPoint: .bottom
             )
-            Spacer()
         }
-        // Clears the (transparent) titlebar strip and its traffic lights.
-        .padding(.top, 24)
-        .padding(.bottom, 14)
-    }
-
-    private func tabButton(_ tab: SettingsTab) -> some View {
-        let isSelected = selectedTab == tab
-        return Button {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
-                selectedTab = tab
-            }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: tab.icon)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(isSelected ? theme.safeAccentText(accent) : theme.textMuted)
-                Text(tab.rawValue)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(isSelected ? theme.text : theme.textMuted)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 6)
-            .contentShape(Capsule(style: .continuous))
-            .background {
-                if isSelected {
-                    Capsule(style: .continuous)
-                        .fill(accent.opacity(colorScheme == .dark ? 0.26 : 0.18))
-                        .overlay {
-                            Capsule(style: .continuous)
-                                .strokeBorder(.white.opacity(colorScheme == .dark ? 0.18 : 0.35), lineWidth: 1)
-                        }
-                        .matchedGeometryEffect(id: "selectedSettingsTab", in: tabNamespace)
-                }
-            }
-        }
-        .buttonStyle(.plain)
+        .frame(height: Self.height)
+        .ignoresSafeArea(edges: .top)
     }
 }
 
 // MARK: - Window Chrome
 
 #if canImport(AppKit)
-/// De-chromes the hosting Settings window: hidden title, transparent titlebar,
-/// content extending under it — same treatment as the main window.
+/// De-chromes the hosting Settings window — hidden title, transparent titlebar,
+/// content extending under it — same treatment as the main window — and
+/// makes it resizable.
+///
+/// SwiftUI owns this window's sizing. The scene supplies the default and
+/// minimum size; setting a `contentMaxSize` or calling `setFrame` from here
+/// makes it drop `.resizable` again, so nothing else is set.
 private struct SettingsWindowConfigurator: NSViewRepresentable {
     func makeNSView(context: Context) -> ChromeView { ChromeView() }
+
     func updateNSView(_ nsView: ChromeView, context: Context) {}
 
     @MainActor
@@ -163,6 +145,9 @@ private struct SettingsWindowConfigurator: NSViewRepresentable {
             window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = true
             window.styleMask.insert(.fullSizeContentView)
+            // Settings windows come up fixed-size whatever the scene's
+            // resizability says.
+            window.styleMask.insert(.resizable)
         }
     }
 }

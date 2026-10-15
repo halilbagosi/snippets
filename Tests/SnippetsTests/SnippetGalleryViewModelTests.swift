@@ -14,6 +14,29 @@ final class SnippetGalleryViewModelTests: XCTestCase {
         XCTAssertEqual(ordered.map(\.title), ["Oldest", "Newest"])
     }
 
+    func test_languageGroups_withPreferredOrder_followsItAndSkipsEmptyLanguages() {
+        let swift = Snippet(title: "S", language: "Swift")
+        let css = Snippet(title: "C", language: "CSS")
+        let sut = SnippetGalleryViewModel()
+
+        let groups = sut.languageGroups([swift, css], preferredOrder: [.css, .python, .swift])
+
+        XCTAssertEqual(groups.map(\.language), [.css, .swift])
+        XCTAssertEqual(groups.first?.snippets.map(\.title), ["C"])
+    }
+
+    func test_languageGroups_withoutPreferredOrder_groupsEveryLanguageAlphabetically() {
+        let swift1 = Snippet(title: "S1", language: "Swift")
+        let css = Snippet(title: "C", language: "CSS")
+        let swift2 = Snippet(title: "S2", language: "Swift")
+        let sut = SnippetGalleryViewModel()
+
+        let groups = sut.languageGroups([swift1, css, swift2], preferredOrder: [])
+
+        XCTAssertEqual(groups.map(\.language), [.css, .swift])
+        XCTAssertEqual(groups.last?.snippets.map(\.title), ["S1", "S2"])
+    }
+
     func test_toggleSelectAll_whenItemsAreUnselected_selectsEveryVisibleSnippet() {
         let first = Snippet(title: "First")
         let second = Snippet(title: "Second")
@@ -102,5 +125,36 @@ final class SnippetGalleryViewModelTests: XCTestCase {
         )
 
         XCTAssertEqual(result, .deleteImmediately(deleteCollectionContents: false))
+    }
+}
+
+@MainActor
+final class SnippetCardPreviewTextTests: XCTestCase {
+    func test_previewText_whenCodeIsShort_returnsItUnchanged() {
+        let code = "let a = 1\nlet b = 2"
+
+        XCTAssertEqual(SnippetCard.previewText(of: code), code)
+    }
+
+    func test_previewText_whenCodeHasManyLines_keepsElevenSoTheCardStillTruncates() {
+        let code = (1...40).map { "line \($0)" }.joined(separator: "\n")
+
+        let preview = SnippetCard.previewText(of: code)
+
+        XCTAssertEqual(preview, (1...11).map { "line \($0)" }.joined(separator: "\n"))
+    }
+
+    func test_previewText_countsCRLFLineEndings() {
+        let code = (1...20).map { "line \($0)" }.joined(separator: "\r\n")
+
+        let preview = SnippetCard.previewText(of: code)
+
+        XCTAssertEqual(preview.components(separatedBy: "\r\n").count, 11)
+    }
+
+    func test_previewText_whenCodeIsOneLongLine_capsTheCharacterCount() {
+        let code = String(repeating: "x", count: 50_000)
+
+        XCTAssertEqual(SnippetCard.previewText(of: code).count, 2_400)
     }
 }

@@ -35,6 +35,22 @@ final class SnippetQueryFilterTests: XCTestCase {
         XCTAssertTrue(SnippetQueryFilter.matches(title: "a", description: "b", language: "c", query: "   "))
     }
 
+    func test_search_everyWordMustMatchSomeField_inAnyOrder() {
+        XCTAssertTrue(SnippetQueryFilter.matches(title: "JSON parser", description: "", language: "Swift", query: "swift parser"))
+        XCTAssertTrue(SnippetQueryFilter.matches(title: "Fetch user profile", description: "", language: "Swift", query: "user fetch"))
+        XCTAssertFalse(SnippetQueryFilter.matches(title: "Fetch user profile", description: "", language: "Swift", query: "user delete"))
+    }
+
+    func test_search_ignoresAccents() {
+        XCTAssertTrue(SnippetQueryFilter.matches(title: "Café menu", description: "", language: "Swift", query: "cafe"))
+        XCTAssertTrue(SnippetQueryFilter.matches(title: "Kód", description: "", language: "Swift", query: "kod"))
+    }
+
+    func test_searchTerms_splitOnAnyWhitespace() {
+        XCTAssertEqual(SnippetSearch.terms("  a \t b\nc  "), ["a", "b", "c"])
+        XCTAssertEqual(SnippetSearch.terms("   "), [])
+    }
+
     func test_filter_nilQuery_returnsAll() {
         let items = [candidate(title: "a"), candidate(title: "b")]
         XCTAssertEqual(filter(items).count, 2)

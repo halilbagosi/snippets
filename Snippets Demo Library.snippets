@@ -1,0 +1,297 @@
+{
+ "format": "com.halilbagosi.snippets",
+ "version": 1,
+ "exportedAt": "2026-10-14T09:00:00.000Z",
+ "appVersion": "1.0",
+ "collections": [
+  {
+   "id": "1702B973-2F5A-440C-BCCA-26B43A5A25CB",
+   "name": "Shaders",
+   "colorHex": "#A855F7",
+   "colorHexDark": null,
+   "iconName": "sparkles",
+   "parentID": null,
+   "isFavorite": true,
+   "createdAt": "2026-10-01T21:00:00.000Z",
+   "updatedAt": "2026-10-01T21:00:00.000Z"
+  },
+  {
+   "id": "A3AC42B4-0EC8-4E7E-915B-08037D45DC70",
+   "name": "UI Components",
+   "colorHex": "#0EA5E9",
+   "colorHexDark": null,
+   "iconName": "square.on.square",
+   "parentID": null,
+   "isFavorite": true,
+   "createdAt": "2026-10-01T21:00:00.000Z",
+   "updatedAt": "2026-10-01T21:00:00.000Z"
+  },
+  {
+   "id": "F932F7A3-8B1A-4862-BA4D-625EA8A20A77",
+   "name": "Animations",
+   "colorHex": "#F97316",
+   "colorHexDark": null,
+   "iconName": "wand.and.stars",
+   "parentID": "A3AC42B4-0EC8-4E7E-915B-08037D45DC70",
+   "isFavorite": false,
+   "createdAt": "2026-10-01T21:00:00.000Z",
+   "updatedAt": "2026-10-01T21:00:00.000Z"
+  },
+  {
+   "id": "43C44EEA-96CA-4B18-BFED-BFE4C3FD5826",
+   "name": "Utilities",
+   "colorHex": "#22C55E",
+   "colorHexDark": null,
+   "iconName": "wrench.and.screwdriver",
+   "parentID": null,
+   "isFavorite": false,
+   "createdAt": "2026-10-01T21:00:00.000Z",
+   "updatedAt": "2026-10-01T21:00:00.000Z"
+  },
+  {
+   "id": "B790E325-09FD-4463-930E-736BAD7E0BA7",
+   "name": "Networking",
+   "colorHex": "#EAB308",
+   "colorHexDark": null,
+   "iconName": "network",
+   "parentID": null,
+   "isFavorite": false,
+   "createdAt": "2026-10-01T21:00:00.000Z",
+   "updatedAt": "2026-10-01T21:00:00.000Z"
+  }
+ ],
+ "snippets": [
+  {
+   "id": "06A9DB76-81EE-467B-BB7A-715BE9FD33BD",
+   "title": "Aurora Plasma",
+   "description": "Layered sine fields that drift like northern lights.",
+   "language": "GLSL",
+   "code": "// Aurora plasma \u2014 Shadertoy style\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n    vec2 uv = fragCoord / iResolution.xy;\n    float t = iTime * 0.35;\n    float v = sin(uv.x * 6.0 + t) + sin(uv.y * 5.0 - t * 1.3);\n    v += sin((uv.x + uv.y) * 7.0 + t * 0.7);\n    v += sin(length(uv - 0.5) * 12.0 - t * 2.0);\n    vec3 a = vec3(0.10, 0.05, 0.45);\n    vec3 b = vec3(0.20, 0.85, 0.95);\n    vec3 c = vec3(0.85, 0.30, 0.95);\n    vec3 col = mix(a, b, 0.5 + 0.5 * sin(v));\n    col = mix(col, c, 0.5 + 0.5 * cos(v * 0.7 + t));\n    fragColor = vec4(col, 1.0);\n}",
+   "createdAt": "2026-10-12T05:00:00.000Z",
+   "updatedAt": "2026-10-14T07:00:00.000Z",
+   "isFavorite": true,
+   "copyCount": 14,
+   "collectionIDs": [
+    "1702B973-2F5A-440C-BCCA-26B43A5A25CB"
+   ],
+   "dependencyIDs": [],
+   "paramConfigs": [],
+   "activeParamConfigID": null,
+   "media": []
+  },
+  {
+   "id": "10D6E8A7-66FB-4FB5-9844-28843191ACC6",
+   "title": "Liquid Rings",
+   "description": "Concentric ripples with a soft chromatic edge.",
+   "language": "Metal",
+   "code": "fragment float4 rings(VertexOut in [[stage_in]],\n                      constant SnippetUniforms& u [[buffer(0)]]) {\n    float2 p = in.uv * 2.0 - 1.0;\n    p.x *= u.resolution.x / u.resolution.y;\n    float r = length(p);\n    float w = sin(r * 18.0 - u.time * 3.0);\n    float3 col = 0.5 + 0.5 * cos(u.time + r * 4.0 + float3(0, 2, 4));\n    col *= smoothstep(0.0, 0.9, w * 0.5 + 0.5);\n    return float4(col * (1.2 - r), 1.0);\n}",
+   "createdAt": "2026-10-12T02:00:00.000Z",
+   "updatedAt": "2026-10-14T04:00:00.000Z",
+   "isFavorite": false,
+   "copyCount": 6,
+   "collectionIDs": [
+    "1702B973-2F5A-440C-BCCA-26B43A5A25CB"
+   ],
+   "dependencyIDs": [],
+   "paramConfigs": [],
+   "activeParamConfigID": null,
+   "media": []
+  },
+  {
+   "id": "CB4E2C7E-5F02-497E-8814-F5D8AF42BFA5",
+   "title": "Glass Button",
+   "description": "A frosted pill button with a moving sheen.",
+   "language": "HTML",
+   "code": "<button class=\"glass\">Get Started</button>\n<style>\n  body { display:grid; place-items:center; height:100vh; margin:0;\n         background: radial-gradient(circle at 30% 20%, #7c3aed, #1e1b4b 70%); }\n  .glass { font: 600 18px -apple-system; color:white; padding:16px 40px;\n           border-radius:999px; border:1px solid #ffffff55;\n           background:#ffffff22; backdrop-filter: blur(12px);\n           box-shadow: 0 10px 40px #0006; cursor:pointer; }\n  .glass:hover { background:#ffffff33; }\n</style>",
+   "createdAt": "2026-10-12T06:00:00.000Z",
+   "updatedAt": "2026-10-14T08:00:00.000Z",
+   "isFavorite": true,
+   "copyCount": 22,
+   "collectionIDs": [
+    "A3AC42B4-0EC8-4E7E-915B-08037D45DC70"
+   ],
+   "dependencyIDs": [],
+   "paramConfigs": [],
+   "activeParamConfigID": null,
+   "media": []
+  },
+  {
+   "id": "A6AC2714-51A6-4271-9E97-BD7D6C2A9B78",
+   "title": "Spring Counter",
+   "description": "A React counter that springs on every tap.",
+   "language": "React",
+   "code": "export default function Counter() {\n  const [count, setCount] = React.useState(0);\n  return (\n    <div style={{display:\"grid\",placeItems:\"center\",height:\"100vh\"}}>\n      <button onClick={() => setCount(c => c + 1)}\n              style={{fontSize: 32, padding: \"20px 36px\", borderRadius: 20}}>\n        Count: {count}\n      </button>\n    </div>\n  );\n}",
+   "createdAt": "2026-10-11T23:00:00.000Z",
+   "updatedAt": "2026-10-14T01:00:00.000Z",
+   "isFavorite": false,
+   "copyCount": 9,
+   "collectionIDs": [
+    "A3AC42B4-0EC8-4E7E-915B-08037D45DC70",
+    "F932F7A3-8B1A-4862-BA4D-625EA8A20A77"
+   ],
+   "dependencyIDs": [],
+   "paramConfigs": [],
+   "activeParamConfigID": null,
+   "media": []
+  },
+  {
+   "id": "4F58CE64-4DF3-4DB2-A03E-38BD823CC01A",
+   "title": "Staggered Fade In",
+   "description": "CSS keyframes with per-item delays.",
+   "language": "CSS",
+   "code": ".item {\n  opacity: 0;\n  transform: translateY(12px);\n  animation: rise 420ms cubic-bezier(.2,.8,.2,1) forwards;\n}\n.item:nth-child(n) { animation-delay: calc(var(--i) * 40ms); }\n\n@keyframes rise {\n  to { opacity: 1; transform: none; }\n}",
+   "createdAt": "2026-10-11T19:00:00.000Z",
+   "updatedAt": "2026-10-13T21:00:00.000Z",
+   "isFavorite": false,
+   "copyCount": 0,
+   "collectionIDs": [
+    "F932F7A3-8B1A-4862-BA4D-625EA8A20A77"
+   ],
+   "dependencyIDs": [],
+   "paramConfigs": [],
+   "activeParamConfigID": null,
+   "media": []
+  },
+  {
+   "id": "435EACD0-45C5-47FB-A3AE-B2BDF15C22C9",
+   "title": "Debounce",
+   "description": "Delay a call until input settles.",
+   "language": "TypeScript",
+   "code": "export function debounce<T extends (...args: any[]) => void>(\n  fn: T,\n  wait = 250\n): (...args: Parameters<T>) => void {\n  let timer: ReturnType<typeof setTimeout> | undefined;\n  return (...args) => {\n    clearTimeout(timer);\n    timer = setTimeout(() => fn(...args), wait);\n  };\n}",
+   "createdAt": "2026-10-12T04:00:00.000Z",
+   "updatedAt": "2026-10-14T06:00:00.000Z",
+   "isFavorite": true,
+   "copyCount": 31,
+   "collectionIDs": [
+    "43C44EEA-96CA-4B18-BFED-BFE4C3FD5826"
+   ],
+   "dependencyIDs": [],
+   "paramConfigs": [],
+   "activeParamConfigID": null,
+   "media": []
+  },
+  {
+   "id": "07F39F32-605F-4D5E-A22B-2D6BD97737D9",
+   "title": "Haptic Press Style",
+   "description": "A SwiftUI button style with scale and haptics.",
+   "language": "Swift",
+   "code": "struct PressableStyle: ButtonStyle {\n    func makeBody(configuration: Configuration) -> some View {\n        configuration.label\n            .scaleEffect(configuration.isPressed ? 0.96 : 1)\n            .animation(.spring(response: 0.25, dampingFraction: 0.7),\n                       value: configuration.isPressed)\n            .sensoryFeedback(.impact, trigger: configuration.isPressed)\n    }\n}",
+   "createdAt": "2026-10-12T01:00:00.000Z",
+   "updatedAt": "2026-10-14T03:00:00.000Z",
+   "isFavorite": false,
+   "copyCount": 12,
+   "collectionIDs": [
+    "A3AC42B4-0EC8-4E7E-915B-08037D45DC70",
+    "F932F7A3-8B1A-4862-BA4D-625EA8A20A77"
+   ],
+   "dependencyIDs": [],
+   "paramConfigs": [],
+   "activeParamConfigID": null,
+   "media": []
+  },
+  {
+   "id": "4FEF68A8-EC4E-4B5F-BC4A-968ADB7C5432",
+   "title": "Retry with Backoff",
+   "description": "Exponential backoff for flaky requests.",
+   "language": "Rust",
+   "code": "pub async fn retry<F, Fut, T, E>(mut op: F, max: u32) -> Result<T, E>\nwhere\n    F: FnMut() -> Fut,\n    Fut: std::future::Future<Output = Result<T, E>>,\n{\n    let mut delay = 100;\n    for attempt in 0.. {\n        match op().await {\n            Ok(v) => return Ok(v),\n            Err(e) if attempt >= max => return Err(e),\n            Err(_) => tokio::time::sleep(ms(delay)).await,\n        }\n        delay *= 2;\n    }\n    unreachable!()\n}",
+   "createdAt": "2026-10-11T11:00:00.000Z",
+   "updatedAt": "2026-10-13T13:00:00.000Z",
+   "isFavorite": false,
+   "copyCount": 4,
+   "collectionIDs": [
+    "B790E325-09FD-4463-930E-736BAD7E0BA7"
+   ],
+   "dependencyIDs": [],
+   "paramConfigs": [],
+   "activeParamConfigID": null,
+   "media": []
+  },
+  {
+   "id": "EE5915B3-7195-4B85-95D9-91D1F919FCB9",
+   "title": "Fetch JSON",
+   "description": "Typed fetch with a timeout.",
+   "language": "JavaScript",
+   "code": "export async function getJSON(url, { timeout = 8000 } = {}) {\n  const ctrl = new AbortController();\n  const id = setTimeout(() => ctrl.abort(), timeout);\n  try {\n    const res = await fetch(url, { signal: ctrl.signal });\n    if (!res.ok) throw new Error(`HTTP ${res.status}`);\n    return await res.json();\n  } finally {\n    clearTimeout(id);\n  }\n}",
+   "createdAt": "2026-10-11T16:00:00.000Z",
+   "updatedAt": "2026-10-13T18:00:00.000Z",
+   "isFavorite": false,
+   "copyCount": 17,
+   "collectionIDs": [
+    "B790E325-09FD-4463-930E-736BAD7E0BA7"
+   ],
+   "dependencyIDs": [],
+   "paramConfigs": [],
+   "activeParamConfigID": null,
+   "media": []
+  },
+  {
+   "id": "12882FDF-D08E-4E77-BCF6-32F6BE24746F",
+   "title": "Chunk List",
+   "description": "Split any list into fixed-size pieces.",
+   "language": "Python",
+   "code": "from itertools import islice\n\ndef chunked(iterable, size):\n    \"\"\"Yield successive lists of `size` items.\"\"\"\n    it = iter(iterable)\n    while batch := list(islice(it, size)):\n        yield batch\n\nfor batch in chunked(range(10), 3):\n    print(batch)",
+   "createdAt": "2026-10-11T01:00:00.000Z",
+   "updatedAt": "2026-10-13T03:00:00.000Z",
+   "isFavorite": false,
+   "copyCount": 8,
+   "collectionIDs": [
+    "43C44EEA-96CA-4B18-BFED-BFE4C3FD5826"
+   ],
+   "dependencyIDs": [],
+   "paramConfigs": [],
+   "activeParamConfigID": null,
+   "media": []
+  },
+  {
+   "id": "360F6B1F-F905-4007-8D1F-CDADF7E6AEF7",
+   "title": "Graceful Shutdown",
+   "description": "Drain an HTTP server on SIGTERM.",
+   "language": "Go",
+   "code": "func run(srv *http.Server) error {\n\tctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)\n\tdefer stop()\n\n\tgo func() { _ = srv.ListenAndServe() }()\n\t<-ctx.Done()\n\n\tshutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)\n\tdefer cancel()\n\treturn srv.Shutdown(shutdown)\n}",
+   "createdAt": "2026-10-10T15:00:00.000Z",
+   "updatedAt": "2026-10-12T17:00:00.000Z",
+   "isFavorite": false,
+   "copyCount": 0,
+   "collectionIDs": [
+    "B790E325-09FD-4463-930E-736BAD7E0BA7"
+   ],
+   "dependencyIDs": [],
+   "paramConfigs": [],
+   "activeParamConfigID": null,
+   "media": []
+  },
+  {
+   "id": "84886051-D80F-405D-8E46-678027B20012",
+   "title": "Clamp",
+   "description": "Keep a value inside a range.",
+   "language": "Swift",
+   "code": "extension Comparable {\n    func clamped(to range: ClosedRange<Self>) -> Self {\n        min(max(self, range.lowerBound), range.upperBound)\n    }\n}\n\nlet opacity = 1.4.clamped(to: 0...1) // 1.0",
+   "createdAt": "2026-10-11T06:00:00.000Z",
+   "updatedAt": "2026-10-13T08:00:00.000Z",
+   "isFavorite": false,
+   "copyCount": 5,
+   "collectionIDs": [],
+   "dependencyIDs": [],
+   "paramConfigs": [],
+   "activeParamConfigID": null,
+   "media": []
+  },
+  {
+   "id": "0B51AF41-4B0D-4EB3-B9FC-723306C2F05C",
+   "title": "Theme Tokens",
+   "description": "Design tokens shared by web and native.",
+   "language": "JSON",
+   "code": "{\n  \"color\": {\n    \"accent\":  { \"light\": \"#6D28D9\", \"dark\": \"#A78BFA\" },\n    \"surface\": { \"light\": \"#FFFFFF\", \"dark\": \"#0F0B1E\" }\n  },\n  \"radius\": { \"sm\": 8, \"md\": 16, \"lg\": 22 },\n  \"motion\": { \"toggle\": \"spring(0.28, 0.86)\" }\n}",
+   "createdAt": "2026-10-10T20:00:00.000Z",
+   "updatedAt": "2026-10-12T22:00:00.000Z",
+   "isFavorite": false,
+   "copyCount": 0,
+   "collectionIDs": [],
+   "dependencyIDs": [],
+   "paramConfigs": [],
+   "activeParamConfigID": null,
+   "media": []
+  }
+ ]
+}

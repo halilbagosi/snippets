@@ -80,6 +80,27 @@ final class SnippetGalleryViewModel {
         isOldestToNewest ? Array(collections.reversed()) : collections
     }
 
+    /// Splits `snippets` into one group per language, keeping each group's
+    /// snippets in the order given.
+    ///
+    /// With a language filter the groups follow `preferredOrder` (the order the
+    /// user tapped them in) and a selected language with nothing to show gets no
+    /// group. Without one — a collection filter — every language present gets a
+    /// group, alphabetically, so the strips don't reshuffle as the data changes.
+    func languageGroups(
+        _ snippets: [Snippet],
+        preferredOrder: [SupportedLanguage]
+    ) -> [(language: SupportedLanguage, snippets: [Snippet])] {
+        let grouped = Dictionary(grouping: snippets) { SupportedLanguage(stored: $0.language) }
+        let languages = preferredOrder.isEmpty
+            ? grouped.keys.sorted { $0.rawValue.localizedCaseInsensitiveCompare($1.rawValue) == .orderedAscending }
+            : preferredOrder
+        return languages.compactMap { language in
+            guard let members = grouped[language], !members.isEmpty else { return nil }
+            return (language, members)
+        }
+    }
+
     func toggleSelectMode() {
         isSelectMode.toggle()
         if !isSelectMode {

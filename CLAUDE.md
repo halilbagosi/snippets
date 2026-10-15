@@ -1,34 +1,52 @@
 # Snippets — build and test invariants
 
-Native macOS app (SwiftUI + SwiftData). Platform: **macOS 26+** (`Package.swift` declares `.macOS(.v26)` — Liquid Glass APIs / modern SDK stamp).
+Native macOS app (SwiftUI + SwiftData). Platform: **macOS 26+** (Liquid Glass APIs / modern SDK stamp).
+
+`Snippets.xcodeproj` is the **only** build system. There is no `Package.swift` —
+`swift build` / `swift test` do not work here, and adding a package manifest
+back would re-create two diverging file lists.
 
 ## Toolchain
 
-SwiftData macros require the full Xcode (beta) toolchain — the Command Line Tools alone will not build this project:
+SwiftData macros require the full Xcode toolchain — the Command Line Tools alone will not build this project. `xcode-select -p` should print `/Applications/Xcode.app/Contents/Developer`; if it points at `/Library/Developer/CommandLineTools`, prefix commands with:
 
 ```sh
-export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 ```
 
 ## Build
 
 ```sh
-DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer swift build --build-path /tmp/snippets-build
+xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' build
 ```
-
-Keep build artifacts out of the repo: use `--build-path /tmp/snippets-build` (build) and `/tmp/snippets-test-build` (test).
 
 ## Test
 
-Tests run only via `swift test` (SPM), not the Xcode scheme:
+493 XCTest cases in the `SnippetsTests` target, hosted by the app (so a run launches `Snippets.app` briefly):
 
 ```sh
-DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer swift test --build-path /tmp/snippets-test-build
+xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' test
 ```
 
-## Dual build system
+## App Store build
 
-SwiftPM (`Package.swift`) auto-discovers sources; `Snippets.xcodeproj` enumerates them manually. Any new/removed/moved file under `Sources/` must also be registered in `Snippets.xcodeproj/project.pbxproj`. (Test files under `Tests/` need no registration.)
+The `AppStore` configuration (used by Archive) is sandboxed via
+`Snippets-AppStore.entitlements` and defines `APP_STORE`, which compiles out
+the Swift preview engine. Code that touches Swift previews must keep both
+builds compiling. Test it too (438 tests — the Swift-preview suites drop out);
+testability is a command-line override, never a setting of that configuration:
+
+```sh
+xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' -configuration AppStore ENABLE_TESTABILITY=YES test
+```
+
+## Registering files
+
+The project enumerates its files explicitly — it does not use synchronized
+folders. Any new/removed/moved file must be registered in
+`Snippets.xcodeproj/project.pbxproj`: under `Sources/` in the `Snippets`
+target, under `Tests/SnippetsTests/` in the `SnippetsTests` target. A file
+that only exists on disk is silently not compiled.
 
 ## Layout
 

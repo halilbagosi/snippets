@@ -41,7 +41,38 @@ struct MediaManager: MediaManaging {
     }
 
     func resolvedURL(for fileName: String) -> URL {
-        resolvedMediaDirectoryURL.appendingPathComponent(fileName)
+        resolvedMediaDirectoryURL.appendingPathComponent(Self.safeFileName(fileName))
+    }
+
+    /// Confines a stored media filename to a single component inside the media
+    /// directory.
+    ///
+    /// Every name written today is a UUID this app generated, so nothing hits
+    /// the rejection path. It exists because the *reads* are the dangerous
+    /// direction and they are already spread across six call sites: the moment
+    /// a `MediaItem` can arrive from an import, a sync, or a shared library, a
+    /// name like `../../../../etc/passwd` would resolve wherever it liked, and
+    /// the video player would happily open it. Cheap to add now, easy to
+    /// forget once there is an importer to write.
+    ///
+    /// Rejected names collapse to a constant that resolves inside the media
+    /// directory and simply does not exist, so callers see the same
+    /// missing-file behavior they already handle.
+    static func safeFileName(_ fileName: String) -> String {
+        let rejected = "__invalid__"
+        guard !fileName.isEmpty,
+              !fileName.hasPrefix("."),
+              !fileName.contains("/"),
+              !fileName.contains("\\"),
+              !fileName.contains("\0"),
+              // A name that is not exactly its own last component is trying to
+              // be a path, whatever separator it used to get there.
+              (fileName as NSString).lastPathComponent == fileName
+        else {
+            logger.error("Rejected unsafe media filename \(fileName, privacy: .public)")
+            return rejected
+        }
+        return fileName
     }
 
     static func kind(for url: URL) -> MediaKind {
@@ -94,12 +125,35 @@ struct MediaManager: MediaManaging {
     }
 
     func deleteFile(for item: MediaItem) {
-        let url = resolvedURL(for: item.fileName)
+        deleteFile(named: item.fileName)
+    }
+
+    func deleteFile(named fileName: String) {
+        let url = resolvedURL(for: fileName)
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         do {
             try FileManager.default.removeItem(at: url)
         } catch {
             Self.logger.error("Failed to delete media file \(url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    /// An attachment's bytes for export; nil when the file is gone.
+    func data(for item: MediaItem) -> Data? {
+        try? Data(contentsOf: resolvedURL(for: item.fileName))
+    }
+
+    /// Stores imported bytes under a fresh name. Nothing from the import file
+    /// reaches the path except an extension `SnippetArchive` already vetted.
+    func storeImported(_ data: Data, fileExtension: String) throws -> String {
+        // Defence in depth: the name is built from this, so it must be a bare
+        // extension even if a caller skips `SnippetArchive`'s checks. (The
+        // importer already lowercases it.)
+        guard !fileExtension.isEmpty, fileExtension.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else {
+            throw CocoaError(.fileWriteInvalidFileName)
+        }
+        let name = "\(UUID().uuidString).\(fileExtension)"
+        try data.write(to: resolvedURL(for: name), options: .atomic)
+        return name
     }
 }

@@ -24,6 +24,49 @@ struct CollectionIconView: View {
     }
 }
 
+/// A collection's name as a chip, drawn like ``LanguageBadge`` but in the
+/// collection's own icon and colour. `extraCount` adds a "+N" for the
+/// collections that didn't fit.
+struct CollectionBadge: View {
+    @Environment(\.colorScheme) private var colorScheme
+    let collection: SnippetCollection
+    var extraCount: Int = 0
+
+    var body: some View {
+        let color = collection.displayColor
+        HStack(spacing: 5) {
+            Image(systemName: collection.displayIconName)
+                .symbolRenderingMode(.hierarchical)
+                .font(Mono.font(size: 9, weight: .semibold))
+            Text(collection.name)
+                .font(Mono.font(size: 10, weight: .semibold))
+                .lineLimit(1)
+                .truncationMode(.tail)
+            if extraCount > 0 {
+                Text("+\(extraCount)")
+                    .font(Mono.font(size: 10, weight: .semibold))
+                    .opacity(0.7)
+                    .fixedSize()
+            }
+        }
+        .frame(maxWidth: 160)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .foregroundStyle(color)
+        .background {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(color.opacity(colorScheme == .dark ? 0.20 : 0.12))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .stroke(color.opacity(0.50), lineWidth: 1)
+                }
+        }
+        .fixedSize(horizontal: true, vertical: false)
+        .help(collection.name)
+        .accessibilityLabel("Collection \(collection.name)")
+    }
+}
+
 extension SnippetCollection {
     var displayColor: Color {
         let lightColor = Color(hex: colorHex) ?? Color(hex: Self.defaultColorHex) ?? .accentColor

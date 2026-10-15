@@ -48,12 +48,43 @@ final class SnippetLinkerTests: XCTestCase {
             XCTAssertTrue(SnippetLinker.canContribute(dep, toEntry: .react))
             XCTAssertTrue(SnippetLinker.canContribute(dep, toEntry: .html))
         }
+        #if !APP_STORE
         XCTAssertTrue(SnippetLinker.canContribute(.swift, toEntry: .swift))
+        #endif
         XCTAssertTrue(SnippetLinker.canContribute(.metal, toEntry: .metal))
         XCTAssertTrue(SnippetLinker.canContribute(.glsl, toEntry: .glsl))
         XCTAssertFalse(SnippetLinker.canContribute(.css, toEntry: .glsl))
         XCTAssertFalse(SnippetLinker.canContribute(.metal, toEntry: .swift))
         XCTAssertFalse(SnippetLinker.canContribute(.python, toEntry: .html))
+        // CSS entries preview against connected markup and extra styles.
+        XCTAssertTrue(SnippetLinker.canContribute(.html, toEntry: .css))
+        XCTAssertTrue(SnippetLinker.canContribute(.css, toEntry: .css))
+        XCTAssertFalse(SnippetLinker.canContribute(.javascript, toEntry: .css))
+    }
+
+    func test_strongerEntry_flagsReactConnectionOfCSSSnippet() {
+        let component = Node(linkID: 1, linkTitle: "Button", linkLanguage: .react, linkCode: "c")
+        let stronger = SnippetLinker.strongerEntry(thanEntryOf: .css, among: [component])
+        XCTAssertEqual(stronger?.linkTitle, "Button")
+    }
+
+    func test_strongerEntry_prefersMostEntryLikeCandidate() {
+        let markup = Node(linkID: 1, linkTitle: "Markup", linkLanguage: .html, linkCode: "h")
+        let component = Node(linkID: 2, linkTitle: "Button", linkLanguage: .react, linkCode: "c")
+        let stronger = SnippetLinker.strongerEntry(thanEntryOf: .css, among: [markup, component])
+        XCTAssertEqual(stronger?.linkTitle, "Button")
+    }
+
+    func test_strongerEntry_nilWhenEditedSnippetIsAlreadyTheRoot() {
+        let styles = Node(linkID: 1, linkTitle: "Theme", linkLanguage: .css, linkCode: "t")
+        let util = Node(linkID: 2, linkTitle: "Util", linkLanguage: .javascript, linkCode: "u")
+        XCTAssertNil(SnippetLinker.strongerEntry(thanEntryOf: .react, among: [styles, util]))
+    }
+
+    func test_strongerEntry_nilWhenReversedDirectionCannotPreview() {
+        // A swift connection can't absorb a css entry, so no hint.
+        let view = Node(linkID: 1, linkTitle: "Card", linkLanguage: .swift, linkCode: "s")
+        XCTAssertNil(SnippetLinker.strongerEntry(thanEntryOf: .css, among: [view]))
     }
 
     func test_excludedDependencySubtree_isNotTraversed() {

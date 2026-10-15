@@ -49,20 +49,25 @@ Maps 1:1 to the SwiftUI system font scale — no custom font family or sizes:
 
 ## Components (`Sources/.../DesignSystem/Components/`)
 
+> Note: of these, only `DSGlassContainer` still exists in the Swift app — the
+> others were removed as dead code (plan 008; recover specs from git history
+> if ever needed). Their React counterparts in `web/design-system/` remain and
+> serve the external Claude Design workflow; the descriptions below stay as
+> the spec for that port.
+
 - **DSButton** — `title`, `style` (`primary` / `secondary` / `ghost` / `destructive`), `action`. Full-width, `md` radius, `body` font, horizontal `md` / vertical `sm` padding. `primary`/`destructive` use solid fill with white text; `secondary` is `surface` fill with a 20%-opacity border; `ghost` is transparent. Dims to 50% opacity when disabled.
 - **DSIconButton** — SF Symbol icon button, `sm` padding, `md` radius, fills with `surface` color on hover, dims to 50% when disabled.
 - **DSTag** — toggle-style pill: `caption` font, `sm` radius, selected state inverts to `textPrimary` fill / `background` text; unselected has a `textSecondary` 1pt border.
 - **DSBadge** — small static label, `caption2` font, tinted background (20% opacity of the given color) and matching text color, `xs` radius.
 - **DSGlassCard** — wraps content in `md` padding + the Liquid Glass surface modifier (see below), `md` corner radius.
-- **DSGlassContainer** — thin wrapper around `GlassEffectContainer` on macOS 26+, falls through to plain content on older OS.
+- **DSGlassContainer** — thin wrapper around `GlassEffectContainer`.
 
 ## Liquid Glass modifier (`Sources/.../Modifiers/DSGlassModifier.swift`)
 
 The system's signature surface treatment, used by `DSGlassCard` and other glass surfaces:
 
-- On macOS 26+: uses the real `glassEffect` API (`.regular` or `.regular.interactive()`).
-- Fallback (older OS): `.ultraThinMaterial` background.
-- Both paths layer the same overlays: a `LiquidGlass.fill` tint, an optional `LiquidGlass.tintFill` when a tint color is passed, a 1pt white border at `LiquidGlass.border` opacity, and a soft shadow (`LiquidGlass.shadow` color, `Shadow.liquidRadius`/`liquidY`).
+- Uses the real `glassEffect` API (`.regular` or `.regular.interactive()`).
+- Layers overlays on top: a `LiquidGlass.fill` tint, an optional `LiquidGlass.tintFill` when a tint color is passed, a 1pt white border at `LiquidGlass.border` opacity, and a soft shadow (`LiquidGlass.shadow` color, `Shadow.liquidRadius`/`liquidY`).
 - `liquidGlassBar(divider:)` is a separate, darker-tinted variant for window-chrome strips (search headers, status bars) — mirrors Xcode/Finder's bottom bar treatment, with an optional hairline divider on the top or bottom edge.
 
 ## Not covered here

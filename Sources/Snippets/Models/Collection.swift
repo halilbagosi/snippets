@@ -36,6 +36,28 @@ final class SnippetCollection {
         deletedAt != nil
     }
 
+    /// Live snippets in this collection and its live subcollections, each
+    /// counted once. A trashed subcollection keeps its parent link, so it is
+    /// skipped explicitly — its snippets are in Recently Deleted, not here.
+    /// A collection that is itself in the trash took its subcollections with
+    /// it, so its card in Recently Deleted still counts them.
+    var activeSnippetCount: Int {
+        var seenIDs = Set<PersistentIdentifier>()
+        let includesTrashedChildren = isDeleted
+
+        func collect(from collection: SnippetCollection) {
+            for snippet in collection.snippets where snippet.deletedAt == nil {
+                seenIDs.insert(snippet.persistentModelID)
+            }
+            for child in collection.children where includesTrashedChildren || !child.isDeleted {
+                collect(from: child)
+            }
+        }
+
+        collect(from: self)
+        return seenIDs.count
+    }
+
     var daysUntilPermanentDeletion: Int {
         guard let deletedAt else { return 30 }
         let elapsed = Calendar.current.dateComponents([.day], from: deletedAt, to: Date.now).day ?? 0

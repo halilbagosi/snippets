@@ -7,8 +7,10 @@ import AppKit
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppearanceSettings.self) private var appearanceSettings
     @Environment(AppIntentNavigator.self) private var navigator
+    @Environment(PreviewTrust.self) private var previewTrust
 
     @Query(filter: #Predicate<Snippet> { $0.deletedAt == nil }, sort: [SortDescriptor(\Snippet.updatedAt, order: .reverse)])
     private var snippets: [Snippet]
@@ -28,6 +30,8 @@ struct ContentView: View {
     @State private var editingSnippet: Snippet? = nil
     @State private var isPresentingNew: Bool = false
     @State private var newSnippetPreselectedCollectionID: PersistentIdentifier? = nil
+    /// Code captured from the clipboard, seeding the next new-snippet editor.
+    @State private var newSnippetDraftCode: String? = nil
     @State private var isPresentingCollectionEditor: Bool = false
     @State private var editingCollection: SnippetCollection? = nil
     @State private var collectionDraftName: String = ""
@@ -38,6 +42,10 @@ struct ContentView: View {
     @State private var collectionDraftParentID: PersistentIdentifier? = nil
     @State private var isSubcollectionDraft: Bool = false
     @State private var selectedSnippetID: PersistentIdentifier? = nil
+    /// Snippets visited before the current one, so the detail view can offer a
+    /// back button when navigating into connected snippets. Cleared whenever the
+    /// detail overlay closes (see `.onChange(of: selectedSnippetID)`).
+    @State private var snippetHistory: [PersistentIdentifier] = []
     enum SidebarSelectionContext: Hashable {
         case frequentlyUsed
         case favorites
@@ -47,10 +55,57 @@ struct ContentView: View {
         case favoriteCollection(PersistentIdentifier)
     }
     @State private var sidebarSelectionContext: SidebarSelectionContext? = .allSnippets
+
+    /// All Snippets opens scoped to snippets outside any collection (the
+    /// collections are shown as cards above them). A language filter is an
+    /// explicit request to see that language wherever it lives, so it lifts
+    /// the scope — otherwise picking a language in the sidebar hides every
+    /// match inside a collection while the row's count still includes them.
+    static func showsUncategorizedOnly(
+        context: SidebarSelectionContext?,
+        selectedLanguages: Set<SupportedLanguage>
+    ) -> Bool {
+        context == .allSnippets && selectedLanguages.isEmpty
+    }
+
+    /// Search is global: the automatic All Snippets scope above only shapes
+    /// the browsing grid, so it is lifted while a query is active. A
+    /// "No collection" filter the user picked themselves still applies.
+    static func effectiveUncategorizedOnly(
+        showUncategorizedOnly: Bool,
+        isAutomaticScope: Bool,
+        isSearching: Bool
+    ) -> Bool {
+        showUncategorizedOnly && !(isSearching && isAutomaticScope)
+    }
     @State private var selectedCollectionID: PersistentIdentifier? = nil
     @State private var sidebarSearch: String = ""
     @State private var showFavoritesOnly: Bool = false
     @State private var showUncategorizedOnly: Bool = true
+    /// True while `showUncategorizedOnly` holds the value navigation set, not
+    /// one the user picked from the collection filter.
+    @State private var uncategorizedScopeIsAutomatic: Bool = true
+
+    private var effectiveUncategorizedOnly: Bool {
+        Self.effectiveUncategorizedOnly(
+            showUncategorizedOnly: showUncategorizedOnly,
+            isAutomaticScope: uncategorizedScopeIsAutomatic,
+            isSearching: !trimmedSearchText.isEmpty
+        )
+    }
+
+    /// The gallery's view of the filter: shows the effective state (so the
+    /// chip reads "collections:all" during a global search), and any change
+    /// made through it is the user's own choice.
+    private var uncategorizedOnlyBinding: Binding<Bool> {
+        Binding(
+            get: { effectiveUncategorizedOnly },
+            set: { newValue in
+                showUncategorizedOnly = newValue
+                uncategorizedScopeIsAutomatic = false
+            }
+        )
+    }
     @State private var isLibrarySectionExpanded: Bool = true
     @State private var isFavoritesSectionExpanded: Bool = true
     @State private var isFrequentlyUsedSectionExpanded: Bool = true
@@ -93,12 +148,36 @@ struct ContentView: View {
     }
     @State private var pendingBulkDelete: PendingBulkDelete?
 
-    private struct Toast {
+    private struct Toast: Equatable {
+        /// Distinguishes consecutive toasts so replacing a live one cross-fades
+        /// the message instead of teleporting the text inside a static pill.
+        let id = UUID()
         let message: String
         let showsUndo: Bool
     }
     @State private var activeToast: Toast?
     @State private var toastHideTask: Task<Void, Never>? = nil
+
+
+    /// Overlay editors and the detail card appear centred, so scaling from the
+    /// centre is right here. Reduce Motion drops the scale and keeps the fade,
+    /// which still explains that a layer arrived.
+    private var modalTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)),
+            removal: .opacity.combined(with: .scale(scale: 0.97, anchor: .center))
+        )
+    }
+
+    /// Reduce Motion strips the upward slide; the fade alone still reads.
+    private var toastTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: .move(edge: .bottom).combined(with: .opacity),
+            removal: .opacity
+        )
+    }
 
     private struct DeletedMediaSnapshot {
         let fileName: String
@@ -189,89 +268,112 @@ struct ContentView: View {
         return collectionIndexCache.descendantIDs
     }
 
-    private var baseFilteredSnippets: [Snippet] {
+    /// Memoized gallery filter results, following the `CollectionIndexCache`
+    /// pattern: a non-observed class so refreshing during body evaluation
+    /// doesn't invalidate the view; the signature keeps it consistent.
+    ///
+    /// Signature audit (plan 010): mutation paths and how the signature sees
+    /// them —
+    /// - title/code/language/description: editor save bumps `updatedAt`
+    ///   (`SnippetEditorViewModel.save`).
+    /// - deletedAt: the `snippets` query filters on it, so the array itself
+    ///   changes (and delete/restore paths bump `updatedAt` anyway).
+    /// - isFavorite: SnippetCard/SnippetDetailView/SnippetCollectionCard
+    ///   toggle WITHOUT bumping `updatedAt` → hashed directly.
+    /// - collection membership: `commitCollectionEditor` removals don't bump
+    ///   the snippet's `updatedAt` → membership ids hashed directly.
+    /// - collection name/isFavorite/deletedAt feed the search predicates →
+    ///   hashed directly; parent links via `collectionStructureSignature`.
+    private final class SnippetFilterCache {
+        var signature: Int? = nil
+        var base: [Snippet] = []
+        var searchFiltered: [Snippet] = []
+        var searchResults: [Snippet] = []
+        var searchResultCollections: [SnippetCollection] = []
+    }
+    @State private var snippetFilterCache = SnippetFilterCache()
+
+    /// Every input the filter predicates read. Any new gallery filter MUST be
+    /// added here — a missing input means stale results, not slow ones.
+    private var filterSignature: Int {
+        var hasher = Hasher()
+        hasher.combine(collectionStructureSignature)
+        hasher.combine(snippets.count)
+        for snippet in snippets {
+            hasher.combine(snippet.persistentModelID)
+            hasher.combine(snippet.updatedAt)
+            hasher.combine(snippet.isFavorite)
+            for collection in snippet.collections {
+                hasher.combine(collection.persistentModelID)
+            }
+        }
+        for collection in collections {
+            hasher.combine(collection.name)
+            hasher.combine(collection.isFavorite)
+            hasher.combine(collection.deletedAt)
+        }
+        hasher.combine(selectedLanguages)
+        hasher.combine(selectedCollectionID)
+        hasher.combine(effectiveUncategorizedOnly)
+        hasher.combine(selectedSearchCollections)
+        hasher.combine(showFavoritesOnly)
+        hasher.combine(trimmedSearchText)
+        return hasher.finalize()
+    }
+
+    private func refreshFilterCacheIfNeeded() {
+        let signature = filterSignature
+        guard snippetFilterCache.signature != signature else { return }
+
         let lookup = collectionLookup
         let descendantIDs = descendantIDsByCollectionID
+        let needle = trimmedSearchText
 
-        return snippets.filter { snippet in
-            if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
+        snippetFilterCache.base = GallerySnippetFilter.base(
+            snippets: snippets,
+            selectedLanguages: selectedLanguages,
+            selectedCollectionID: selectedCollectionID,
+            showUncategorizedOnly: effectiveUncategorizedOnly,
+            selectedSearchCollections: selectedSearchCollections,
+            showFavoritesOnly: showFavoritesOnly,
+            lookup: lookup,
+            descendantIDs: descendantIDs
+        )
+        let pool = GallerySnippetFilter.searchPool(
+            snippets: snippets,
+            selectedLanguages: selectedLanguages,
+            showUncategorizedOnly: effectiveUncategorizedOnly,
+            selectedSearchCollections: selectedSearchCollections,
+            showFavoritesOnly: showFavoritesOnly,
+            lookup: lookup,
+            descendantIDs: descendantIDs
+        )
+        snippetFilterCache.searchFiltered = pool
+        snippetFilterCache.searchResults = GallerySnippetFilter.searchResults(in: pool, needle: needle)
+        snippetFilterCache.searchResultCollections = GallerySnippetFilter.searchCollections(
+            collections, needle: needle, showFavoritesOnly: showFavoritesOnly
+        )
+        snippetFilterCache.signature = signature
+    }
 
-            let belongsDirectlyToCollection = { (colID: PersistentIdentifier) -> Bool in
-                snippet.collections.contains(where: { $0.persistentModelID == colID })
-            }
-
-            let belongsToCollection = { (colID: PersistentIdentifier) -> Bool in
-                guard lookup[colID] != nil, let allowedIDs = descendantIDs[colID] else { return false }
-                return snippet.collections.contains(where: { allowedIDs.contains($0.persistentModelID) })
-            }
-
-            if let selectedCollectionID {
-                if !belongsDirectlyToCollection(selectedCollectionID) { return false }
-            }
-
-            if showUncategorizedOnly && snippet.collections.contains(where: { !$0.isDeleted }) {
-                return false
-            }
-
-            if !selectedSearchCollections.isEmpty {
-                if !selectedSearchCollections.contains(where: { belongsToCollection($0) }) { return false }
-            }
-
-            if showFavoritesOnly && !snippet.isFavorite { return false }
-
-            return true
-        }
+    private var baseFilteredSnippets: [Snippet] {
+        refreshFilterCacheIfNeeded()
+        return snippetFilterCache.base
     }
 
     private var searchFilteredSnippets: [Snippet] {
-        let lookup = collectionLookup
-        let descendantIDs = descendantIDsByCollectionID
-
-        return snippets.filter { snippet in
-            if !selectedLanguages.isEmpty, let lang = SupportedLanguage(rawValue: snippet.language), !selectedLanguages.contains(lang) { return false }
-
-            if showFavoritesOnly && !snippet.isFavorite { return false }
-
-            if showUncategorizedOnly && snippet.collections.contains(where: { !$0.isDeleted }) {
-                return false
-            }
-
-            guard !selectedSearchCollections.isEmpty else { return true }
-            return selectedSearchCollections.contains { collectionID in
-                guard lookup[collectionID] != nil, let allowedIDs = descendantIDs[collectionID] else { return false }
-                return snippet.collections.contains { allowedIDs.contains($0.persistentModelID) }
-            }
-        }
-    }
-
-    /// Case-insensitive substring match without allocating a lowercased copy
-    /// of `haystack` (search runs over every snippet's full code per pass).
-    private func matches(_ haystack: String, _ needle: String) -> Bool {
-        haystack.range(of: needle, options: .caseInsensitive) != nil
+        refreshFilterCacheIfNeeded()
+        return snippetFilterCache.searchFiltered
     }
 
     private var searchResultCollections: [SnippetCollection] {
-        let needle = trimmedSearchText
-        guard !needle.isEmpty else { return [] }
-
-        return collections.filter { collection in
-            !collection.isDeleted &&
-            (!showFavoritesOnly || collection.isFavorite) &&
-            matches(collection.name, needle)
-        }
+        refreshFilterCacheIfNeeded()
+        return snippetFilterCache.searchResultCollections
     }
 
     private var searchResultSnippets: [Snippet] {
-        let needle = trimmedSearchText
-        guard !needle.isEmpty else { return [] }
-
-        return searchFilteredSnippets.filter { snippet in
-            matches(snippet.title, needle) ||
-            matches(snippet.snippetDescription, needle) ||
-            matches(snippet.code, needle) ||
-            matches(snippet.language, needle) ||
-            snippet.collections.contains { !$0.isDeleted && matches($0.name, needle) }
-        }
+        refreshFilterCacheIfNeeded()
+        return snippetFilterCache.searchResults
     }
 
     private var gallerySnippets: [Snippet] {
@@ -395,7 +497,7 @@ struct ContentView: View {
     }
 
     private func buildAvailableLanguages() -> [SupportedLanguage] {
-        let used = Set(snippets.compactMap { SupportedLanguage(rawValue: $0.language) })
+        let used = Set(snippets.map { SupportedLanguage(stored: $0.language) })
         return SupportedLanguage.allCases.filter { used.contains($0) }
     }
 
@@ -471,12 +573,12 @@ struct ContentView: View {
                             showFavoritesOnly: $showFavoritesOnly,
                             selectedLanguages: $selectedLanguages,
                             selectedSearchCollections: $selectedSearchCollections,
-                            showUncategorizedOnly: $showUncategorizedOnly,
+                            showUncategorizedOnly: uncategorizedOnlyBinding,
                             availableLanguages: availableLanguages,
                             availableCollections: collections,
                             subcollections: gallerySubcollections,
                             onSelect: { snippet in
-                                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                withAnimation(DSToken.Motion.overlay) {
                                     selectedSnippetID = snippet.persistentModelID
                                     if let colID = selectedCollectionID {
                                         sidebarSelectionContext = .collection(colID)
@@ -486,7 +588,7 @@ struct ContentView: View {
                                 }
                             },
                             onSelectCollection: { collection in
-                                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                withAnimation(DSToken.Motion.overlay) {
                                     selectedSearchCollections.removeAll()
                                     selectedSnippetID = nil
                                     selectedCollectionID = collection.persistentModelID
@@ -504,9 +606,10 @@ struct ContentView: View {
                                 navigateBackFromCollection()
                             } : nil,
                             onClearSelection: {
-                                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                withAnimation(DSToken.Motion.overlay) {
                                     selectedSearchCollections.removeAll()
                                     showUncategorizedOnly = false
+                                    uncategorizedScopeIsAutomatic = false
                                     if selectedCollectionID == nil {
                                         sidebarSelectionContext = .allSnippets
                                     }
@@ -537,7 +640,7 @@ struct ContentView: View {
                             .opacity(colorScheme == .dark ? 0.34 : 0.22)
                             .ignoresSafeArea()
                             .onTapGesture {
-                                withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                withAnimation(DSToken.Motion.overlay) {
                                     selectedSnippetID = nil
                                 }
                             }
@@ -548,17 +651,26 @@ struct ContentView: View {
                             let cardWidth = min(max(proxy.size.width * 0.86, 700), 1080)
                             let cardHeight = min(max(proxy.size.height * 0.84, 500), 860)
 
-                            SnippetDetailView(snippet: snippet) {
+                            SnippetDetailView(snippet: snippet, canGoBack: !snippetHistory.isEmpty) {
                                 editingSnippet = snippet
                             } onDelete: {
                                 delete(snippet)
                             } onClose: {
-                                withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                withAnimation(DSToken.Motion.overlay) {
                                     selectedSnippetID = nil
                                 }
                             } onOpenSnippet: { dependency in
-                                withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                withAnimation(DSToken.Motion.overlay) {
+                                    if let current = selectedSnippetID {
+                                        snippetHistory.append(current)
+                                    }
                                     selectedSnippetID = dependency.persistentModelID
+                                }
+                            } onBack: {
+                                withAnimation(DSToken.Motion.overlay) {
+                                    if let previous = snippetHistory.popLast() {
+                                        selectedSnippetID = previous
+                                    }
                                 }
                             }
                             .frame(width: cardWidth, height: cardHeight)
@@ -573,12 +685,7 @@ struct ContentView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                             .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .transition(
-                                .asymmetric(
-                                    insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)),
-                                    removal: .opacity.combined(with: .scale(scale: 0.97, anchor: .center))
-                                )
-                            )
+                            .transition(modalTransition)
                         }
                         .zIndex(2)
                     }
@@ -597,18 +704,23 @@ struct ContentView: View {
                             let w: CGFloat = 640
                             let h = min(max(proxy.size.height * 0.92, 660), 960)
                             SnippetEditorView(
-                                mode: .create(preselectedCollectionID: newSnippetPreselectedCollectionID),
+                                mode: .create(
+                                    preselectedCollectionID: newSnippetPreselectedCollectionID,
+                                    draftCode: newSnippetDraftCode
+                                ),
                                 availableCollections: collections,
                                 availableSnippets: snippets,
                                 onRequestDismiss: {
-                                    withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                                    newSnippetDraftCode = nil
+                                    withAnimation(DSToken.Motion.overlay) {
                                         isPresentingNew = false
                                     }
                                 },
                                 onSave: { newSnippet in
                                     modelContext.insert(newSnippet)
                                     saveOrToast(modelContext)
-                                    withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                    newSnippetDraftCode = nil
+                                    withAnimation(DSToken.Motion.overlay) {
                                         isPresentingNew = false
                                     }
                                 }
@@ -625,12 +737,7 @@ struct ContentView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                             .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .transition(
-                                .asymmetric(
-                                    insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)),
-                                    removal:   .opacity.combined(with: .scale(scale: 0.97, anchor: .center))
-                                )
-                            )
+                            .transition(modalTransition)
                         }
                         .zIndex(4)
                     }
@@ -643,7 +750,7 @@ struct ContentView: View {
                                     .foregroundStyle(theme.text)
                                 if toast.showsUndo {
                                     Button("Undo") {
-                                        withAnimation {
+                                        withAnimation(DSToken.Motion.toastOut) {
                                             _ = undoLast()
                                             activeToast = nil
                                         }
@@ -653,17 +760,36 @@ struct ContentView: View {
                                     .buttonStyle(.plain)
                                 }
                             }
+                            // Keyed on the toast's identity so a message that
+                            // replaces a live toast cross-fades in place rather
+                            // than swapping text inside a motionless pill.
+                            // Order matters: `.transition` has to sit inside the
+                            // `.id` so it travels with the view being swapped,
+                            // and `.animation` outside it to drive that swap.
+                            .transition(.opacity)
+                            .id(toast.id)
+                            .animation(DSToken.Motion.toastIn, value: toast.id)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
                             .liquidGlassSurface(in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                             .padding(.bottom, 60)
                         }
                         .zIndex(100)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        // Asymmetric on purpose: the toast rises into view, but
+                        // dismissal is the system getting out of the way, so it
+                        // fades rather than sliding back down.
+                        .transition(toastTransition)
                     }
                 }
-                .animation(.spring(response: 0.4, dampingFraction: 0.88), value: selectedSnippetID)
-                .animation(.spring(response: 0.4, dampingFraction: 0.88), value: isPresentingNew)
+                .animation(DSToken.Motion.overlay, value: selectedSnippetID)
+                // Closing the detail overlay (X, tap-outside, delete) ends the
+                // navigation session, so drop any accumulated back history.
+                .onChange(of: selectedSnippetID) { _, newValue in
+                    if newValue == nil {
+                        snippetHistory.removeAll()
+                    }
+                }
+                .animation(DSToken.Motion.overlay, value: isPresentingNew)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     StatusBar(
                         segments: currentStatusSegments,
@@ -677,9 +803,12 @@ struct ContentView: View {
             performTrashCleanup()
             debouncedSearchText = searchText
             rebuildDerivedCaches()
-            // Cold launch: an intent that launched the app may have set the flag
-            // before this view began observing, so onChange never fires for it.
-            if navigator.pendingNewSnippet { presentNewSnippetFromIntent() }
+            drainPendingWork()
+        }
+        .onChange(of: SnippetTransferController.shared.notice, initial: true) { _, notice in
+            guard let notice else { return }
+            showToast(notice.message)
+            SnippetTransferController.shared.clearNotice()
         }
         .onChange(of: searchText) { _, newValue in
             debounceSearch(newValue)
@@ -697,28 +826,28 @@ struct ContentView: View {
             rebuildDerivedCaches()
         }
         .onChange(of: sidebarSelectionContext) { _, newValue in
-            if newValue == .allSnippets {
-                showUncategorizedOnly = true
-            } else {
-                showUncategorizedOnly = false
-            }
+            showUncategorizedOnly = Self.showsUncategorizedOnly(context: newValue, selectedLanguages: selectedLanguages)
+            uncategorizedScopeIsAutomatic = true
             selectedSearchCollections.removeAll()
+        }
+        .onChange(of: selectedLanguages) { _, newValue in
+            // The sidebar's language rows and its All Snippets row both stay
+            // in `.allSnippets`, so they never pass through the context
+            // change above; only the language set moves.
+            showUncategorizedOnly = Self.showsUncategorizedOnly(context: sidebarSelectionContext, selectedLanguages: newValue)
+            uncategorizedScopeIsAutomatic = true
         }
         .onChange(of: navigator.pendingOpenSnippetUUID) { _, newValue in
             guard let uuid = newValue else { return }
-            if let match = snippets.first(where: { $0.uuid == uuid }) {
-                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
-                    searchText = ""
-                    selectedCollectionID = nil
-                    sidebarSelectionContext = .allSnippets
-                    selectedSnippetID = match.persistentModelID
-                }
-            }
-            navigator.pendingOpenSnippetUUID = nil
+            openPendingSnippet(uuid)
         }
         .onChange(of: navigator.pendingNewSnippet) { _, isPending in
             guard isPending else { return }
             presentNewSnippetFromIntent()
+        }
+        .onChange(of: CaptureDraft.shared.pending) { _, candidate in
+            guard let candidate else { return }
+            presentCapturedDraft(candidate)
         }
         .sheet(item: $editingSnippet) { snippet in
             SnippetEditorView(mode: .edit(snippet), availableCollections: collections, availableSnippets: snippets) { _ in
@@ -894,18 +1023,62 @@ struct ContentView: View {
     /// clearing any open detail and the pending flag.
     private func presentNewSnippetFromIntent() {
         newSnippetPreselectedCollectionID = nil
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+        withAnimation(DSToken.Motion.overlay) {
             selectedSnippetID = nil
             isPresentingNew = true
         }
         navigator.pendingNewSnippet = false
     }
 
+    /// Opens the snippet `OpenSnippetIntent` or the quick-copy panel asked for,
+    /// clearing the request either way — an unclearable request would make every
+    /// later request for the same snippet a no-op, because `onChange` fires on
+    /// change and not on value.
+    private func openPendingSnippet(_ uuid: UUID) {
+        if let match = snippets.first(where: { $0.uuid == uuid }) {
+            withAnimation(DSToken.Motion.overlay) {
+                searchText = ""
+                selectedCollectionID = nil
+                sidebarSelectionContext = .allSnippets
+                selectedSnippetID = match.persistentModelID
+            }
+        }
+        navigator.pendingOpenSnippetUUID = nil
+    }
+
+    /// Opens the new-snippet editor seeded with captured clipboard code.
+    /// Nothing is written to the store — the user still has to save.
+    private func presentCapturedDraft(_ candidate: ClipboardCapture.Candidate) {
+        newSnippetPreselectedCollectionID = nil
+        newSnippetDraftCode = candidate.code
+        withAnimation(DSToken.Motion.overlay) {
+            selectedSnippetID = nil
+            isPresentingNew = true
+        }
+        CaptureDraft.shared.pending = nil
+    }
+
+    /// Acts on work that was requested before this view existed.
+    ///
+    /// Two ways in: an App Intent that launched the app cold, and the menu bar
+    /// panel handing off after `MainWindowOpener` had to build a fresh window.
+    /// Both set their flag and return immediately, so the value is already in
+    /// place by the time this view first runs its body — and `onChange` fires on
+    /// a change, never on the value it started with. Without this drain the
+    /// request is dropped, and because each handler is also what clears its own
+    /// flag, it stays dropped: every later request for the same snippet writes
+    /// the same value and changes nothing.
+    private func drainPendingWork() {
+        if navigator.pendingNewSnippet { presentNewSnippetFromIntent() }
+        if let uuid = navigator.pendingOpenSnippetUUID { openPendingSnippet(uuid) }
+        if let candidate = CaptureDraft.shared.pending { presentCapturedDraft(candidate) }
+    }
+
     private func navigateBackFromCollection() {
         guard let id = selectedCollectionID else { return }
         let parentID = parentCollectionID(for: id)
 
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+        withAnimation(DSToken.Motion.overlay) {
             searchText = ""
             selectedSnippetID = nil
             selectedSearchCollections.removeAll()
@@ -1068,7 +1241,7 @@ struct ContentView: View {
     }
 
     private func showToast(_ message: String, showsUndo: Bool = false) {
-        withAnimation { activeToast = Toast(message: message, showsUndo: showsUndo) }
+        withAnimation(DSToken.Motion.toastIn) { activeToast = Toast(message: message, showsUndo: showsUndo) }
         hideToastAfterDelay()
     }
 
@@ -1172,7 +1345,8 @@ struct ContentView: View {
                 snippets: trashedSnippets,
                 collections: collections.filter { $0.deletedAt != nil },
                 cutoff: cutoff,
-                context: modelContext
+                context: modelContext,
+                forgetTrust: { previewTrust.forget($0) }
             )
         } catch {
             showToast("Couldn't save changes: \(error.localizedDescription)")
@@ -1321,7 +1495,11 @@ struct ContentView: View {
                 if selectedSnippetID == snippet.persistentModelID {
                     selectedSnippetID = nil
                 }
-                TrashLifecycle.purgeSnippet(snippet, context: modelContext)
+                TrashLifecycle.purgeSnippet(
+                    snippet,
+                    context: modelContext,
+                    forgetTrust: { previewTrust.forget($0) }
+                )
             } else {
                 self.performDeleteSnippet(snippet)
             }
@@ -1369,7 +1547,7 @@ struct ContentView: View {
         toastHideTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 4_000_000_000)
             guard !Task.isCancelled else { return }
-            withAnimation { activeToast = nil }
+            withAnimation(DSToken.Motion.toastOut) { activeToast = nil }
         }
     }
 
@@ -1466,12 +1644,125 @@ struct ContentView: View {
     }
 }
 
+/// Pure filter core for the gallery — plain functions of inputs to outputs,
+/// no SwiftUI or view state, so the predicates are directly unit-testable.
+/// Predicate logic moved verbatim from the former computed properties.
+@MainActor
+enum GallerySnippetFilter {
+    static func base(
+        snippets: [Snippet],
+        selectedLanguages: Set<SupportedLanguage>,
+        selectedCollectionID: PersistentIdentifier?,
+        showUncategorizedOnly: Bool,
+        selectedSearchCollections: Set<PersistentIdentifier>,
+        showFavoritesOnly: Bool,
+        lookup: [PersistentIdentifier: SnippetCollection],
+        descendantIDs: [PersistentIdentifier: Set<PersistentIdentifier>]
+    ) -> [Snippet] {
+        snippets.filter { snippet in
+            if !selectedLanguages.isEmpty, !selectedLanguages.contains(SupportedLanguage(stored: snippet.language)) { return false }
+
+            let belongsDirectlyToCollection = { (colID: PersistentIdentifier) -> Bool in
+                snippet.collections.contains(where: { $0.persistentModelID == colID })
+            }
+
+            let belongsToCollection = { (colID: PersistentIdentifier) -> Bool in
+                guard lookup[colID] != nil, let allowedIDs = descendantIDs[colID] else { return false }
+                return snippet.collections.contains(where: { allowedIDs.contains($0.persistentModelID) })
+            }
+
+            if let selectedCollectionID {
+                if !belongsDirectlyToCollection(selectedCollectionID) { return false }
+            }
+
+            if showUncategorizedOnly && snippet.collections.contains(where: { !$0.isDeleted }) {
+                return false
+            }
+
+            if !selectedSearchCollections.isEmpty {
+                if !selectedSearchCollections.contains(where: { belongsToCollection($0) }) { return false }
+            }
+
+            if showFavoritesOnly && !snippet.isFavorite { return false }
+
+            return true
+        }
+    }
+
+    static func searchPool(
+        snippets: [Snippet],
+        selectedLanguages: Set<SupportedLanguage>,
+        showUncategorizedOnly: Bool,
+        selectedSearchCollections: Set<PersistentIdentifier>,
+        showFavoritesOnly: Bool,
+        lookup: [PersistentIdentifier: SnippetCollection],
+        descendantIDs: [PersistentIdentifier: Set<PersistentIdentifier>]
+    ) -> [Snippet] {
+        snippets.filter { snippet in
+            if !selectedLanguages.isEmpty, !selectedLanguages.contains(SupportedLanguage(stored: snippet.language)) { return false }
+
+            if showFavoritesOnly && !snippet.isFavorite { return false }
+
+            if showUncategorizedOnly && snippet.collections.contains(where: { !$0.isDeleted }) {
+                return false
+            }
+
+            guard !selectedSearchCollections.isEmpty else { return true }
+            return selectedSearchCollections.contains { collectionID in
+                guard lookup[collectionID] != nil, let allowedIDs = descendantIDs[collectionID] else { return false }
+                return snippet.collections.contains { allowedIDs.contains($0.persistentModelID) }
+            }
+        }
+    }
+
+    static func searchResults(in pool: [Snippet], needle: String) -> [Snippet] {
+        let terms = SnippetSearch.terms(needle)
+        guard !terms.isEmpty else { return [] }
+
+        return pool.filter { snippet in
+            let collectionNames = snippet.collections.compactMap { $0.isDeleted ? nil : $0.name }
+            return SnippetSearch.matches(
+                terms: terms,
+                in: [snippet.title, snippet.snippetDescription, snippet.code, snippet.language] + collectionNames
+            )
+        }
+    }
+
+    static func searchCollections(
+        _ collections: [SnippetCollection], needle: String, showFavoritesOnly: Bool
+    ) -> [SnippetCollection] {
+        let terms = SnippetSearch.terms(needle)
+        guard !terms.isEmpty else { return [] }
+
+        return collections.filter { collection in
+            !collection.isDeleted &&
+            (!showFavoritesOnly || collection.isFavorite) &&
+            SnippetSearch.matches(terms: terms, in: [collection.name])
+        }
+    }
+}
+
 /// Hard-delete operations shared by the Trash cleanup and permanent collection
 /// delete flows. Context-injected so the logic is testable outside the view.
 @MainActor
 enum TrashLifecycle {
-    /// Hard-deletes a snippet: removes media files from disk, then deletes the model.
-    static func purgeSnippet(_ snippet: Snippet, context: ModelContext) {
+    /// Hard-deletes a snippet: removes media files from disk, drops any preview
+    /// consent recorded for it, then deletes the model.
+    ///
+    /// `forgetTrust` is `PreviewTrust.forget` at the call sites that have one.
+    /// It is a parameter rather than a global because this type is
+    /// context-injected precisely so it stays testable outside a view, and the
+    /// object being reached for is the one that gates code execution and
+    /// network egress — the last one that should become ambient state.
+    ///
+    /// It fires *before* the delete, deliberately: reading `snippet.uuid` off a
+    /// model the context has already deleted is reading an invalidated object.
+    static func purgeSnippet(
+        _ snippet: Snippet,
+        context: ModelContext,
+        forgetTrust: (@MainActor (UUID?) -> Void)? = nil
+    ) {
+        forgetTrust?(snippet.uuid)
         for media in snippet.mediaItems {
             MediaManager.deleteFile(for: media)
         }
@@ -1485,11 +1776,12 @@ enum TrashLifecycle {
         snippets: [Snippet],
         collections: [SnippetCollection],
         cutoff: Date,
-        context: ModelContext
+        context: ModelContext,
+        forgetTrust: (@MainActor (UUID?) -> Void)? = nil
     ) throws {
         for snippet in snippets {
             if let deletedAt = snippet.deletedAt, deletedAt < cutoff {
-                purgeSnippet(snippet, context: context)
+                purgeSnippet(snippet, context: context, forgetTrust: forgetTrust)
             }
         }
         for collection in collections {
@@ -1503,4 +1795,3 @@ enum TrashLifecycle {
         try context.save()
     }
 }
-

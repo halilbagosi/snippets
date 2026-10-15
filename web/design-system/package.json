@@ -19,7 +19,8 @@
   ],
   "scripts": {
     "build": "tsup && node scripts/copy-css.mjs",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
     "react": "^18.0.0",

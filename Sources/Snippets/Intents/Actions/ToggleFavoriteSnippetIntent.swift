@@ -1,4 +1,5 @@
 import AppIntents
+import SwiftData
 
 struct ToggleFavoriteSnippetIntent: AppIntent {
     static let title: LocalizedStringResource = "Toggle Snippet Favorite"
@@ -15,17 +16,24 @@ struct ToggleFavoriteSnippetIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<Bool> & ProvidesDialog {
         let context = SnippetsData.sharedModelContainer.mainContext
-        guard let model = try SnippetStore.snippet(uuid: snippet.id, in: context) else {
-            throw SnippetIntentError.snippetNotFound
-        }
-        model.isFavorite.toggle()
-        model.updatedAt = .now
-        try context.save()
+        let model = try Self.execute(snippetID: snippet.id, in: context)
 
         let name = model.title.isEmpty ? "Untitled" : model.title
         let dialog: IntentDialog = model.isFavorite
             ? "Added \(name) to favorites."
             : "Removed \(name) from favorites."
         return .result(value: model.isFavorite, dialog: dialog)
+    }
+
+    /// Core logic, context-injected for tests.
+    @MainActor
+    static func execute(snippetID: UUID, in context: ModelContext) throws -> Snippet {
+        guard let model = try SnippetStore.snippet(uuid: snippetID, in: context) else {
+            throw SnippetIntentError.snippetNotFound
+        }
+        model.isFavorite.toggle()
+        model.updatedAt = .now
+        try context.save()
+        return model
     }
 }
