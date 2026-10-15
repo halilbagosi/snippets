@@ -63,6 +63,12 @@ public extension DSToken {
         /// so it should not take as long as the arrival did.
         public static let toastOut: Animation = .easeOut(duration: 0.18)
 
+        /// Onboarding page turns: the device zooms toward the next feature
+        /// while the screenshot and copy blur across. Slower than ``overlay``
+        /// because the zoom travels much further than a sheet does, and it
+        /// plays a handful of times per install, not per minute.
+        public static let pageTurn: Animation = .spring(response: 0.55, dampingFraction: 0.92)
+
         // MARK: - Status item panels
         //
         // `overlay` is modal-scale (response 0.4); the budget at the top of

@@ -147,6 +147,10 @@ struct PreviewParamControls: View {
     let params: [PreviewParam]
     @Binding var overrides: [String: PreviewParamValue]
     let theme: Theme
+    /// Values slider ranges are derived from. Applying a config rewrites the
+    /// source, so `params` defaults move with it; anchoring ranges to the
+    /// `Default` config keeps min/max constant across config switches.
+    var rangeBasis: [String: PreviewParamValue] = [:]
 
     @State private var isExpanded = false
 
@@ -229,7 +233,7 @@ struct PreviewParamControls: View {
         case .number(let fallback):
             cell(param.name) {
                 HStack(spacing: 6) {
-                    Slider(value: numberBinding(param.name, fallback: fallback), in: sliderRange(around: fallback))
+                    Slider(value: numberBinding(param.name, fallback: fallback), in: sliderRange(around: basis(param.name, fallback: fallback)))
                         .controlSize(.mini)
                     Text(formatted(numberBinding(param.name, fallback: fallback).wrappedValue))
                         .font(Mono.font(size: 10))
@@ -242,7 +246,7 @@ struct PreviewParamControls: View {
                 HStack(spacing: 6) {
                     Slider(
                         value: numberBinding(param.name, fallback: Double(fallback)),
-                        in: sliderRange(around: Double(max(fallback, 1))),
+                        in: sliderRange(around: max(basis(param.name, fallback: Double(fallback)), 1)),
                         step: 1
                     )
                     .controlSize(.mini)
@@ -301,6 +305,11 @@ struct PreviewParamControls: View {
     private func sliderRange(around fallback: Double) -> ClosedRange<Double> {
         let magnitude = max(abs(fallback) * 2, 1)
         return fallback < 0 ? -magnitude...magnitude : 0...magnitude
+    }
+
+    private func basis(_ name: String, fallback: Double) -> Double {
+        if case .number(let value) = rangeBasis[name] { return value }
+        return fallback
     }
 
     private func formatted(_ value: Double) -> String {

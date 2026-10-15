@@ -5,6 +5,7 @@ import SwiftUI
 struct AppearanceView: View {
     @Environment(AppearanceSettings.self) private var appearanceSettings
     @Environment(PreviewTrust.self) private var previewTrust
+    @Environment(Onboarding.self) private var onboarding
     @Environment(\.colorScheme) private var colorScheme
 
     private var theme: Theme { Theme.current(colorScheme) }
@@ -43,6 +44,9 @@ struct AppearanceView: View {
             schemeCard
             behaviorCard
             accentCard
+            #if DEBUG
+            debugCard
+            #endif
         }
     }
 
@@ -299,6 +303,49 @@ struct AppearanceView: View {
                 .tint(accent)
         }
     }
+
+    // MARK: - Debug
+
+    #if DEBUG
+    /// Debug builds only: the tour otherwise shows once per install, so
+    /// iterating on it would mean clearing defaults between every look.
+    private var debugCard: some View {
+        glassCard {
+            sectionLabel("Debug")
+
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles.rectangle.stack")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(theme.safeAccentText(accent))
+                    .frame(width: 30, height: 30)
+                    .liquidGlassSurface(
+                        in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+                        tint: accent.opacity(0.12),
+                        shadowRadius: 3,
+                        shadowY: 1
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Replay Onboarding")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(theme.text)
+                    Text("Show the welcome tour again over the main window")
+                        .font(.system(size: 11))
+                        .foregroundStyle(theme.textMuted)
+                }
+
+                Spacer(minLength: 12)
+
+                Button("Replay") {
+                    MainWindowOpener.activate()
+                    onboarding.present()
+                }
+                .buttonStyle(.glass)
+                .controlSize(.small)
+            }
+        }
+    }
+    #endif
 
     // MARK: - Accent Color
 

@@ -14,6 +14,29 @@ final class SnippetGalleryViewModelTests: XCTestCase {
         XCTAssertEqual(ordered.map(\.title), ["Oldest", "Newest"])
     }
 
+    func test_languageGroups_withPreferredOrder_followsItAndSkipsEmptyLanguages() {
+        let swift = Snippet(title: "S", language: "Swift")
+        let css = Snippet(title: "C", language: "CSS")
+        let sut = SnippetGalleryViewModel()
+
+        let groups = sut.languageGroups([swift, css], preferredOrder: [.css, .python, .swift])
+
+        XCTAssertEqual(groups.map(\.language), [.css, .swift])
+        XCTAssertEqual(groups.first?.snippets.map(\.title), ["C"])
+    }
+
+    func test_languageGroups_withoutPreferredOrder_groupsEveryLanguageAlphabetically() {
+        let swift1 = Snippet(title: "S1", language: "Swift")
+        let css = Snippet(title: "C", language: "CSS")
+        let swift2 = Snippet(title: "S2", language: "Swift")
+        let sut = SnippetGalleryViewModel()
+
+        let groups = sut.languageGroups([swift1, css, swift2], preferredOrder: [])
+
+        XCTAssertEqual(groups.map(\.language), [.css, .swift])
+        XCTAssertEqual(groups.last?.snippets.map(\.title), ["S1", "S2"])
+    }
+
     func test_toggleSelectAll_whenItemsAreUnselected_selectsEveryVisibleSnippet() {
         let first = Snippet(title: "First")
         let second = Snippet(title: "Second")

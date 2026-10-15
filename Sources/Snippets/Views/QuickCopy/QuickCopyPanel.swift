@@ -67,7 +67,15 @@ struct QuickCopyPanel: View {
             footer
         }
         .frame(width: Self.panelWidth, height: Self.panelHeight)
-        .liquidGlassSurface(in: RoundedRectangle(cornerRadius: DSToken.Radius.md, style: .continuous))
+        // No SwiftUI shadow: the window is exactly the panel's size, so a drawn
+        // shadow is clipped to a square at the window edge and AppKit's window
+        // shadow then traces that square too. The native window shadow alone
+        // follows the rounded shape.
+        .liquidGlassSurface(
+            in: RoundedRectangle(cornerRadius: DSToken.Radius.md, style: .continuous),
+            shadowRadius: 0,
+            shadowY: 0
+        )
         // Reduced motion keeps the opacity change and drops the scale, which is
         // the vestibular part.
         .scaleEffect(hasEntered || reduceMotion ? 1 : 0.96, anchor: scaleAnchor)

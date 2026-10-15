@@ -407,7 +407,10 @@ struct SnippetDetailView: View {
             if resolution != nil, showPreview, language.previewKind != nil {
                 let params = detected.map(\.param)
                 if !params.isEmpty {
-                    PreviewParamControls(params: params, overrides: $paramOverrides, theme: theme)
+                    PreviewParamControls(
+                        params: params, overrides: $paramOverrides, theme: theme,
+                        rangeBasis: snippet.paramConfigs.first(where: \.isDefault)?.values ?? [:]
+                    )
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .liquidGlassSurface(
                             in: RoundedRectangle(cornerRadius: 14, style: .continuous),

@@ -131,6 +131,7 @@ struct SnippetsApp: App {
     @State private var environment = AppEnvironment()
     @State private var appearanceSettings = AppearanceSettings()
     @State private var previewTrust: PreviewTrust
+    @State private var onboarding = Onboarding()
 
     init() {
         let trust = PreviewTrust()
@@ -139,11 +140,15 @@ struct SnippetsApp: App {
     }
 
     static let mainWindowID = "main"
+    /// Fits a 14" display with the Dock showing.
+    static let settingsDefaultHeight: CGFloat = 620
 
     var body: some Scene {
         WindowGroup(id: SnippetsApp.mainWindowID) {
             ContentView()
                 .previewTrustPrompt()
+                .onboardingTour()
+                .environment(onboarding)
                 .environment(environment)
                 .environment(appearanceSettings)
                 .environment(previewTrust)
@@ -173,7 +178,7 @@ struct SnippetsApp: App {
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) { }
-            HelpCommands()
+            HelpCommands(onboarding: onboarding)
             TransferCommands()
             CommandGroup(after: .windowArrangement) {
                 Button("Toggle Full Screen") {
@@ -190,7 +195,12 @@ struct SnippetsApp: App {
             SettingsView()
                 .environment(appearanceSettings)
                 .environment(previewTrust)
+                .environment(onboarding)
         }
+        // Height is the user's, down to SettingsView's minimum; the panes
+        // scroll inside it.
+        .defaultSize(width: 520, height: SnippetsApp.settingsDefaultHeight)
+        .windowResizability(.contentMinSize)
 
         Window("Third-Party Notices", id: ThirdPartyNoticesView.windowID) {
             ThirdPartyNoticesView()

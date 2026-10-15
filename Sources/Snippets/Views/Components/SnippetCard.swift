@@ -24,6 +24,9 @@ struct SnippetCard: View {
     /// Marks a card revealed from another card's connected-snippet stack;
     /// renders a "connected" chip on the title row.
     var isConnected: Bool = false
+    /// Collections named beside the title. The gallery fills this only while a
+    /// language filter has pulled snippets out of their collections.
+    var collectionTags: [SnippetCollection] = []
 
     @State private var didCopy: Bool = false
     @State private var copyResetTask: Task<Void, Never>? = nil
@@ -229,8 +232,11 @@ struct SnippetCard: View {
                         .foregroundStyle(theme.text)
                         .lineLimit(1)
 
-                    Spacer()
+                    Spacer(minLength: 8)
 
+                    if let tag = collectionTags.first {
+                        CollectionBadge(collection: tag, extraCount: collectionTags.count - 1)
+                    }
                     if isConnected {
                         connectedChip(theme: theme)
                     }
