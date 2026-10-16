@@ -11,18 +11,16 @@ struct AppearanceView: View {
     private var theme: Theme { Theme.current(colorScheme) }
     private var accent: Color { appearanceSettings.themeColor }
 
-    /// Preset accent colour palette. Yellow and Rose are the app icon's
-    /// yellow and pink layers (the light end of each gradient in
-    /// `SnippetsIcon.icon/icon.json`, display-p3 converted to sRGB); the dark
-    /// ends sit too close to Orange and Pink to tell apart.
+    /// Preset accent colour palette. Pink and Yellow are the app icon's pink
+    /// and yellow layers (the light end of each gradient in
+    /// `SnippetsIcon.icon/icon.json`, display-p3 converted to sRGB); they
+    /// replaced the system Pink and Orange, which the icon's dark ends match.
     static let presetColors: [(name: String, hex: String)] = [
         ("Green",  "#51C278"),
         ("Blue",   "#0A84FF"),
         ("Indigo", "#5E5CE6"),
         ("Purple", "#BF5AF2"),
-        ("Pink",   "#FF375F"),
-        ("Rose",   "#FF6583"),
-        ("Orange", "#FF9F0A"),
+        ("Pink",   "#FF6583"),
         ("Yellow", "#FFCA00"),
         ("Teal",   "#64D2FF"),
         ("Red",    "#FF453A"),
@@ -358,10 +356,7 @@ struct AppearanceView: View {
         glassCard {
             sectionLabel("Accent Color")
 
-            // 11 swatches × 36pt + 10 gaps × 4pt = 436pt, inside the 440pt the
-            // 520pt Settings window leaves; any wider and the whole pane is
-            // pushed past both window edges.
-            HStack(spacing: 4) {
+            HStack(spacing: 10) {
                 Spacer(minLength: 0)
                 ForEach(Self.presetColors, id: \.hex) { preset in
                     presetSwatch(preset)
@@ -383,7 +378,7 @@ struct AppearanceView: View {
             ZStack {
                 Circle()
                     .fill(swatchColor.opacity(0.35))
-                    .frame(width: 36, height: 36)
+                    .frame(width: 38, height: 38)
                     .blur(radius: 6)
                     .opacity(isActive ? 1 : 0)
 
@@ -396,7 +391,7 @@ struct AppearanceView: View {
                     .frame(width: 28, height: 28)
                     .opacity(isActive ? 1 : 0)
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 38, height: 38)
             .scaleEffect(isActive ? 1.08 : 1.0)
             .animation(DSToken.Motion.toggle, value: isActive)
         }
@@ -417,7 +412,7 @@ struct AppearanceView: View {
         return ZStack {
             Circle()
                 .fill(accent.opacity(0.35))
-                .frame(width: 36, height: 36)
+                .frame(width: 38, height: 38)
                 .blur(radius: 6)
                 .opacity(isCustomActive ? 1 : 0)
 
@@ -455,7 +450,7 @@ struct AppearanceView: View {
                 .allowsHitTesting(false)
             }
         }
-        .frame(width: 36, height: 36)
+        .frame(width: 38, height: 38)
         .scaleEffect(isCustomActive ? 1.08 : 1.0)
         .animation(DSToken.Motion.toggle, value: isCustomActive)
         .help("Custom color")

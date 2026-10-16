@@ -47,7 +47,9 @@ final class AppearanceSettingsTests: XCTestCase {
     func test_presets_includeIconYellowAndPink() {
         let presets = Dictionary(uniqueKeysWithValues: AppearanceView.presetColors.map { ($0.name, $0.hex) })
         XCTAssertEqual(presets["Yellow"], "#FFCA00")
-        XCTAssertEqual(presets["Rose"], "#FF6583")
+        XCTAssertEqual(presets["Pink"], "#FF6583")
+        XCTAssertEqual(AppearanceView.presetColors.count, 8,
+                       "The icon colours replace two presets rather than widening the row")
         XCTAssertEqual(presets["Blue"], AppearanceSettings.defaultThemeColorHex,
                        "The default accent must be selectable as a preset")
     }
