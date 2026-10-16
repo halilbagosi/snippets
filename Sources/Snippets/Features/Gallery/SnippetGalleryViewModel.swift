@@ -85,8 +85,8 @@ final class SnippetGalleryViewModel {
     ///
     /// With a language filter the groups follow `preferredOrder` (the order the
     /// user tapped them in) and a selected language with nothing to show gets no
-    /// group. Without one — a collection filter — every language present gets a
-    /// group, alphabetically, so the strips don't reshuffle as the data changes.
+    /// group. Without one, every language present gets a group, alphabetically,
+    /// so the strips don't reshuffle as the data changes.
     func languageGroups(
         _ snippets: [Snippet],
         preferredOrder: [SupportedLanguage]
