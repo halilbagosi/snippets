@@ -104,8 +104,8 @@ struct SnippetGalleryView: View {
         for language in selectedLanguages.map(\.rawValue).sorted() {
             hasher.combine(language)
         }
-        // A collection filter now splits the grid into language strips, so
-        // picking or clearing one adds or removes whole strips as well.
+        // A collection filter swaps the grid's whole membership and, past one
+        // collection, adds the cards' collection tags, so it reflows as well.
         hasher.combine(selectedSearchCollections)
         return hasher.finalize()
     }
@@ -843,12 +843,14 @@ struct SnippetGalleryView: View {
         }
     }
 
-    /// The collections a card names beside its title. Only a language filter
-    /// pulls snippets out of their collections and mixes them in one strip, so
-    /// that is the only time the card has to say where each one lives — and not
-    /// inside a collection, where every card would carry the same tag.
+    /// The collections a card names beside its title. A language filter, or a
+    /// filter on several collections, pulls snippets out of their collections
+    /// and mixes them in one grid, so those are the times the card has to say
+    /// where each one lives — and not inside a single collection, where every
+    /// card would carry the same tag.
     private func collectionTags(for snippet: Snippet) -> [SnippetCollection] {
-        guard !selectedLanguages.isEmpty, onBack == nil, !isTrashMode else { return [] }
+        let mixesCollections = !selectedLanguages.isEmpty || selectedSearchCollections.count > 1
+        guard mixesCollections, onBack == nil, !isTrashMode else { return [] }
         return snippet.collections
             .filter { !$0.isDeleted }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
@@ -857,10 +859,11 @@ struct SnippetGalleryView: View {
     private func snippetSectionSpecs(_ source: [Snippet]) -> [SnippetSectionSpec] {
         let ordered = viewModel.ordered(source)
 
-        // Strips split by language whenever either filter is on: a language
-        // filter asks for them directly, and a collection filter would
-        // otherwise be one undifferentiated grid.
-        guard !selectedLanguages.isEmpty || !selectedSearchCollections.isEmpty else {
+        // Strips split by language only when a language filter asks for them.
+        // A collection filter keeps one grid: `lang:` strips appearing on a
+        // collection pick read as language filters switching on, and the
+        // cards' collection tags already say where each snippet lives.
+        guard !selectedLanguages.isEmpty else {
             return [
                 SnippetSectionSpec(
                     id: .primary,
