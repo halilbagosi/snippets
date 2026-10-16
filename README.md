@@ -41,8 +41,8 @@ bar is not ours.
 
 Previewing a snippet runs it. Three engines do that: a `WKWebView` for HTML,
 CSS, JavaScript, TypeScript, React, and GLSL; an `MTKView` for Metal shaders;
-and, for Swift, a compile to a dynamic library that is loaded into the app's own
-process. That is the feature working as intended for code you wrote yourself,
+and, for Swift, a compile with the Xcode toolchain — a SwiftUI view is loaded
+into the app's own process, and any other Swift runs as a separate program. That is the feature working as intended for code you wrote yourself,
 which is where snippets come from today — so execution is something you turn on
 rather than something that happens.
 
@@ -55,6 +55,46 @@ rather than something that happens.
   the Mac App Store build at all (see [App Store build](#app-store-build)).
 - Loading npm modules from esm.sh is a separate grant, per snippet, shown as a
   banner naming the packages. It is the only way a preview reaches the network.
+
+### Swift previews
+
+Open a Swift snippet, switch the panel from **source** to **preview**, and press
+**run**. The first build of a snippet takes a few seconds; running unchanged
+code again is instant because builds are cached. After an edit the preview
+offers **code changed — run again**. It needs Xcode installed; Snippets finds
+the Swift compiler through `xcrun`, so it follows `xcode-select`.
+
+What the preview shows depends on what the snippet declares, in this order:
+
+1. **A `#Preview { … }` block** — its body is rendered, exactly as Xcode would.
+   This is the way to preview a view that needs init arguments, and
+   `@Previewable @State` works for bindings. Only the first `#Preview` counts;
+   its name and traits are ignored.
+2. **A view** — a `View`, `Shape`, `NSViewRepresentable` or
+   `NSViewControllerRepresentable`. `Preview` wins, then `ContentView`, then
+   the view no other code in the snippet creates (the composed root rather
+   than a subcomponent). It must be creatable with no arguments.
+3. **A style or modifier** — a `ButtonStyle` or `PrimitiveButtonStyle` is
+   shown on a sample button, a `ToggleStyle` on a live toggle, a
+   `ViewModifier` on a line of text.
+4. **Anything else** runs as a console program and shows what it prints
+   (standard output and standard error together). Top-level code works;
+   `@main` works too. A program still running after 10 seconds is stopped.
+
+Things to know:
+
+- `import SwiftUI` and `import AppKit` (or `Foundation` for console code) are
+  added if missing.
+- A type defined in another snippet is found only if that snippet is one of
+  this snippet's **connections** (editor → connections). The two compile as one
+  file, connections first.
+- Compile errors point at the line in the snippet (`snippet:12:5`), or in a
+  connection (`connected snippet 1:3:9`), and common mistakes come with a hint.
+- A view runs inside Snippets itself: a crash in the view (a force-unwrap of
+  `nil`, say) takes the app down with it. Console programs run separately, so a
+  crash there only ends that run.
+- Only macOS code works — the build targets macOS 26 with the SDK Xcode
+  provides. UIKit and iOS-only APIs fail to compile.
 
 ### Clipboard capture
 
