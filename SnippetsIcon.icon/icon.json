@@ -1,113 +1,116 @@
 {
-  "groups": [
+  "features" : [
+    "specular-location"
+  ],
+  "fill-specializations" : [
     {
-      "name": "code",
-      "layers": [
-        {
-          "name": "l1",
-          "image-name": "l1.png",
-          "glass": true,
-          "fill": {
-            "linear-gradient": [
-              "display-p3:0.95686,0.24706,0.36863,1.00000",
-              "display-p3:0.98431,0.44314,0.52157,1.00000"
-            ]
-          }
-        },
-        {
-          "name": "l2",
-          "image-name": "l2.png",
-          "glass": true,
-          "fill": {
-            "linear-gradient": [
-              "display-p3:0.23137,0.50980,0.96471,1.00000",
-              "display-p3:0.37647,0.64706,0.98039,1.00000"
-            ]
-          }
-        },
-        {
-          "name": "l3",
-          "image-name": "l3.png",
-          "glass": true,
-          "fill": {
-            "linear-gradient": [
-              "display-p3:0.96078,0.61961,0.04314,1.00000",
-              "display-p3:0.98039,0.80000,0.08235,1.00000"
-            ]
-          }
-        }
-      ],
-      "specular": "inside",
-      "shadow": {
-        "kind": "neutral",
-        "opacity": 0.35
-      },
-      "translucency": {
-        "enabled": true,
-        "value": 0.15
+      "value" : {
+        "linear-gradient" : [
+          "display-p3:1.00000,1.00000,1.00000,1.00000",
+          "display-p3:0.82200,0.76311,0.96078,1.00000"
+        ]
       }
     },
     {
-      "name": "card",
-      "layers": [
+      "appearance" : "dark",
+      "value" : {
+        "linear-gradient" : [
+          "display-p3:0.16471,0.16471,0.18824,1.00000",
+          "display-p3:0.08201,0.03069,0.13095,1.00000"
+        ]
+      }
+    }
+  ],
+  "groups" : [
+    {
+      "layers" : [
         {
-          "name": "card",
-          "image-name": "card.png",
-          "glass": true,
-          "fill-specializations": [
+          "fill" : {
+            "linear-gradient" : [
+              "display-p3:0.95686,0.24706,0.36863,1.00000",
+              "display-p3:0.98431,0.44314,0.52157,1.00000"
+            ]
+          },
+          "glass" : true,
+          "image-name" : "l1.png",
+          "name" : "l1"
+        },
+        {
+          "fill" : {
+            "linear-gradient" : [
+              "display-p3:0.23137,0.50980,0.96471,1.00000",
+              "display-p3:0.37647,0.64706,0.98039,1.00000"
+            ]
+          },
+          "glass" : true,
+          "image-name" : "l2.png",
+          "name" : "l2"
+        },
+        {
+          "fill" : {
+            "linear-gradient" : [
+              "display-p3:0.96078,0.61961,0.04314,1.00000",
+              "display-p3:0.98039,0.80000,0.08235,1.00000"
+            ]
+          },
+          "glass" : true,
+          "image-name" : "l3.png",
+          "name" : "l3"
+        }
+      ],
+      "name" : "code",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.35
+      },
+      "specular" : "inside",
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.15
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill-specializations" : [
             {
-              "value": {
-                "linear-gradient": [
+              "value" : {
+                "linear-gradient" : [
                   "display-p3:1.00000,1.00000,1.00000,0.95000",
                   "display-p3:0.86667,0.83922,0.99608,0.75000"
                 ]
               }
             },
             {
-              "appearance": "dark",
-              "value": {
-                "linear-gradient": [
+              "appearance" : "dark",
+              "value" : {
+                "linear-gradient" : [
                   "display-p3:0.65490,0.54510,0.98039,0.42000",
                   "display-p3:0.48627,0.22745,0.92941,0.15000"
                 ]
               }
             }
-          ]
+          ],
+          "glass" : true,
+          "image-name" : "card.png",
+          "name" : "card"
         }
       ],
-      "specular": "inside",
-      "shadow": {
-        "kind": "neutral",
-        "opacity": 0.6
+      "name" : "card",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.6
       },
-      "translucency": {
-        "enabled": true,
-        "value": 0.6
+      "specular" : "inside",
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.6
       }
     }
   ],
-  "supported-platforms": {
-    "squares": [
+  "supported-platforms" : {
+    "squares" : [
       "macOS"
     ]
-  },
-  "fill-specializations": [
-    {
-      "value": {
-        "linear-gradient": [
-          "display-p3:1.00000,1.00000,1.00000,1.00000",
-          "display-p3:0.91373,0.90196,0.96078,1.00000"
-        ]
-      }
-    },
-    {
-      "appearance": "dark",
-      "value": {
-        "linear-gradient": [
-          "display-p3:0.16471,0.16471,0.18824,1.00000",
-          "display-p3:0.01961,0.01961,0.02745,1.00000"
-        ]
-      }
-    }
-  ]
+  }
 }
