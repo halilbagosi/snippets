@@ -54,9 +54,7 @@ struct Theme {
     }
 
     var accent: Color {
-        let fallback = scheme == .dark
-            ? Color(red: 0.318, green: 0.761, blue: 0.420)
-            : Color(red: 0.094, green: 0.518, blue: 0.286)
+        let fallback = Color(hex: AppearanceSettings.defaultThemeColorHex)!
         return MainActor.assumeIsolated { Theme.userAccent ?? fallback }
     }
     var keyword: Color { Color(red: 1.0, green: 0.482, blue: 0.447) }
@@ -81,9 +79,24 @@ struct Theme {
         return accentColor(for: language)
     }
 
+    /// The accent as a text colour. Light mode darkens it by at least 35%,
+    /// and further for bright accents (yellow, teal) until it reaches 4.5:1
+    /// against the light canvas.
     func safeAccentText(_ accent: Color) -> Color {
-        scheme == .dark ? accent : accent.blended(with: .black, ratio: 0.35)
+        guard scheme == .light else { return accent }
+        var ratio = 0.35
+        var text = accent.blended(with: .black, ratio: ratio)
+        while let luminance = text.relativeLuminance,
+              luminance > Self.maxLightTextLuminance, ratio < 0.9 {
+            ratio += 0.05
+            text = accent.blended(with: .black, ratio: ratio)
+        }
+        return text
     }
+
+    /// Highest WCAG relative luminance with 4.5:1 contrast against the light
+    /// canvas: (L_canvas + 0.05) / 4.5 - 0.05, with L_canvas ≈ 0.922.
+    static let maxLightTextLuminance = 0.166
 }
 
 enum Mono {

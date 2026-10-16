@@ -97,4 +97,21 @@ extension Color {
         return self
         #endif
     }
+
+    /// WCAG relative luminance (0 black … 1 white), or nil when the colour
+    /// can't be expressed in sRGB.
+    var relativeLuminance: Double? {
+        #if canImport(AppKit)
+        guard let color = NSColor(self).usingColorSpace(.sRGB) else { return nil }
+        func linear(_ component: CGFloat) -> Double {
+            let c = Double(max(0, min(component, 1)))
+            return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * linear(color.redComponent)
+            + 0.7152 * linear(color.greenComponent)
+            + 0.0722 * linear(color.blueComponent)
+        #else
+        return nil
+        #endif
+    }
 }

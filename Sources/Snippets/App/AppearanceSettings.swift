@@ -20,48 +20,53 @@ final class AppearanceSettings {
         static let collectionDeletionBehavior = "settings.collectionDeletionBehavior"
     }
 
+    /// Accent for a fresh install: system blue, which is also the icon's blue layer.
+    nonisolated static let defaultThemeColorHex = "#0A84FF"
+
+    private let defaults: UserDefaults
+
     // MARK: - Published State
 
     /// "system", "light", or "dark".
     var preferredColorScheme: String {
         didSet {
-            UserDefaults.standard.set(preferredColorScheme, forKey: Key.colorScheme)
+            defaults.set(preferredColorScheme, forKey: Key.colorScheme)
             applyAppAppearance()
         }
     }
 
     /// When true, the animated gradient background is hidden.
     var focusedMode: Bool {
-        didSet { UserDefaults.standard.set(focusedMode, forKey: Key.focusedMode) }
+        didSet { defaults.set(focusedMode, forKey: Key.focusedMode) }
     }
 
     /// When true, snippet card hover effects are suppressed.
     var disableHoverEffects: Bool {
-        didSet { UserDefaults.standard.set(disableHoverEffects, forKey: Key.disableHover) }
+        didSet { defaults.set(disableHoverEffects, forKey: Key.disableHover) }
     }
 
-    /// Hex string for the user-chosen theme accent colour (e.g. "#51C278").
+    /// Hex string for the user-chosen theme accent colour (e.g. "#0A84FF").
     var themeColorHex: String {
         didSet {
-            UserDefaults.standard.set(themeColorHex, forKey: Key.themeColorHex)
+            defaults.set(themeColorHex, forKey: Key.themeColorHex)
             Theme.userAccent = Color(hex: themeColorHex)
         }
     }
 
     /// Whether to ask for confirmation when deleting a snippet.
     var confirmSnippetDeletion: Bool {
-        didSet { UserDefaults.standard.set(confirmSnippetDeletion, forKey: Key.confirmSnippetDeletion) }
+        didSet { defaults.set(confirmSnippetDeletion, forKey: Key.confirmSnippetDeletion) }
     }
 
     /// Behavior for deleting collections: "ask", "collectionOnly", "collectionAndContents".
     var collectionDeletionBehavior: String {
-        didSet { UserDefaults.standard.set(collectionDeletionBehavior, forKey: Key.collectionDeletionBehavior) }
+        didSet { defaults.set(collectionDeletionBehavior, forKey: Key.collectionDeletionBehavior) }
     }
 
     // MARK: - Computed Helpers
 
     var themeColor: Color {
-        Color(hex: themeColorHex) ?? Color(red: 0.318, green: 0.761, blue: 0.420)
+        Color(hex: themeColorHex) ?? Color(hex: Self.defaultThemeColorHex)!
     }
 
     #if canImport(AppKit)
@@ -88,12 +93,12 @@ final class AppearanceSettings {
 
     // MARK: - Init
 
-    init() {
-        let defaults = UserDefaults.standard
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         self.preferredColorScheme = defaults.string(forKey: Key.colorScheme) ?? "system"
         self.focusedMode          = defaults.bool(forKey: Key.focusedMode)
         self.disableHoverEffects  = defaults.bool(forKey: Key.disableHover)
-        self.themeColorHex        = defaults.string(forKey: Key.themeColorHex) ?? "#51C278"
+        self.themeColorHex        = defaults.string(forKey: Key.themeColorHex) ?? Self.defaultThemeColorHex
 
         if defaults.object(forKey: Key.confirmSnippetDeletion) == nil {
             self.confirmSnippetDeletion = true
