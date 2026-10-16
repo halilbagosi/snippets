@@ -50,6 +50,8 @@ final class AppearanceSettingsTests: XCTestCase {
         XCTAssertEqual(presets["Pink"], "#FF6583")
         XCTAssertEqual(AppearanceView.presetColors.count, 8,
                        "The icon colours replace two presets rather than widening the row")
+        XCTAssertEqual(AppearanceView.presetColors.prefix(3).map(\.name), ["Blue", "Pink", "Yellow"],
+                       "The default and the icon's colours lead the row")
         XCTAssertEqual(presets["Blue"], AppearanceSettings.defaultThemeColorHex,
                        "The default accent must be selectable as a preset")
     }

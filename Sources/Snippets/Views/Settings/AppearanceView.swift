@@ -16,12 +16,12 @@ struct AppearanceView: View {
     /// `SnippetsIcon.icon/icon.json`, display-p3 converted to sRGB); they
     /// replaced the system Pink and Orange, which the icon's dark ends match.
     static let presetColors: [(name: String, hex: String)] = [
-        ("Green",  "#51C278"),
         ("Blue",   "#0A84FF"),
-        ("Indigo", "#5E5CE6"),
-        ("Purple", "#BF5AF2"),
         ("Pink",   "#FF6583"),
         ("Yellow", "#FFCA00"),
+        ("Green",  "#51C278"),
+        ("Indigo", "#5E5CE6"),
+        ("Purple", "#BF5AF2"),
         ("Teal",   "#64D2FF"),
         ("Red",    "#FF453A"),
     ]
