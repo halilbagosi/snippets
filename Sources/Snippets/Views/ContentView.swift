@@ -61,11 +61,16 @@ struct ContentView: View {
     /// explicit request to see that language wherever it lives, so it lifts
     /// the scope — otherwise picking a language in the sidebar hides every
     /// match inside a collection while the row's count still includes them.
+    ///
+    /// A collection filter lifts it too: "no collection" and "in collection X"
+    /// can never both hold, so restoring the scope while collections are
+    /// picked (say, on clearing the last language) empties the gallery.
     static func showsUncategorizedOnly(
         context: SidebarSelectionContext?,
-        selectedLanguages: Set<SupportedLanguage>
+        selectedLanguages: Set<SupportedLanguage>,
+        hasCollectionFilter: Bool = false
     ) -> Bool {
-        context == .allSnippets && selectedLanguages.isEmpty
+        context == .allSnippets && selectedLanguages.isEmpty && !hasCollectionFilter
     }
 
     /// Search is global: the automatic All Snippets scope above only shapes
@@ -834,7 +839,11 @@ struct ContentView: View {
             // The sidebar's language rows and its All Snippets row both stay
             // in `.allSnippets`, so they never pass through the context
             // change above; only the language set moves.
-            showUncategorizedOnly = Self.showsUncategorizedOnly(context: sidebarSelectionContext, selectedLanguages: newValue)
+            showUncategorizedOnly = Self.showsUncategorizedOnly(
+                context: sidebarSelectionContext,
+                selectedLanguages: newValue,
+                hasCollectionFilter: !selectedSearchCollections.isEmpty
+            )
             uncategorizedScopeIsAutomatic = true
         }
         .onChange(of: navigator.pendingOpenSnippetUUID) { _, newValue in

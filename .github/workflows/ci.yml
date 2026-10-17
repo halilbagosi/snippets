@@ -39,12 +39,19 @@ jobs:
       # Tests are hosted by the app, so this builds and launches Snippets.app.
       # Signing is skipped: CI has no signing identity, and none is needed to
       # run unit tests locally on the runner.
+      #
+      # The app icon is left out too. SnippetsIcon.icon is saved by Icon
+      # Composer from Xcode 27, and the newest Xcode on the hosted image is
+      # 26.6, whose actool crashes on it ("Could not open SnippetsIcon.icon").
+      # No test reads the icon. Drop these two overrides once the image ships
+      # Xcode 27.
       - name: Run tests
         run: |
           xcodebuild -project Snippets.xcodeproj \
             -scheme Snippets \
             -destination 'platform=macOS' \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
+            EXCLUDED_SOURCE_FILE_NAMES=SnippetsIcon.icon ASSETCATALOG_COMPILER_APPICON_NAME= \
             test
 
   web-build:
