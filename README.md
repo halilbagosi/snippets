@@ -227,7 +227,9 @@ from esm.sh are not bundled and stay under their own licences.
 
 The download page and the support, privacy policy and license pages that the
 Help menu links to are in `site/`, served by GitHub Pages from the public
-`halilbagosi/halilbagosi.github.io` repo (this repo is private).
+`halilbagosi/halilbagosi.github.io` repo (this repo is private), on the custom
+domain in `site/CNAME` (snippets.halilbagosi.com). Keep that file: publishing
+mirrors `site/`, so without it the domain would be dropped.
 
 - `site/snippets/index.html`, `home.css`, `style.css` and `site.js` are
   written by hand. The page follows the system's light or dark appearance and
