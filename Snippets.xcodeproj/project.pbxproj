@@ -57,6 +57,7 @@
 		5E57E5700000000000000200 /* AppearanceSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000100 /* AppearanceSettingsTests.swift */; };
 		5E57E5700000000000000201 /* CollectionMoveTreeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000101 /* CollectionMoveTreeTests.swift */; };
 		5E57E5700000000000000202 /* LanguageDetectorCorpusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000102 /* LanguageDetectorCorpusTests.swift */; };
+		5E57E57000000000000002A7 /* LanguageDetectorShortFunctionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E57000000000000001A7 /* LanguageDetectorShortFunctionTests.swift */; };
 		5E57E5700000000000000203 /* LanguageDetectorHardeningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000103 /* LanguageDetectorHardeningTests.swift */; };
 		5E57E5700000000000000204 /* LanguageDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000104 /* LanguageDetectorTests.swift */; };
 		5E57E5700000000000000205 /* MetalShaderSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000105 /* MetalShaderSourceTests.swift */; };
@@ -218,6 +219,7 @@
 		5E57E5700000000000000100 /* AppearanceSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000101 /* CollectionMoveTreeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionMoveTreeTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000102 /* LanguageDetectorCorpusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetectorCorpusTests.swift; sourceTree = "<group>"; };
+		5E57E57000000000000001A7 /* LanguageDetectorShortFunctionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetectorShortFunctionTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000103 /* LanguageDetectorHardeningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetectorHardeningTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000104 /* LanguageDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetectorTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000105 /* MetalShaderSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalShaderSourceTests.swift; sourceTree = "<group>"; };
@@ -564,6 +566,7 @@
 				5E57E5700000000000000101 /* CollectionMoveTreeTests.swift */,
 				5E57E5700000000000000102 /* LanguageDetectorCorpusTests.swift */,
 				5E57E5700000000000000103 /* LanguageDetectorHardeningTests.swift */,
+				5E57E57000000000000001A7 /* LanguageDetectorShortFunctionTests.swift */,
 				5E57E5700000000000000104 /* LanguageDetectorTests.swift */,
 				5E57E5700000000000000105 /* MetalShaderSourceTests.swift */,
 				5E57E5700000000000000106 /* PreviewParamConfigPersistenceTests.swift */,
@@ -1016,6 +1019,7 @@
 				5E57E5700000000000000201 /* CollectionMoveTreeTests.swift in Sources */,
 				5E57E5700000000000000202 /* LanguageDetectorCorpusTests.swift in Sources */,
 				5E57E5700000000000000203 /* LanguageDetectorHardeningTests.swift in Sources */,
+				5E57E57000000000000002A7 /* LanguageDetectorShortFunctionTests.swift in Sources */,
 				5E57E5700000000000000204 /* LanguageDetectorTests.swift in Sources */,
 				5E57E5700000000000000205 /* MetalShaderSourceTests.swift in Sources */,
 				5E57E5700000000000000206 /* PreviewParamConfigPersistenceTests.swift in Sources */,
