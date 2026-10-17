@@ -93,6 +93,13 @@ extension LanguageDetector {
                 marker(#"\bself\.\w"#, Weight.weak, cap: 2),
                 // Closure shorthand arguments: `{ $0 * 2 }`.
                 marker(#"\{\s*\$\d"#, Weight.strong, cap: 2),
+                // Unlabelled parameters: `(_ a: Double, _ b: Double)`. Without
+                // these a one-line `func` is outvoted by TypeScript's
+                // `name: Type` parameter marker.
+                marker(#"[(,]\s*_\s+\w+\s*:"#, Weight.strong, cap: 2),
+                // `func name(…) -> Type` — Go's `func` has no arrow, Rust's
+                // arrow follows `fn`.
+                marker(#"\bfunc\s+\w+\s*(<[^>\n]*>)?\([^)\n]*\)\s*(async\s+)?(re)?(throws\s+)?->"#, Weight.strong),
                 // A stored property with a type and no initializer or `;` —
                 // invalid in Kotlin class bodies, absent from TS (no `var`).
                 marker(#"(?m)^\s*(var|let)\s+\w+\s*:\s*[A-Z][\w<>\[\], ]*[?!]?\s*$"#, Weight.strong, cap: 2)
