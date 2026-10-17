@@ -519,11 +519,14 @@ private struct MenuBar: View {
 
 private struct OnboardingTour: ViewModifier {
     @Environment(Onboarding.self) private var onboarding
+    @Environment(LicenseAgreement.self) private var agreement
 
     func body(content: Content) -> some View {
         @Bindable var onboarding = onboarding
         content
-            .task { onboarding.presentIfNeeded() }
+            // Until the license is agreed to, its gate starts the tour once
+            // its own sheet has gone.
+            .task { if agreement.isAccepted { onboarding.presentIfNeeded() } }
             .sheet(isPresented: $onboarding.isPresented, onDismiss: onboarding.complete) {
                 OnboardingView()
             }

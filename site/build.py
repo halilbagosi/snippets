@@ -6,6 +6,8 @@ site/<page>/index.html from one shared shell.
 - license is the EULA the app bundles, so Help > License Agreement and the
   website always show the same text.
 
+It also fingerprints style.css, home.css and site.js in every page's links.
+
 The landing page (site/index.html) is written by hand, except for
 its header and favicons, which this script fills in between <!-- header -->
 and <!-- favicons --> markers so every page shares one nav.
@@ -18,7 +20,9 @@ changing a page fragment, the shell below, or EULA.txt:
     python3 site/build.py
 """
 
+import hashlib
 import html
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -168,3 +172,16 @@ for old, new in (("", "/"), ("support/", "/support/"), ("privacy/", "/privacy/")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(REDIRECT.format(to=new))
 print("wrote redirects under site/snippets/")
+
+# Fingerprint the stylesheets and script in every page (style.css?v=<hash>).
+# GitHub Pages tells browsers to keep them for 10 minutes, so without this a
+# visitor can get a new page with an old stylesheet. A new hash is a new URL.
+assets = {name: hashlib.sha256((SITE / name).read_bytes()).hexdigest()[:10]
+          for name in ("style.css", "home.css", "site.js")}
+pages = [SITE / "index.html"] + [SITE / p / "index.html" for p in PAGES]
+for page in pages:
+    text = page.read_text()
+    for name, digest in assets.items():
+        text = re.sub(rf'({re.escape(name)})(\?v=[0-9a-f]+)?"', rf'\1?v={digest}"', text)
+    page.write_text(text)
+print("fingerprinted", ", ".join(f"{n}?v={d}" for n, d in assets.items()))
