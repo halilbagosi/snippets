@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1E6A1D0C0000000000000003 /* LegalDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6A1D0C0000000000000004 /* LegalDocumentTests.swift */; };
+		1E6A1D0C0000000000000001 /* LegalDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6A1D0C0000000000000002 /* LegalDocument.swift */; };
 		002912E32D5AD77A965C6669 /* SnippetCollectionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72351DDB378B8C22EB8FD8EE /* SnippetCollectionCard.swift */; };
 		01E24B2BB3789E64F91EB040 /* PreviewParams.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06154F76A632D66D3A6AA3D2 /* PreviewParams.swift */; };
 		05C84AB0AD5549D7F7069E6E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 757E7F34577C563AEFCB24FA /* PrivacyInfo.xcprivacy */; };
@@ -179,6 +181,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1E6A1D0C0000000000000004 /* LegalDocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocumentTests.swift; sourceTree = "<group>"; };
+		1E6A1D0C0000000000000002 /* LegalDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocument.swift; sourceTree = "<group>"; };
 		01362798D5520FFC54DBDD42 /* DSGlassContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSGlassContainer.swift; sourceTree = "<group>"; };
 		06154F76A632D66D3A6AA3D2 /* PreviewParams.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewParams.swift; sourceTree = "<group>"; };
 		0B0A2D010000000000000002 /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
@@ -589,6 +593,7 @@
 				5E57E5700000000000000116 /* UUIDBackfillTests.swift */,
 				5E57E5700000000000000A16 /* PreviewTrustTests.swift */,
 				0B0A2D010000000000000006 /* OnboardingTests.swift */,
+				1E6A1D0C0000000000000004 /* LegalDocumentTests.swift */,
 				5E57E5700000000000000816 /* MediaFileNameTests.swift */,
 				5E57E5700000000000000117 /* WebPreviewHTMLBuilderTests.swift */,
 			);
@@ -669,6 +674,7 @@
 				3FE6005FDBD6D97E65546E29 /* AppearanceView.swift */,
 				F8540F55E9369EE99D79F3CF /* SettingsView.swift */,
 				271373FECC71F698C4601723 /* ThirdPartyNoticesView.swift */,
+				1E6A1D0C0000000000000002 /* LegalDocument.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -907,6 +913,7 @@
 				B5B0E85A3DC87178E69928BA /* SnippetExporter.swift in Sources */,
 				75BA5AA7792F8E5F50152054 /* SnippetArchive.swift in Sources */,
 				F46B79656507314308974187 /* ThirdPartyNoticesView.swift in Sources */,
+				1E6A1D0C0000000000000001 /* LegalDocument.swift in Sources */,
 				40D4ED353970535DB11DCF63 /* HelpCommands.swift in Sources */,
 				CF9418FAE91E4369C97CBFF2 /* AppLinks.swift in Sources */,
 				D4A378895A23F8FD4EF5248F /* AppIntentNavigator.swift in Sources */,
@@ -1046,6 +1053,7 @@
 				5E57E5700000000000000216 /* UUIDBackfillTests.swift in Sources */,
 				5E57E5700000000000000B16 /* PreviewTrustTests.swift in Sources */,
 				0B0A2D010000000000000005 /* OnboardingTests.swift in Sources */,
+				1E6A1D0C0000000000000003 /* LegalDocumentTests.swift in Sources */,
 				5E57E5700000000000000916 /* MediaFileNameTests.swift in Sources */,
 				5E57E5700000000000000217 /* WebPreviewHTMLBuilderTests.swift in Sources */,
 			);
