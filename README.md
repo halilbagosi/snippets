@@ -231,10 +231,11 @@ Help menu links to are in `site/`, served by GitHub Pages from the public
 domain in `site/CNAME` (snippets.halilbagosi.com). Keep that file: publishing
 mirrors `site/`, so without it the domain would be dropped.
 
-- `site/snippets/index.html`, `home.css`, `style.css` and `site.js` are
-  written by hand. The page follows the system's light or dark appearance and
-  has a toggle to override it; screenshots and clips in `site/snippets/media/`
-  come in `-light` and `-dark` versions.
+- `site/index.html`, `home.css`, `style.css` and `site.js` are written by
+  hand. The page follows the system's light or dark appearance and
+  has a toggle to override it; screenshots and clips in `site/media/`
+  come in `-light` and `-dark` versions. The app's Help menu links
+  (`AppLinks.swift`) and the EULA point at https://snippets.halilbagosi.com.
 - The support, privacy and license pages are generated: edit
   `site/pages/<page>.html` (or `EULA.txt` for the license), then run
 

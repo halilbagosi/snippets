@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """Builds the Snippets document pages (support, privacy, license) into
-site/snippets/<page>/index.html from one shared shell.
+site/<page>/index.html from one shared shell.
 
 - support and privacy come from site/pages/<page>.html (just the content);
 - license is the EULA the app bundles, so Help > License Agreement and the
   website always show the same text.
 
-The landing page (site/snippets/index.html) is written by hand, except for
+The landing page (site/index.html) is written by hand, except for
 its header and favicons, which this script fills in between <!-- header -->
-and <!-- favicons --> markers so every page shares one nav. Run after
+and <!-- favicons --> markers so every page shares one nav.
+
+It also writes redirect pages at the old /snippets/ paths, where the site
+lived before it moved to the root of snippets.halilbagosi.com; older builds
+of the app link there. Run after
 changing a page fragment, the shell below, or EULA.txt:
 
     python3 site/build.py
@@ -81,7 +85,7 @@ def favicons(base: str) -> str:
 
 
 def header(base, current):
-    """The nav every page shares. `base` is the path back to site/snippets/."""
+    """The nav every page shares. `base` is the path back to the site root."""
     mark = ' aria-current="page"'
     links = f'      <a href="{base}#features">features</a>\n' + "\n".join(
         f'      <a href="{base}{p}/"{mark if p == current else ""}>{p}</a>'
@@ -127,13 +131,13 @@ def indent(text: str, by: str) -> str:
 
 for page, (title, description) in PAGES.items():
     body = license_body() if page == "license" else (SITE / "pages" / f"{page}.html").read_text().rstrip()
-    out = SITE / "snippets" / page / "index.html"
+    out = SITE / page / "index.html"
     out.write_text(SHELL.format(title=title, description=description, favicons=favicons("../"),
                                   header=header("../", page), body=indent(body, "      ")))
     print(f"wrote {out.relative_to(ROOT)}")
 
 # The hand-written home page gets the same header and favicons, between markers.
-home = SITE / "snippets" / "index.html"
+home = SITE / "index.html"
 text = home.read_text()
 for name, block in (("favicons", favicons("") + "\n"), ("header", header("", None))):
     begin, end = f"<!-- {name} -->\n", f"<!-- /{name} -->"
@@ -141,3 +145,26 @@ for name, block in (("favicons", favicons("") + "\n"), ("header", header("", Non
     text = text[:i] + block + text[j:]
 home.write_text(text)
 print(f"wrote {home.relative_to(ROOT)} (header, favicons)")
+
+# The site used to live under /snippets/ (halilbagosi.github.io/snippets/...,
+# which GitHub now redirects to this domain). Older app builds link to those
+# paths, so each one forwards to its new home.
+REDIRECT = """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Snippets</title>
+  <meta http-equiv="refresh" content="0; url={to}">
+  <link rel="canonical" href="{to}">
+  <script>location.replace("{to}" + location.hash)</script>
+</head>
+<body>
+  <p><a href="{to}">Snippets has moved here.</a></p>
+</body>
+</html>
+"""
+for old, new in (("", "/"), ("support/", "/support/"), ("privacy/", "/privacy/"), ("license/", "/license/")):
+    out = SITE / "snippets" / old / "index.html"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(REDIRECT.format(to=new))
+print("wrote redirects under site/snippets/")
