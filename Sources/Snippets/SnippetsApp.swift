@@ -83,10 +83,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // all of it ahead of the main window's first frame. A run-loop turn
         // later the window has already been committed; nothing reads the
         // status item before the user can click it.
-        DispatchQueue.main.async {
-            MenuBarController.shared.install()
+        // Nothing runs from the menu bar until the license is agreed to; on a
+        // first launch the agreement's Agree button installs these instead.
+        if LicenseAgreement.isAccepted(in: .standard) {
+            DispatchQueue.main.async {
+                MenuBarController.shared.install()
+            }
+            ClipboardMonitor.shared.start()
         }
-        ClipboardMonitor.shared.start()
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(50))
             NSApp.activate(ignoringOtherApps: true)
@@ -132,6 +136,7 @@ struct SnippetsApp: App {
     @State private var appearanceSettings = AppearanceSettings()
     @State private var previewTrust: PreviewTrust
     @State private var onboarding = Onboarding()
+    @State private var licenseAgreement = LicenseAgreement()
 
     init() {
         let trust = PreviewTrust()
@@ -148,7 +153,9 @@ struct SnippetsApp: App {
             ContentView()
                 .previewTrustPrompt()
                 .onboardingTour()
+                .licenseAgreementGate()
                 .environment(onboarding)
+                .environment(licenseAgreement)
                 .environment(environment)
                 .environment(appearanceSettings)
                 .environment(previewTrust)
