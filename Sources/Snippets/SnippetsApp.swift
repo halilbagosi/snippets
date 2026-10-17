@@ -206,6 +206,11 @@ struct SnippetsApp: App {
             ThirdPartyNoticesView()
         }
         .windowResizability(.contentMinSize)
+
+        Window("License Agreement", id: LicenseAgreementView.windowID) {
+            LicenseAgreementView()
+        }
+        .windowResizability(.contentMinSize)
         #endif
     }
 

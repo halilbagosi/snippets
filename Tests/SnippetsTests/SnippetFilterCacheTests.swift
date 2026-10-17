@@ -202,6 +202,37 @@ final class SnippetFilterCacheTests: XCTestCase {
         XCTAssertFalse(ContentView.showsUncategorizedOnly(context: nil, selectedLanguages: []))
     }
 
+    func test_uncategorizedScope_staysLiftedWhileCollectionsAreFiltered() throws {
+        // Clearing the last language with collections picked must not bring
+        // back "no collection": the two can never both hold, so the gallery
+        // went empty and the chip read collections:none.
+        XCTAssertFalse(ContentView.showsUncategorizedOnly(
+            context: .allSnippets, selectedLanguages: [], hasCollectionFilter: true))
+
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let collection = SnippetCollection(name: "Web")
+        let inside = Snippet(title: "Inside", code: "a")
+        context.insert(collection)
+        context.insert(inside)
+        inside.collections = [collection]
+        try context.save()
+
+        let id = collection.persistentModelID
+        let visible = GallerySnippetFilter.base(
+            snippets: [inside],
+            selectedLanguages: [],
+            selectedCollectionID: nil,
+            showUncategorizedOnly: ContentView.showsUncategorizedOnly(
+                context: .allSnippets, selectedLanguages: [], hasCollectionFilter: true),
+            selectedSearchCollections: [id],
+            showFavoritesOnly: false,
+            lookup: [id: collection],
+            descendantIDs: [id: [id]]
+        )
+        XCTAssertEqual(visible.map(\.title), ["Inside"])
+    }
+
     func test_search_liftsAutomaticAllSnippetsScope_keepsUserPickedOne() {
         // Browsing All Snippets: the automatic scope applies.
         XCTAssertTrue(ContentView.effectiveUncategorizedOnly(

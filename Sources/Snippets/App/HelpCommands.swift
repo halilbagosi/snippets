@@ -16,6 +16,9 @@ struct HelpCommands: Commands {
             Link("Snippets Support", destination: AppLinks.support)
             Link("Privacy Policy", destination: AppLinks.privacyPolicy)
             Divider()
+            Button("License Agreement") {
+                openWindow(id: LicenseAgreementView.windowID)
+            }
             Button("Third-Party Notices") {
                 openWindow(id: ThirdPartyNoticesView.windowID)
             }

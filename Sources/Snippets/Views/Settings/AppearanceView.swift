@@ -11,14 +11,17 @@ struct AppearanceView: View {
     private var theme: Theme { Theme.current(colorScheme) }
     private var accent: Color { appearanceSettings.themeColor }
 
-    /// Preset accent colour palette.
-    private static let presetColors: [(name: String, hex: String)] = [
-        ("Green",  "#51C278"),
+    /// Preset accent colour palette. Pink and Yellow are the app icon's pink
+    /// and yellow layers (the light end of each gradient in
+    /// `SnippetsIcon.icon/icon.json`, display-p3 converted to sRGB); they
+    /// replaced the system Pink and Orange, which the icon's dark ends match.
+    static let presetColors: [(name: String, hex: String)] = [
         ("Blue",   "#0A84FF"),
+        ("Pink",   "#FF6583"),
+        ("Yellow", "#FFCA00"),
+        ("Green",  "#51C278"),
         ("Indigo", "#5E5CE6"),
         ("Purple", "#BF5AF2"),
-        ("Pink",   "#FF375F"),
-        ("Orange", "#FF9F0A"),
         ("Teal",   "#64D2FF"),
         ("Red",    "#FF453A"),
     ]
@@ -268,7 +271,7 @@ struct AppearanceView: View {
             .pickerStyle(.menu)
             .labelsHidden()
             .frame(width: 180)
-            .tint(accent)
+            .tint(theme.safeAccentText(accent))
         }
     }
 
@@ -416,7 +419,7 @@ struct AppearanceView: View {
             ColorPicker("", selection: Binding(
                 get: { settings.themeColor },
                 set: { newColor in
-                    settings.themeColorHex = newColor.hexString(fallback: "#51C278")
+                    settings.themeColorHex = newColor.hexString(fallback: AppearanceSettings.defaultThemeColorHex)
                 }
             ), supportsOpacity: false)
             .labelsHidden()

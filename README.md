@@ -208,3 +208,42 @@ The `SnippetsTests` target is hosted by the app, so a test run launches
 ## Notes
 
 Generated build products, local Xcode state, and temporary editor files are intentionally excluded from source control. The repository ignores these files so local development stays clean.
+
+## License
+
+Snippets is proprietary software, © 2026 Halil Bagosi, all rights reserved.
+It is free to use, personally or at work, under the
+[End User License Agreement](Sources/Snippets/Resources/EULA.txt), which is
+also shown in the app under **Help ▸ License Agreement**. This source is not
+licensed for redistribution or modification.
+
+The bundled preview runtimes (React, Babel, Tailwind CSS and Bootstrap with
+Popper) are third-party code under their own MIT licences, listed in
+[`ThirdPartyNotices.txt`](Sources/Snippets/Resources/ThirdPartyNotices.txt) and
+shown in the app under **Help ▸ Third-Party Notices**. Packages a preview loads
+from esm.sh are not bundled and stay under their own licences.
+
+## Website
+
+The download page and the support, privacy policy and license pages that the
+Help menu links to are in `site/`, served by GitHub Pages from the public
+`halilbagosi/halilbagosi.github.io` repo (this repo is private), on the custom
+domain in `site/CNAME` (snippets.halilbagosi.com). Keep that file: publishing
+mirrors `site/`, so without it the domain would be dropped.
+
+- `site/index.html`, `home.css`, `style.css` and `site.js` are written by
+  hand. The page follows the system's light or dark appearance and
+  has a toggle to override it; screenshots and clips in `site/media/`
+  come in `-light` and `-dark` versions. The app's Help menu links
+  (`AppLinks.swift`) and the EULA point at https://snippets.halilbagosi.com.
+- The support, privacy and license pages are generated: edit
+  `site/pages/<page>.html` (or `EULA.txt` for the license), then run
+
+  ```sh
+  python3 site/build.py
+  ```
+
+To publish, copy everything in `site/` except `build.py` and `pages/` into the
+Pages repo and push. The download buttons point at
+`releases/latest/download/Snippets.dmg` in that repo, so a release there with a
+`Snippets.dmg` asset is what visitors get.
