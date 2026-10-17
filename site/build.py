@@ -6,7 +6,9 @@ site/snippets/<page>/index.html from one shared shell.
 - license is the EULA the app bundles, so Help > License Agreement and the
   website always show the same text.
 
-The landing page (site/snippets/index.html) is written by hand. Run after
+The landing page (site/snippets/index.html) is written by hand, except for
+its header and favicons, which this script fills in between <!-- header -->
+and <!-- favicons --> markers so every page shares one nav. Run after
 changing a page fragment, the shell below, or EULA.txt:
 
     python3 site/build.py
@@ -28,7 +30,7 @@ SHELL = """<!doctype html>
   <meta name="description" content="{description}">
   <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0e1014" media="(prefers-color-scheme: dark)">
-  <link rel="icon" href="../icon.png">
+{favicons}
   <link rel="stylesheet" href="../style.css">
   <script>try{{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}}catch(e){{}}</script>
   <script src="../site.js" defer></script>
@@ -39,20 +41,7 @@ SHELL = """<!doctype html>
     <div class="glow glow-b"></div>
   </div>
 
-  <header class="nav glass">
-    <a class="brand" href="../"><img src="../icon.png" alt="">snippets</a>
-    <nav class="nav-links" aria-label="Site">
-{nav}
-    </nav>
-    <div class="theme-toggle" role="group" aria-label="Appearance">
-      <span class="thumb" aria-hidden="true"></span>
-      <button type="button" data-choice="auto" aria-pressed="true" title="Match system"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor"/></svg><span class="sr-only">Match system</span></button>
-      <button type="button" data-choice="light" aria-pressed="false" title="Light"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M3 13l1-1M12 4l1-1"/></svg><span class="sr-only">Light</span></button>
-      <button type="button" data-choice="dark" aria-pressed="false" title="Dark"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 10.2A6 6 0 0 1 5.8 2.5a6 6 0 1 0 7.7 7.7z"/></svg><span class="sr-only">Dark</span></button>
-    </div>
-    <a class="btn btn-primary" href="../#download"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8.5M4.5 7 8 10.5 11.5 7M3 13.5h10"/></svg><span>download</span></a>
-  </header>
-
+{header}
   <main class="doc">
     <div class="wrap wrap-narrow">
 {body}
@@ -83,8 +72,38 @@ PAGES = {
 }
 
 
+def favicons(base: str) -> str:
+    return (f'  <link rel="icon" href="{base}icon-light.png" media="(prefers-color-scheme: light)">\n'
+            f'  <link rel="icon" href="{base}icon-dark.png" media="(prefers-color-scheme: dark)">')
+
+
+def header(base, current):
+    """The nav every page shares. `base` is the path back to site/snippets/."""
+    mark = ' aria-current="page"'
+    links = "\n".join(
+        f'      <a href="{base}{p}/"{mark if p == current else ""}>{p}</a>'
+        for p in ("support", "privacy", "license")
+    )
+    return f"""  <header class="nav glass">
+    <a class="brand" href="{base or './'}"><img class="theme-light" src="{base}icon-light.png" alt=""><img class="theme-dark" src="{base}icon-dark.png" alt="">snippets</a>
+    <nav class="nav-links" aria-label="Site">
+{links}
+    </nav>
+    <div class="theme-toggle" role="group" aria-label="Appearance">
+      <span class="thumb" aria-hidden="true"></span>
+      <button type="button" data-choice="auto" aria-pressed="true" title="Match system"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor"/></svg><span class="sr-only">Match system</span></button>
+      <button type="button" data-choice="light" aria-pressed="false" title="Light"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M3 13l1-1M12 4l1-1"/></svg><span class="sr-only">Light</span></button>
+      <button type="button" data-choice="dark" aria-pressed="false" title="Dark"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 10.2A6 6 0 0 1 5.8 2.5a6 6 0 1 0 7.7 7.7z"/></svg><span class="sr-only">Dark</span></button>
+    </div>
+    <a class="btn btn-primary" href="{base}#download"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8.5M4.5 7 8 10.5 11.5 7M3 13.5h10"/></svg><span>download</span></a>
+  </header>
+"""
+
+
 def license_body() -> str:
-    eula = html.escape(EULA.read_text().strip())
+    # One line, newlines as &#10;: the legal block is pre-wrap, so the page
+    # indentation applied below must not reach inside it.
+    eula = html.escape(EULA.read_text().strip()).replace("\n", "&#10;")
     return f"""<p class="eyebrow reveal">// license</p>
 <h1 class="headline reveal">License Agreement</h1>
 <p class="lede reveal">Snippets is free to use, at home and at work. This is the agreement you
@@ -104,11 +123,17 @@ def indent(text: str, by: str) -> str:
 
 for page, (title, description) in PAGES.items():
     body = license_body() if page == "license" else (SITE / "pages" / f"{page}.html").read_text().rstrip()
-    current = ' aria-current="page"'
-    nav = "\n".join(
-        f'      <a href="../{p}/"{current if p == page else ""}>{p}</a>'
-        for p in ("support", "privacy", "license")
-    )
     out = SITE / "snippets" / page / "index.html"
-    out.write_text(SHELL.format(title=title, description=description, nav=nav, body=indent(body, "      ")))
+    out.write_text(SHELL.format(title=title, description=description, favicons=favicons("../"),
+                                  header=header("../", page), body=indent(body, "      ")))
     print(f"wrote {out.relative_to(ROOT)}")
+
+# The hand-written home page gets the same header and favicons, between markers.
+home = SITE / "snippets" / "index.html"
+text = home.read_text()
+for name, block in (("favicons", favicons("") + "\n"), ("header", header("", None))):
+    begin, end = f"<!-- {name} -->\n", f"<!-- /{name} -->"
+    i, j = text.index(begin) + len(begin), text.index(end)
+    text = text[:i] + block + text[j:]
+home.write_text(text)
+print(f"wrote {home.relative_to(ROOT)} (header, favicons)")
