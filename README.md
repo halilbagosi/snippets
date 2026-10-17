@@ -225,13 +225,22 @@ from esm.sh are not bundled and stay under their own licences.
 
 ## Website
 
-The support, privacy policy and license pages that Help ▸ Snippets Support and
-Help ▸ Privacy Policy link to are in `site/`, served by GitHub Pages from the
-public `halilbagosi/halilbagosi.github.io` repo (this repo is private). The
-license page is generated from `EULA.txt`. To publish a change:
+The download page and the support, privacy policy and license pages that the
+Help menu links to are in `site/`, served by GitHub Pages from the public
+`halilbagosi/halilbagosi.github.io` repo (this repo is private).
 
-```sh
-python3 site/build.py      # after editing EULA.txt
-```
+- `site/snippets/index.html`, `home.css`, `style.css` and `site.js` are
+  written by hand. The page follows the system's light or dark appearance and
+  has a toggle to override it; screenshots and clips in `site/snippets/media/`
+  come in `-light` and `-dark` versions.
+- The support, privacy and license pages are generated: edit
+  `site/pages/<page>.html` (or `EULA.txt` for the license), then run
 
-then copy everything in `site/` except `build.py` into the Pages repo and push.
+  ```sh
+  python3 site/build.py
+  ```
+
+To publish, copy everything in `site/` except `build.py` and `pages/` into the
+Pages repo and push. The download buttons point at
+`releases/latest/download/Snippets.dmg` in that repo, so a release there with a
+`Snippets.dmg` asset is what visitors get.
