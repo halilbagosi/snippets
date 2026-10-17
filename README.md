@@ -222,3 +222,16 @@ Popper) are third-party code under their own MIT licences, listed in
 [`ThirdPartyNotices.txt`](Sources/Snippets/Resources/ThirdPartyNotices.txt) and
 shown in the app under **Help ▸ Third-Party Notices**. Packages a preview loads
 from esm.sh are not bundled and stay under their own licences.
+
+## Website
+
+The support, privacy policy and license pages that Help ▸ Snippets Support and
+Help ▸ Privacy Policy link to are in `site/`, served by GitHub Pages from the
+public `halilbagosi/halilbagosi.github.io` repo (this repo is private). The
+license page is generated from `EULA.txt`. To publish a change:
+
+```sh
+python3 site/build.py      # after editing EULA.txt
+```
+
+then copy everything in `site/` except `build.py` into the Pages repo and push.
