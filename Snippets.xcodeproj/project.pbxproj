@@ -101,6 +101,7 @@
 		8C194C4688BD21316569B386 /* PreviewKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34864A38BFC0374501E4B732 /* PreviewKind.swift */; };
 		8F3191ED945089431C000C5D /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E923CF09607326EACCF905D0 /* TrashView.swift */; };
 		983FBD981744431AEA0FBA0E /* ColorExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C705146AEB83C4F2B48E87D9 /* ColorExtensions.swift */; };
+		A1B2C3D40000000000EULAB1 /* EULA.txt in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000EULAF1 /* EULA.txt */; };
 		98B128D9E36B123A4D976EB8 /* ThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = 18B912223FDE5C2A7CC856B3 /* ThirdPartyNotices.txt */; };
 		9B234FBFDBABE1B76CD0F9A5 /* SnippetQueryFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22D8859737516C8AF09273C /* SnippetQueryFilter.swift */; };
 		A0C9005949BBBE4C9692FF02 /* SnippetEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59B7E708E9A71A8D278A41B3 /* SnippetEditorView.swift */; };
@@ -188,6 +189,7 @@
 		0C82E0C23D62D7837A6EAE83 /* DotGridBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DotGridBackground.swift; sourceTree = "<group>"; };
 		0CB355D03E22E70CDFEFBE08 /* CopySnippetIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopySnippetIntent.swift; sourceTree = "<group>"; };
 		132202CF7B77D71B4D874FF4 /* HelpCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpCommands.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000EULAF1 /* EULA.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = EULA.txt; sourceTree = "<group>"; };
 		18B912223FDE5C2A7CC856B3 /* ThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThirdPartyNotices.txt; sourceTree = "<group>"; };
 		25E755FD360416D4858461B1 /* DSTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSTypography.swift; sourceTree = "<group>"; };
 		260E4CFC84DAC135CA1F2EA9 /* MetalShaderSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalShaderSource.swift; sourceTree = "<group>"; };
@@ -364,6 +366,7 @@
 				C5A1D0E2B7F94C3A8E6D2006 /* OnboardingParameters-dark.mp4 */,
 				C5A1D0E2B7F94C3A8E6D2008 /* OnboardingParameters-light.mp4 */,
 				18B912223FDE5C2A7CC856B3 /* ThirdPartyNotices.txt */,
+				A1B2C3D40000000000EULAF1 /* EULA.txt */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -878,6 +881,7 @@
 				C5A1D0E2B7F94C3A8E6D2005 /* OnboardingParameters-dark.mp4 in Resources */,
 				C5A1D0E2B7F94C3A8E6D2007 /* OnboardingParameters-light.mp4 in Resources */,
 				98B128D9E36B123A4D976EB8 /* ThirdPartyNotices.txt in Resources */,
+				A1B2C3D40000000000EULAB1 /* EULA.txt in Resources */,
 				C124BF522FFA5675008B595C /* SnippetsIcon.icon in Resources */,
 				5F83E4E6DBEBBC102F4EE2BD /* DisintegrationShaders.metal.txt in Resources */,
 				49595C2F65E32BDA2D559953 /* babel.min.js in Resources */,
@@ -1121,7 +1125,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi. All rights reserved.";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -1194,7 +1198,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi. All rights reserved.";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -1220,7 +1224,7 @@
 				INFOPLIST_FILE = "Snippets-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -1285,7 +1289,7 @@
 				INFOPLIST_FILE = "Snippets-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -1321,7 +1325,7 @@
 				INFOPLIST_FILE = "Snippets-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -1392,7 +1396,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Halil Bagosi. All rights reserved.";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;

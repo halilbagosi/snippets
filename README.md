@@ -208,3 +208,17 @@ The `SnippetsTests` target is hosted by the app, so a test run launches
 ## Notes
 
 Generated build products, local Xcode state, and temporary editor files are intentionally excluded from source control. The repository ignores these files so local development stays clean.
+
+## License
+
+Snippets is proprietary software, © 2026 Halil Bagosi, all rights reserved.
+It is free to use, personally or at work, under the
+[End User License Agreement](Sources/Snippets/Resources/EULA.txt), which is
+also shown in the app under **Help ▸ License Agreement**. This source is not
+licensed for redistribution or modification.
+
+The bundled preview runtimes (React, Babel, Tailwind CSS and Bootstrap with
+Popper) are third-party code under their own MIT licences, listed in
+[`ThirdPartyNotices.txt`](Sources/Snippets/Resources/ThirdPartyNotices.txt) and
+shown in the app under **Help ▸ Third-Party Notices**. Packages a preview loads
+from esm.sh are not bundled and stay under their own licences.
