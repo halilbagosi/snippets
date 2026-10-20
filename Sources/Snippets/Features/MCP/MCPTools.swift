@@ -83,16 +83,53 @@ final class SnippetMCPTools: MCPToolProvider {
         }
     }
 
-    // MARK: - Write tools (Task 3)
+    // MARK: - Write tools
 
     private func create(_ a: [String: JSONValue]) throws -> JSONValue {
         guard editsAllowed() else { throw MCPToolError.failed(Self.editsOffMessage) }
-        throw MCPToolError.failed("Not implemented yet.")
+        // Validate everything before inserting: `CreateSnippetIntent.execute`
+        // inserts first, so a failure afterwards would leave a stray row.
+        let title = try requiredString(a, "title")
+        let code = try requiredString(a, "code")
+        let description = try string(a, "description")
+        let language = try string(a, "language").map(Self.canonicalLanguage)
+            ?? LanguageDetector.detect(code: code).rawValue
+        let collectionID = try string(a, "collection").map { try collectionUUID($0) }
+
+        let snippet = try CreateSnippetIntent.execute(
+            title: title, code: code, language: language, collectionID: collectionID, in: context
+        )
+        if let description {
+            snippet.snippetDescription = description
+            try context.save()
+        }
+        return detail(snippet)
     }
 
     private func update(_ a: [String: JSONValue]) throws -> JSONValue {
         guard editsAllowed() else { throw MCPToolError.failed(Self.editsOffMessage) }
-        throw MCPToolError.failed("Not implemented yet.")
+        let snippet = try snippet(a)
+        let title = try string(a, "title")
+        let code = try string(a, "code")
+        let language = try string(a, "language")
+        let description = try string(a, "description")
+        guard title != nil || code != nil || language != nil || description != nil else {
+            throw MCPToolError.invalidArguments("Give at least one of title, code, language or description to change.")
+        }
+
+        if let title { snippet.title = title }
+        if let code { snippet.code = code }
+        if let language { snippet.language = Self.canonicalLanguage(language) }
+        if let description { snippet.snippetDescription = description }
+        snippet.updatedAt = .now
+        try context.save()
+        return detail(snippet)
+    }
+
+    /// The app's own spelling for a language it knows ("javascript" →
+    /// "JavaScript"), so the gallery's language filter groups it correctly.
+    private static func canonicalLanguage(_ name: String) -> String {
+        SupportedLanguage(rawValue: name)?.rawValue ?? name
     }
 
     // MARK: - Lookup

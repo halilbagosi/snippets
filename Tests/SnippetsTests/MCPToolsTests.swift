@@ -174,5 +174,78 @@ final class MCPToolsTests: XCTestCase {
         XCTAssertEqual(s.copyCount, 1)
         XCTAssertEqual(s.updatedAt, past)
     }
+
+    // MARK: create_snippet
+
+    func test_create_editsOff_failsAndInsertsNothing() throws {
+        assertFails("create_snippet", ["title": "T", "code": "c"], .failed(SnippetMCPTools.editsOffMessage))
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Snippet>()).count, 0)
+    }
+
+    func test_create_detectsLanguageAndSetsDescriptionAndCollection() throws {
+        allowEdits = true
+        let utils = SnippetCollection(name: "Utils")
+        context.insert(utils)
+        try context.save()
+
+        let code = "import SwiftUI\n\nstruct ContentView: View {\n    var body: some View { Text(\"Hi\") }\n}"
+        let result = try tools.call("create_snippet", arguments: [
+            "title": "Hello", "code": .string(code), "description": "Greets", "collection": "utils",
+        ])
+
+        XCTAssertEqual(result["language"], "Swift")
+        XCTAssertEqual(result["description"], "Greets")
+        XCTAssertEqual(result["collections"], ["Utils"])
+        let stored = try XCTUnwrap(try context.fetch(FetchDescriptor<Snippet>()).first)
+        XCTAssertEqual(stored.title, "Hello")
+        XCTAssertEqual(stored.snippetDescription, "Greets")
+    }
+
+    func test_create_canonicalizesAKnownLanguageName() throws {
+        allowEdits = true
+        let result = try tools.call("create_snippet", arguments: ["title": "T", "code": "x", "language": "javascript"])
+        XCTAssertEqual(result["language"], "JavaScript")
+    }
+
+    func test_create_missingCode_isInvalidArguments() {
+        allowEdits = true
+        assertFails("create_snippet", ["title": "T"], .invalidArguments("Missing required argument: code"))
+    }
+
+    func test_create_unknownCollection_failsAndInsertsNothing() throws {
+        allowEdits = true
+        assertFails("create_snippet", ["title": "T", "code": "c", "collection": "Nope"],
+                    .failed("No collection named or with id Nope."))
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Snippet>()).count, 0)
+    }
+
+    // MARK: update_snippet
+
+    func test_update_editsOff_failsAndChangesNothing() throws {
+        let s = try insert("Old")
+        assertFails("update_snippet", ["id": id(s), "title": "New"], .failed(SnippetMCPTools.editsOffMessage))
+        XCTAssertEqual(s.title, "Old")
+    }
+
+    func test_update_changesOnlyGivenFieldsAndBumpsUpdatedAt() throws {
+        allowEdits = true
+        let past = Date(timeIntervalSince1970: 1_000)
+        let s = try insert("Old", code: "keep", description: "keep too", updatedAt: past)
+
+        let result = try tools.call("update_snippet", arguments: ["id": id(s), "title": "New"])
+
+        XCTAssertEqual(result["title"], "New")
+        XCTAssertEqual(s.title, "New")
+        XCTAssertEqual(s.code, "keep")
+        XCTAssertEqual(s.snippetDescription, "keep too")
+        XCTAssertGreaterThan(s.updatedAt, past)
+    }
+
+    func test_update_nothingToChange_isInvalidArguments() throws {
+        allowEdits = true
+        let s = try insert("S")
+        assertFails("update_snippet", ["id": id(s)],
+                    .invalidArguments("Give at least one of title, code, language or description to change."))
+    }
 }
 #endif
