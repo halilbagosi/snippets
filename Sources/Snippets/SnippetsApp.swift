@@ -77,7 +77,13 @@ struct WindowChromeConfigurator: NSViewRepresentable {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
+        #if !APP_STORE
+        // An agent-launched copy must not steal focus from the user's editor.
+        let launchedByAgent = CommandLine.arguments.contains(MCPStdioShim.launchedByAgentFlag)
+        #else
+        let launchedByAgent = false
+        #endif
+        if !launchedByAgent { NSApp.activate(ignoringOtherApps: true) }
         ColorPanelCenterer.shared.install()
         // Creating the status item costs ~45ms of window-server round trips,
         // all of it ahead of the main window's first frame. A run-loop turn
@@ -88,8 +94,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         ClipboardMonitor.shared.start()
         #if !APP_STORE
-        AgentAccess.shared.start()
+        // Test runs must never serve the user's real socket.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil {
+            AgentAccess.shared.start()
+        }
         #endif
+        guard !launchedByAgent else { return }
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(50))
             NSApp.activate(ignoringOtherApps: true)

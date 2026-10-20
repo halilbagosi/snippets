@@ -10,10 +10,14 @@ enum MCPStdioShim {
     static let flag = "--mcp-stdio"
     static let accessOffMessage = "Agent access is off — enable it in Snippets ▸ Settings ▸ Agents."
     static let unreachableMessage = "Couldn't reach Snippets. Open the app and try again."
+    /// Passed to an app the shim launches, so it stays in the background.
+    static let launchedByAgentFlag = "--launched-by-agent"
     private static let launchTimeout: TimeInterval = 5
 
     @MainActor
     static func run() -> Never {
+        // A client that closes its read end should end us cleanly, not by signal.
+        signal(SIGPIPE, SIG_IGN)
         guard UserDefaults.standard.bool(forKey: AgentAccess.enabledDefaultsKey) else {
             answerWithError(accessOffMessage)
         }
@@ -33,10 +37,14 @@ enum MCPStdioShim {
         return MCPDispatcher.errorResponse(id: id, code: JSONRPCErrorCode.serverUnavailable, message: message).serialized()
     }
 
+    static func launchArguments(bundlePath: String) -> [String] {
+        ["-g", "-a", bundlePath, "--args", launchedByAgentFlag]
+    }
+
     private static func launchAppAndConnect(path: String) -> Int32? {
         let open = Process()
         open.executableURL = URL(filePath: "/usr/bin/open")
-        open.arguments = ["-g", "-a", Bundle.main.bundleURL.path(percentEncoded: false)]
+        open.arguments = launchArguments(bundlePath: Bundle.main.bundleURL.path(percentEncoded: false))
         // stdout belongs to the MCP client; open must not write to it.
         open.standardOutput = FileHandle.nullDevice
         open.standardError = FileHandle.nullDevice

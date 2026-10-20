@@ -30,6 +30,12 @@ final class MCPStdioShimTests: XCTestCase {
         )
     }
 
+    func test_launchArguments_backgroundTheAppAndMarkTheLaunch() {
+        let args = MCPStdioShim.launchArguments(bundlePath: "/A/Snippets.app")
+        XCTAssertEqual(args.prefix(3), ["-g", "-a", "/A/Snippets.app"])
+        XCTAssertEqual(args.suffix(2), ["--args", MCPStdioShim.launchedByAgentFlag])
+    }
+
     func test_socketPathFitsInSockaddr() {
         XCTAssertNoThrow(try UnixSocket.address(path: AgentAccess.socketPath))
         XCTAssertTrue(AgentAccess.socketPath.hasSuffix("/Application Support/Snippets/mcp.sock"))
