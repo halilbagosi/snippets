@@ -42,7 +42,17 @@ enum UnixSocket {
         setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
     }
 
-    /// Writes all of `data`, retrying short writes. False once the peer is gone.
+    /// A client that stops reading must cost a failed write, not a stalled server queue.
+    static let sendTimeoutSeconds = 2
+
+    /// Bounds every blocking write on `fd`; a timed-out write fails with EAGAIN.
+    static func setSendTimeout(_ fd: Int32) {
+        var timeout = timeval(tv_sec: sendTimeoutSeconds, tv_usec: 0)
+        setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+    }
+
+    /// Writes all of `data`, retrying short writes. False once the peer is gone
+    /// or stopped reading (the send timeout surfaces as EAGAIN).
     @discardableResult
     static func writeAll(_ fd: Int32, _ data: Data) -> Bool {
         data.withUnsafeBytes { raw in
@@ -65,6 +75,9 @@ enum UnixSocket {
 /// Listens on a Unix socket and hands each newline-delimited message to
 /// `handler` on the main actor, writing back whatever it returns. Main-queue
 /// dispatch keeps replies in request order. All socket state lives on `queue`.
+///
+/// Callers must call `stop()` before releasing the server; there is no deinit
+/// cleanup because a `queue.sync` there could deadlock.
 final class MCPSocketServer: @unchecked Sendable {
     typealias Handler = @MainActor @Sendable (String) -> String?
 
@@ -73,6 +86,10 @@ final class MCPSocketServer: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.halilbagosi.Snippets.mcp")
     private var listenSource: DispatchSourceRead?
     private var connections: [ObjectIdentifier: Connection] = [:]
+    /// Inode of the socket file this instance bound; nil when it holds none.
+    private var boundInode: UInt64?
+    /// Whether `listenSource` is suspended while accept backs off.
+    private var listenSuspended = false
 
     init(path: String, handler: @escaping Handler) {
         self.path = path
@@ -100,33 +117,84 @@ final class MCPSocketServer: @unchecked Sendable {
             }
         }
         guard bound == 0 else { let e = errno; close(fd); throw UnixSocket.Failure.system("bind", e) }
+        let inode = Self.inode(of: path)
         // Owner only: whoever can connect can read the whole library.
-        chmod(path, 0o600)
+        guard chmod(path, 0o600) == 0 else {
+            let e = errno; close(fd); unlink(path); throw UnixSocket.Failure.system("chmod", e)
+        }
+        // Non-blocking so the accept loop can drain until EAGAIN.
+        guard fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK) != -1 else {
+            let e = errno; close(fd); unlink(path); throw UnixSocket.Failure.system("fcntl", e)
+        }
         guard listen(fd, 8) == 0 else { let e = errno; close(fd); unlink(path); throw UnixSocket.Failure.system("listen", e) }
 
         let source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: queue)
-        source.setEventHandler { [weak self] in self?.acceptConnection(on: fd) }
+        source.setEventHandler { [weak self, unowned source] in self?.acceptConnections(on: fd, source: source) }
         source.setCancelHandler { close(fd) }
-        queue.sync { listenSource = source }
+        queue.sync {
+            listenSource = source
+            listenSuspended = false
+            boundInode = inode
+        }
         source.resume()
+    }
+
+    private static func inode(of path: String) -> UInt64? {
+        var info = stat()
+        return stat(path, &info) == 0 ? UInt64(info.st_ino) : nil
     }
 
     /// Stops listening and drops every connection. Safe to call twice.
     func stop() {
-        queue.sync {
-            listenSource?.cancel()
+        let ours: UInt64? = queue.sync {
+            if let source = listenSource {
+                source.cancel()
+                // A suspended source runs its cancel handler (closing the fd) only once resumed.
+                if listenSuspended { source.resume() }
+            }
             listenSource = nil
+            listenSuspended = false
             let open = Array(connections.values)
             connections.removeAll()
             open.forEach { $0.close() }
+            defer { boundInode = nil }
+            return boundInode
         }
-        unlink(path)
+        // Only remove the file we bound, never another instance's replacement.
+        if let ours, Self.inode(of: path) == ours { unlink(path) }
     }
 
-    private func acceptConnection(on listenFD: Int32) {
-        let fd = accept(listenFD, nil, nil)
-        guard fd >= 0 else { return }
+    private func acceptConnections(on listenFD: Int32, source: DispatchSourceRead) {
+        while true {
+            let fd = accept(listenFD, nil, nil)
+            if fd >= 0 {
+                adopt(fd)
+                continue
+            }
+            switch errno {
+            case EAGAIN, EWOULDBLOCK: return
+            case EINTR, ECONNABORTED: continue
+            default:
+                // EMFILE/ENFILE or anything else: stop polling a socket that stays
+                // readable, and try again in a second.
+                guard !listenSuspended else { return }
+                listenSuspended = true
+                source.suspend()
+                queue.asyncAfter(deadline: .now() + 1) { [weak self] in
+                    guard let self, listenSource === source, listenSuspended else { return }
+                    listenSuspended = false
+                    source.resume()
+                }
+                return
+            }
+        }
+    }
+
+    private func adopt(_ fd: Int32) {
+        // Darwin hands accepted sockets the listener's O_NONBLOCK; writes here must block (bounded by the send timeout).
+        _ = fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) & ~O_NONBLOCK)
         UnixSocket.disableSIGPIPE(fd)
+        UnixSocket.setSendTimeout(fd)
         let connection = Connection(fd: fd, queue: queue)
         let key = ObjectIdentifier(connection)
         connections[key] = connection
@@ -148,9 +216,14 @@ final class MCPSocketServer: @unchecked Sendable {
 
 /// One client. Everything here runs on the server's queue.
 private final class Connection: @unchecked Sendable {
+    /// A line longer than this is a misbehaving client, not a request.
+    private static let maxLineBytes = 4 * 1024 * 1024
+
     private let fd: Int32
     private let source: DispatchSourceRead
     private var buffer = Data()
+    /// Start of the bytes in `buffer` not yet searched for a newline.
+    private var scanFrom = 0
     /// Requests handed to the main actor and not yet answered.
     private var pending = 0
     private var inputEnded = false
@@ -184,7 +257,9 @@ private final class Connection: @unchecked Sendable {
 
     private func readAvailable() {
         var chunk = [UInt8](repeating: 0, count: 64 * 1024)
-        let count = read(fd, &chunk, chunk.count)
+        var count: Int
+        repeat { count = read(fd, &chunk, chunk.count) } while count < 0 && errno == EINTR
+        if count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) { return }
         guard count > 0 else {
             // The client half-closed or hung up. Stop reading, but keep the
             // descriptor until replies already in flight are written.
@@ -193,11 +268,14 @@ private final class Connection: @unchecked Sendable {
             return
         }
         buffer.append(contentsOf: chunk[0..<count])
-        while let newline = buffer.firstIndex(of: 0x0A) {
+        while let newline = buffer[scanFrom...].firstIndex(of: 0x0A) {
             let line = String(decoding: buffer[buffer.startIndex..<newline], as: UTF8.self)
             buffer = Data(buffer[buffer.index(after: newline)...])
+            scanFrom = 0
             if !line.trimmingCharacters(in: .whitespaces).isEmpty { onLine?(self, line) }
         }
+        scanFrom = buffer.count
+        if buffer.count > Self.maxLineBytes { close() }
     }
 
     private func sourceDidCancel() {
