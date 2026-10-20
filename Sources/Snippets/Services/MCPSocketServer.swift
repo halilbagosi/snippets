@@ -42,24 +42,35 @@ enum UnixSocket {
         setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
     }
 
-    /// A client that stops reading must cost a failed write, not a stalled server queue.
-    static let sendTimeoutSeconds = 2
+    /// One deadline for a whole reply: a client that stops (or trickles) reading
+    /// must cost a failed write, not a stalled server queue.
+    static let sendTimeoutSeconds: TimeInterval = 2
 
-    /// Bounds every blocking write on `fd`; a timed-out write fails with EAGAIN.
-    static func setSendTimeout(_ fd: Int32) {
-        var timeout = timeval(tv_sec: sendTimeoutSeconds, tv_usec: 0)
+    private static func setSendTimeout(_ fd: Int32, _ seconds: TimeInterval) {
+        let whole = Int(seconds)
+        let micros = max(1000, Int((seconds - Double(whole)) * 1_000_000)) // 0 would mean "forever"
+        var timeout = timeval(tv_sec: whole, tv_usec: Int32(whole == 0 ? micros : min(micros, 999_999)))
         setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
     }
 
-    /// Writes all of `data`, retrying short writes. False once the peer is gone
-    /// or stopped reading (the send timeout surfaces as EAGAIN).
+    /// Writes all of `data`, retrying short writes. False once the peer is gone.
+    /// With `timeout`, the whole write shares one deadline and also fails when
+    /// it passes (a timed-out write surfaces as EAGAIN).
     @discardableResult
-    static func writeAll(_ fd: Int32, _ data: Data) -> Bool {
-        data.withUnsafeBytes { raw in
+    static func writeAll(_ fd: Int32, _ data: Data, timeout: TimeInterval? = nil) -> Bool {
+        let deadline = timeout.map { Date().addingTimeInterval($0) }
+        return data.withUnsafeBytes { raw in
             guard var pointer = raw.baseAddress else { return true }
             var remaining = raw.count
             while remaining > 0 {
-                let written = write(fd, pointer, remaining)
+                if let deadline {
+                    let left = deadline.timeIntervalSinceNow
+                    if left <= 0 { return false }
+                    setSendTimeout(fd, left)
+                }
+                // Bounded slices: a blocked write() only times out when no space opens
+                // for the whole timeout, so a trickling reader would never trip it.
+                let written = write(fd, pointer, min(remaining, 16 * 1024))
                 if written < 0 {
                     if errno == EINTR { continue }
                     return false
@@ -86,8 +97,8 @@ final class MCPSocketServer: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.halilbagosi.Snippets.mcp")
     private var listenSource: DispatchSourceRead?
     private var connections: [ObjectIdentifier: Connection] = [:]
-    /// Inode of the socket file this instance bound; nil when it holds none.
-    private var boundInode: UInt64?
+    /// Device and inode of the socket file this instance bound; nil when it holds none.
+    private var boundInode: FileID?
     /// Whether `listenSource` is suspended while accept backs off.
     private var listenSuspended = false
 
@@ -123,7 +134,8 @@ final class MCPSocketServer: @unchecked Sendable {
             let e = errno; close(fd); unlink(path); throw UnixSocket.Failure.system("chmod", e)
         }
         // Non-blocking so the accept loop can drain until EAGAIN.
-        guard fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK) != -1 else {
+        let flags = fcntl(fd, F_GETFL)
+        guard flags != -1, fcntl(fd, F_SETFL, flags | O_NONBLOCK) != -1 else {
             let e = errno; close(fd); unlink(path); throw UnixSocket.Failure.system("fcntl", e)
         }
         guard listen(fd, 8) == 0 else { let e = errno; close(fd); unlink(path); throw UnixSocket.Failure.system("listen", e) }
@@ -139,14 +151,19 @@ final class MCPSocketServer: @unchecked Sendable {
         source.resume()
     }
 
-    private static func inode(of path: String) -> UInt64? {
+    private struct FileID: Equatable {
+        let device: Int64
+        let inode: UInt64
+    }
+
+    private static func inode(of path: String) -> FileID? {
         var info = stat()
-        return stat(path, &info) == 0 ? UInt64(info.st_ino) : nil
+        return stat(path, &info) == 0 ? FileID(device: Int64(info.st_dev), inode: UInt64(info.st_ino)) : nil
     }
 
     /// Stops listening and drops every connection. Safe to call twice.
     func stop() {
-        let ours: UInt64? = queue.sync {
+        let ours: FileID? = queue.sync {
             if let source = listenSource {
                 source.cancel()
                 // A suspended source runs its cancel handler (closing the fd) only once resumed.
@@ -192,9 +209,9 @@ final class MCPSocketServer: @unchecked Sendable {
 
     private func adopt(_ fd: Int32) {
         // Darwin hands accepted sockets the listener's O_NONBLOCK; writes here must block (bounded by the send timeout).
-        _ = fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) & ~O_NONBLOCK)
+        let flags = fcntl(fd, F_GETFL)
+        guard flags != -1, fcntl(fd, F_SETFL, flags & ~O_NONBLOCK) != -1 else { Darwin.close(fd); return }
         UnixSocket.disableSIGPIPE(fd)
-        UnixSocket.setSendTimeout(fd)
         let connection = Connection(fd: fd, queue: queue)
         let key = ObjectIdentifier(connection)
         connections[key] = connection
@@ -248,7 +265,7 @@ private final class Connection: @unchecked Sendable {
 
     func finishRequest(_ reply: String?) {
         pending -= 1
-        if let reply, !isClosed, !UnixSocket.writeAll(fd, Data((reply + "\n").utf8)) {
+        if let reply, !isClosed, !UnixSocket.writeAll(fd, Data((reply + "\n").utf8), timeout: UnixSocket.sendTimeoutSeconds) {
             close()
             return
         }
@@ -268,12 +285,16 @@ private final class Connection: @unchecked Sendable {
             return
         }
         buffer.append(contentsOf: chunk[0..<count])
-        while let newline = buffer[scanFrom...].firstIndex(of: 0x0A) {
-            let line = String(decoding: buffer[buffer.startIndex..<newline], as: UTF8.self)
-            buffer = Data(buffer[buffer.index(after: newline)...])
-            scanFrom = 0
+        var lineStart = buffer.startIndex
+        var searchFrom = buffer.index(buffer.startIndex, offsetBy: scanFrom)
+        while let newline = buffer[searchFrom...].firstIndex(of: 0x0A) {
+            let line = String(decoding: buffer[lineStart..<newline], as: UTF8.self)
+            lineStart = buffer.index(after: newline)
+            searchFrom = lineStart
             if !line.trimmingCharacters(in: .whitespaces).isEmpty { onLine?(self, line) }
         }
+        // Drop the consumed prefix once per read.
+        if lineStart > buffer.startIndex { buffer.removeSubrange(buffer.startIndex..<lineStart) }
         scanFrom = buffer.count
         if buffer.count > Self.maxLineBytes { close() }
     }

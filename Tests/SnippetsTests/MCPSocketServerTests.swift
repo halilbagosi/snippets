@@ -145,9 +145,21 @@ final class MCPSocketServerTests: XCTestCase {
         }
     }
 
-    func test_aClientThatStopsReadingIsDroppedWithoutStallingOthers() async throws {
+    /// Flips when the main-queue handler has seen the request.
+    private final class Flag: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value = false
+        var isSet: Bool { lock.lock(); defer { lock.unlock() }; return value }
+        func set() { lock.lock(); value = true; lock.unlock() }
+    }
+
+    func test_aClientThatStopsReadingIsDroppedWithinOneDeadline() async throws {
         let big = String(repeating: "x", count: 4 * 1024 * 1024)
-        let server = MCPSocketServer(path: path) { $0 == "big" ? big : "echo:" + $0 }
+        let dispatched = Flag()
+        let server = MCPSocketServer(path: path) { line in
+            if line == "big" { dispatched.set(); return big }
+            return "echo:" + line
+        }
         try server.start()
         defer { server.stop() }
         let stalled = try XCTUnwrap(UnixSocket.connect(path: path))
@@ -156,15 +168,45 @@ final class MCPSocketServerTests: XCTestCase {
         defer { close(other) }
 
         UnixSocket.writeAll(stalled, Data("big\n".utf8))
-        UnixSocket.writeAll(other, Data("hello\n".utf8))
+        // The big reply is queued ahead of anything the other client sends.
+        let wait = Date().addingTimeInterval(5)
+        while !dispatched.isSet && Date() < wait { await Task.yield() }
+        XCTAssertTrue(dispatched.isSet)
+
         let started = Date()
+        UnixSocket.writeAll(other, Data("hello\n".utf8))
         let reply = await readLine(other)
+        let elapsed = Date().timeIntervalSince(started)
         XCTAssertEqual(reply, .line("echo:hello"))
-        // Two bounded writes (2 s each) stall the queue before the stalled client is dropped.
-        XCTAssertLessThan(Date().timeIntervalSince(started), 8)
-        // The stalled connection was closed by the server; draining reaches EOF.
+        // One 2 s deadline for the stalled reply, not one per write() call.
+        XCTAssertGreaterThan(elapsed, 1.0)
+        XCTAssertLessThan(elapsed, 3.5)
         let end = await drain(stalled)
         XCTAssertEqual(end, .eof)
+    }
+
+    func test_aClientTricklingItsReadsIsStillDroppedWithinOneDeadline() async throws {
+        let big = String(repeating: "x", count: 4 * 1024 * 1024)
+        let server = MCPSocketServer(path: path) { _ in big }
+        try server.start()
+        defer { server.stop() }
+        let fd = try XCTUnwrap(UnixSocket.connect(path: path))
+        defer { close(fd) }
+
+        UnixSocket.writeAll(fd, Data("big\n".utf8))
+        let started = Date()
+        let end = await Task.detached { () -> Read in
+            var chunk = [UInt8](repeating: 0, count: 16 * 1024)
+            while Date().timeIntervalSince(started) < 8 {
+                let count = read(fd, &chunk, chunk.count)
+                if count == 0 { return .eof }
+                if count < 0 && errno != EINTR { return .eof }
+                usleep(500_000) // a slow reader, deliberately
+            }
+            return .timeout
+        }.value
+        XCTAssertEqual(end, .eof)
+        XCTAssertLessThan(Date().timeIntervalSince(started), 4)
     }
 
     func test_stopOnAServerThatLostTheBindDoesNotRemoveTheLiveSocket() async throws {
