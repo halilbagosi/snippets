@@ -89,9 +89,10 @@ final class SnippetMCPTools: MCPToolProvider {
         guard editsAllowed() else { throw MCPToolError.failed(Self.editsOffMessage) }
         // Validate everything before inserting: `CreateSnippetIntent.execute`
         // inserts first, so a failure afterwards would leave a stray row.
-        let title = try requiredString(a, "title")
+        let title = try Self.nonBlank(try requiredString(a, "title"), "title")
         let code = try requiredString(a, "code")
-        let description = try string(a, "description")
+        _ = try Self.nonBlank(code, "code")
+        let description = try string(a, "description")?.trimmingCharacters(in: .whitespacesAndNewlines)
         let language = try string(a, "language").map(Self.canonicalLanguage)
             ?? LanguageDetector.detect(code: code).rawValue
         let collectionID = try string(a, "collection").map { try collectionUUID($0) }
@@ -109,10 +110,11 @@ final class SnippetMCPTools: MCPToolProvider {
     private func update(_ a: [String: JSONValue]) throws -> JSONValue {
         guard editsAllowed() else { throw MCPToolError.failed(Self.editsOffMessage) }
         let snippet = try snippet(a)
-        let title = try string(a, "title")
+        let title = try string(a, "title").map { try Self.nonBlank($0, "title") }
         let code = try string(a, "code")
+        if let code { _ = try Self.nonBlank(code, "code") }
         let language = try string(a, "language")
-        let description = try string(a, "description")
+        let description = try string(a, "description")?.trimmingCharacters(in: .whitespacesAndNewlines)
         guard title != nil || code != nil || language != nil || description != nil else {
             throw MCPToolError.invalidArguments("Give at least one of title, code, language or description to change.")
         }
@@ -124,6 +126,15 @@ final class SnippetMCPTools: MCPToolProvider {
         snippet.updatedAt = .now
         try context.save()
         return detail(snippet)
+    }
+
+    /// The editor never saves a blank title or code (`canSave`) and stores the
+    /// title and description trimmed; agent writes follow the same rule.
+    /// Returns the trimmed text; code callers use it only for the check.
+    private static func nonBlank(_ value: String, _ field: String) throws -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw MCPToolError.invalidArguments("\(field) can't be blank") }
+        return trimmed
     }
 
     /// The app's own spelling for a language it knows ("javascript" →

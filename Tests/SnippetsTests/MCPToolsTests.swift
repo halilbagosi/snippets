@@ -212,6 +212,29 @@ final class MCPToolsTests: XCTestCase {
         assertFails("create_snippet", ["title": "T"], .invalidArguments("Missing required argument: code"))
     }
 
+    func test_create_blankTitle_isInvalidArgumentsAndInsertsNothing() throws {
+        allowEdits = true
+        assertFails("create_snippet", ["title": "  \n ", "code": "c"], .invalidArguments("title can't be blank"))
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Snippet>()).count, 0)
+    }
+
+    func test_create_blankCode_isInvalidArgumentsAndInsertsNothing() throws {
+        allowEdits = true
+        assertFails("create_snippet", ["title": "T", "code": " \n\t"], .invalidArguments("code can't be blank"))
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Snippet>()).count, 0)
+    }
+
+    func test_create_trimsTitleAndDescriptionButNotCode() throws {
+        allowEdits = true
+        _ = try tools.call("create_snippet", arguments: [
+            "title": "  Hello \n", "code": "  x\n", "description": " Greets  ",
+        ])
+        let stored = try XCTUnwrap(try context.fetch(FetchDescriptor<Snippet>()).first)
+        XCTAssertEqual(stored.title, "Hello")
+        XCTAssertEqual(stored.snippetDescription, "Greets")
+        XCTAssertEqual(stored.code, "  x\n")
+    }
+
     func test_create_unknownCollection_failsAndInsertsNothing() throws {
         allowEdits = true
         assertFails("create_snippet", ["title": "T", "code": "c", "collection": "Nope"],
@@ -239,6 +262,32 @@ final class MCPToolsTests: XCTestCase {
         XCTAssertEqual(s.code, "keep")
         XCTAssertEqual(s.snippetDescription, "keep too")
         XCTAssertGreaterThan(s.updatedAt, past)
+    }
+
+    func test_update_blankTitle_isInvalidArgumentsAndChangesNothing() throws {
+        allowEdits = true
+        let s = try insert("Old", code: "keep")
+        assertFails("update_snippet", ["id": id(s), "title": "   ", "code": "new"],
+                    .invalidArguments("title can't be blank"))
+        XCTAssertEqual(s.title, "Old")
+        XCTAssertEqual(s.code, "keep")
+    }
+
+    func test_update_blankCode_isInvalidArgumentsAndChangesNothing() throws {
+        allowEdits = true
+        let s = try insert("Old", code: "keep")
+        assertFails("update_snippet", ["id": id(s), "title": "New", "code": "\n "],
+                    .invalidArguments("code can't be blank"))
+        XCTAssertEqual(s.title, "Old")
+        XCTAssertEqual(s.code, "keep")
+    }
+
+    func test_update_trimsTitleAndDescription() throws {
+        allowEdits = true
+        let s = try insert("Old")
+        _ = try tools.call("update_snippet", arguments: ["id": id(s), "title": "  New \n", "description": " d "])
+        XCTAssertEqual(s.title, "New")
+        XCTAssertEqual(s.snippetDescription, "d")
     }
 
     func test_update_nothingToChange_isInvalidArguments() throws {
