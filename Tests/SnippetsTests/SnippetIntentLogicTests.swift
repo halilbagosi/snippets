@@ -34,6 +34,19 @@ final class SnippetIntentLogicTests: XCTestCase {
         XCTAssertEqual(fetched[0].code, "func parse() {}")
     }
 
+    func test_create_withDescription_persistsIt() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+
+        _ = try CreateSnippetIntent.execute(
+            title: "Parser", code: "c", language: "Swift",
+            collectionID: nil, in: context, description: "Parses things"
+        )
+
+        let fetched = try ModelContext(container).fetch(FetchDescriptor<Snippet>())
+        XCTAssertEqual(fetched.map(\.snippetDescription), ["Parses things"])
+    }
+
     func test_create_intoCollection_appendsAndBumpsUpdatedAt() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext

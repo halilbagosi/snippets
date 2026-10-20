@@ -333,7 +333,7 @@ struct AppearanceView: View {
             behaviorRow(
                 icon: "square.and.pencil",
                 title: "Allow Agents to Edit",
-                caption: "Let agents create snippets and change existing ones. They can never delete.",
+                caption: "Agents can create and change snippets, but never delete them; edits replace the existing code.",
                 isOn: $access.allowsEdits
             )
             .disabled(!access.isEnabled)

@@ -132,7 +132,8 @@ For Claude Code, **Copy Setup Command** gives you:
 Agents can `find_snippets`, `get_snippet` and `use_snippet` (code ready to
 paste, with its linked snippets resolved in order). With **Allow Agents to
 Edit** on, they can also `create_snippet` and `update_snippet`. There is no
-delete. The agent's process relays to the running app over a socket only
+delete; an update replaces the code, and a snippet whose code an agent changed
+asks for preview approval again. The agent's process relays to the running app over a socket only
 you can open, starting Snippets if it isn't running; an agent-launched
 Snippets starts in the background. Only one copy of Snippets can serve
 agents at a time: a second copy (a debug build, say) leaves the running

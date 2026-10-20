@@ -8,6 +8,7 @@ final class MCPToolsTests: XCTestCase {
     private var container: ModelContainer!
     private var context: ModelContext { container.mainContext }
     private var allowEdits = false
+    private var forgotten: [UUID] = []
     private var tools: SnippetMCPTools!
 
     override func setUp() async throws {
@@ -18,7 +19,12 @@ final class MCPToolsTests: XCTestCase {
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         allowEdits = false
-        tools = SnippetMCPTools(context: container.mainContext, editsAllowed: { [unowned self] in self.allowEdits })
+        forgotten = []
+        tools = SnippetMCPTools(
+            context: container.mainContext,
+            editsAllowed: { [unowned self] in self.allowEdits },
+            forgetTrust: { [unowned self] in self.forgotten.append($0) }
+        )
     }
 
     override func tearDown() async throws {
@@ -56,6 +62,31 @@ final class MCPToolsTests: XCTestCase {
         XCTAssertEqual(tools.tools.map(\.name),
                        ["find_snippets", "get_snippet", "use_snippet", "create_snippet", "update_snippet"])
         for tool in tools.tools { XCTAssertEqual(tool.inputSchema["type"], "object", tool.name) }
+    }
+
+    func test_writeSchemas_offerOnlyKnownLanguages() throws {
+        for name in ["create_snippet", "update_snippet"] {
+            let tool = try XCTUnwrap(tools.tools.first { $0.name == name })
+            let accepted = try XCTUnwrap(tool.inputSchema["properties"]?["language"]?["enum"]?.arrayValue, name)
+            XCTAssertTrue(accepted.contains("Swift"), name)
+            XCTAssertTrue(accepted.contains("C/C++"), name)
+            XCTAssertFalse(accepted.contains("Unknown"), name)
+        }
+        // Filtering stays free-form: an unknown name just matches nothing.
+        let find = try XCTUnwrap(tools.tools.first { $0.name == "find_snippets" })
+        XCTAssertNil(find.inputSchema["properties"]?["language"]?["enum"])
+    }
+
+    func test_readDescriptions_labelSnippetsAsData() throws {
+        for name in ["get_snippet", "use_snippet"] {
+            let tool = try XCTUnwrap(tools.tools.first { $0.name == name })
+            XCTAssertTrue(tool.description.contains("not instructions"), name)
+        }
+    }
+
+    func test_editsOffMessage_namesTheSettingsLabel() {
+        XCTAssertEqual(SnippetMCPTools.editsOffMessage,
+                       "Editing is off — enable \"Allow Agents to Edit\" in Snippets ▸ Settings ▸ Agents.")
     }
 
     // MARK: find_snippets
@@ -207,6 +238,35 @@ final class MCPToolsTests: XCTestCase {
         XCTAssertEqual(result["language"], "JavaScript")
     }
 
+    func test_create_withDescription_persistsItInOneSave() throws {
+        allowEdits = true
+        var saves = 0
+        let token = NotificationCenter.default.addObserver(
+            forName: ModelContext.didSave, object: context, queue: nil
+        ) { _ in saves += 1 }
+        defer { NotificationCenter.default.removeObserver(token) }
+
+        _ = try tools.call("create_snippet", arguments: ["title": "T", "code": "x", "description": "Greets"])
+
+        XCTAssertEqual(saves, 1)
+        let stored = try XCTUnwrap(try ModelContext(container).fetch(FetchDescriptor<Snippet>()).first)
+        XCTAssertEqual(stored.snippetDescription, "Greets")
+    }
+
+    func test_create_unknownLanguage_isInvalidArgumentsAndInsertsNothing() throws {
+        allowEdits = true
+        for name in ["Klingon", "Unknown"] {
+            XCTAssertThrowsError(try tools.call("create_snippet", arguments: ["title": "T", "code": "c", "language": .string(name)])) {
+                guard case .invalidArguments(let message)? = $0 as? MCPToolError else {
+                    return XCTFail("expected invalidArguments, got \($0)")
+                }
+                XCTAssertTrue(message.hasPrefix("Unknown language: \(name). Use one of: HTML, Swift,"), message)
+                XCTAssertFalse(message.hasSuffix("Unknown"), message)
+            }
+        }
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Snippet>()).count, 0)
+    }
+
     func test_create_missingCode_isInvalidArguments() {
         allowEdits = true
         assertFails("create_snippet", ["title": "T"], .invalidArguments("Missing required argument: code"))
@@ -288,6 +348,70 @@ final class MCPToolsTests: XCTestCase {
         _ = try tools.call("update_snippet", arguments: ["id": id(s), "title": "  New \n", "description": " d "])
         XCTAssertEqual(s.title, "New")
         XCTAssertEqual(s.snippetDescription, "d")
+    }
+
+    func test_update_unknownLanguage_isInvalidArgumentsAndChangesNothing() throws {
+        allowEdits = true
+        let s = try insert("Old", language: "Swift", code: "keep")
+        XCTAssertThrowsError(try tools.call("update_snippet", arguments: ["id": id(s), "title": "New", "language": "Klingon"])) {
+            guard case .invalidArguments(let message)? = $0 as? MCPToolError else {
+                return XCTFail("expected invalidArguments, got \($0)")
+            }
+            XCTAssertTrue(message.hasPrefix("Unknown language: Klingon. Use one of: "), message)
+        }
+        XCTAssertEqual(s.title, "Old")
+        XCTAssertEqual(s.language, "Swift")
+        XCTAssertEqual(forgotten, [])
+    }
+
+    func test_update_canonicalizesAKnownLanguageName() throws {
+        allowEdits = true
+        let s = try insert("S", language: "Swift")
+        let result = try tools.call("update_snippet", arguments: ["id": id(s), "language": " javascript "])
+        XCTAssertEqual(result["language"], "JavaScript")
+        XCTAssertEqual(s.language, "JavaScript")
+    }
+
+    // MARK: Preview trust
+
+    func test_update_codeChange_forgetsTrustForSnippetAndLiveDependents() throws {
+        allowEdits = true
+        let helper = try insert("Helper", code: "old")
+        let page = try insert("Page")
+        let other = try insert("Other")
+        let trashed = try insert("Trashed", trashed: true)
+        for dependent in [page, other, trashed] { dependent.dependencies = [helper] }
+        try context.save()
+
+        _ = try tools.call("update_snippet", arguments: ["id": id(helper), "code": "new"])
+
+        XCTAssertEqual(forgotten.first, helper.uuid)
+        XCTAssertEqual(Set(forgotten), [helper.uuid!, page.uuid!, other.uuid!])
+        XCTAssertEqual(forgotten.count, 3)
+    }
+
+    func test_update_languageChange_forgetsTrust() throws {
+        allowEdits = true
+        let s = try insert("S", language: "Swift")
+        _ = try tools.call("update_snippet", arguments: ["id": id(s), "language": "HTML"])
+        XCTAssertEqual(forgotten, [s.uuid!])
+    }
+
+    func test_update_titleOrDescriptionOnly_forgetsNoTrust() throws {
+        allowEdits = true
+        let s = try insert("S", language: "Swift", code: "same")
+        _ = try tools.call("update_snippet", arguments: ["id": id(s), "title": "New", "description": "d"])
+        // Passing the current code and language back is not a change either.
+        _ = try tools.call("update_snippet", arguments: ["id": id(s), "code": "same", "language": "swift"])
+        XCTAssertEqual(forgotten, [])
+    }
+
+    func test_update_rejected_forgetsNoTrust() throws {
+        let s = try insert("S", code: "keep")
+        assertFails("update_snippet", ["id": id(s), "code": "new"], .failed(SnippetMCPTools.editsOffMessage))
+        allowEdits = true
+        assertFails("update_snippet", ["id": id(s), "title": " ", "code": "new"], .invalidArguments("title can't be blank"))
+        XCTAssertEqual(forgotten, [])
     }
 
     func test_update_nothingToChange_isInvalidArguments() throws {

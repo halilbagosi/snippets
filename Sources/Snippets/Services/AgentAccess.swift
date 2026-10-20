@@ -33,6 +33,10 @@ final class AgentAccess {
 
     @ObservationIgnored private var server: MCPSocketServer?
 
+    /// The app's preview approvals, so an agent's code edit can revoke them.
+    /// Set once at launch by `SnippetsApp`.
+    @ObservationIgnored var previewTrust: PreviewTrust?
+
     private init() {
         isEnabled = UserDefaults.standard.bool(forKey: Self.enabledDefaultsKey)
         allowsEdits = UserDefaults.standard.bool(forKey: Self.editsDefaultsKey)
@@ -43,7 +47,8 @@ final class AgentAccess {
         guard isEnabled, server == nil else { return }
         let tools = SnippetMCPTools(
             context: SnippetsData.sharedModelContainer.mainContext,
-            editsAllowed: { AgentAccess.shared.allowsEdits }
+            editsAllowed: { AgentAccess.shared.allowsEdits },
+            forgetTrust: { AgentAccess.shared.previewTrust?.forget($0) }
         )
         let dispatcher = MCPDispatcher(provider: tools)
         let server = MCPSocketServer(path: Self.socketPath) { dispatcher.handle(line: $0) }

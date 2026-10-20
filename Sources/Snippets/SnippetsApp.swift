@@ -164,6 +164,9 @@ struct SnippetsApp: App {
         let trust = PreviewTrust()
         _previewTrust = State(initialValue: trust)
         SnippetTransferController.shared.previewTrust = trust
+        #if !APP_STORE
+        AgentAccess.shared.previewTrust = trust
+        #endif
     }
 
     static let mainWindowID = "main"
