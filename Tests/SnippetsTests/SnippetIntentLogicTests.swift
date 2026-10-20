@@ -165,6 +165,24 @@ final class SnippetIntentLogicTests: XCTestCase {
         XCTAssertEqual(all.count, 200)
     }
 
+    func test_find_appliesLanguageFilterBeforeTheCap() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        // A full cap's worth of newer non-matching snippets must not push
+        // the one older matching snippet out of the result.
+        let target = Snippet(title: "Theme", language: "CSS", code: "t", updatedAt: .distantPast)
+        context.insert(target)
+        for index in 0..<FindSnippetsIntent.resultLimit {
+            context.insert(Snippet(title: "Note \(index)", language: "Swift", code: "n", updatedAt: .now))
+        }
+        try context.save()
+
+        let found = try FindSnippetsIntent.execute(
+            searchText: nil, collectionID: nil, favoritesOnly: false, in: context, language: "css"
+        )
+        XCTAssertEqual(found.map(\.title), ["Theme"])
+    }
+
     // MARK: Copy
 
     func test_copy_returnsSnippetAndBumpsCopyCount_unknownThrows() throws {

@@ -39,7 +39,7 @@ struct FindSnippetsIntent: AppIntent {
     @MainActor
     static func execute(
         searchText: String?, collectionID: UUID?, favoritesOnly: Bool,
-        in context: ModelContext
+        in context: ModelContext, language: String? = nil
     ) throws -> [Snippet] {
         let descriptor = FetchDescriptor<Snippet>(
             predicate: #Predicate { $0.deletedAt == nil },
@@ -53,7 +53,7 @@ struct FindSnippetsIntent: AppIntent {
         // Filter the whole library, then cap. Capping the fetch instead made
         // anything older than the 200 most recently edited snippets
         // unfindable, with no error to say so.
-        let matched = SnippetQueryFilter.filter(
+        var matched = SnippetQueryFilter.filter(
             snippets,
             query: searchText,
             collectionUUID: collectionID,
@@ -68,6 +68,10 @@ struct FindSnippetsIntent: AppIntent {
                 )
             }
         )
+        // The language filter belongs before the cap for the same reason.
+        if let language {
+            matched = matched.filter { $0.language.caseInsensitiveCompare(language) == .orderedSame }
+        }
         return Array(matched.prefix(Self.resultLimit))
     }
 }

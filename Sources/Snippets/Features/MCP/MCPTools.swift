@@ -41,12 +41,10 @@ final class SnippetMCPTools: MCPToolProvider {
         let limit = try min(max(int(a, "limit") ?? Self.defaultFindLimit, 1), Self.maxFindLimit)
         let collectionID = try string(a, "collection").map { try collectionUUID($0) }
 
-        var found = try FindSnippetsIntent.execute(
-            searchText: query, collectionID: collectionID, favoritesOnly: favoritesOnly, in: context
+        let found = try FindSnippetsIntent.execute(
+            searchText: query, collectionID: collectionID, favoritesOnly: favoritesOnly,
+            in: context, language: language
         )
-        if let language {
-            found = found.filter { $0.language.caseInsensitiveCompare(language) == .orderedSame }
-        }
         return [
             "snippets": .array(found.prefix(limit).map { .object(summaryFields($0)) }),
             "truncated": .bool(found.count > limit),
@@ -57,7 +55,7 @@ final class SnippetMCPTools: MCPToolProvider {
         let snippet = try snippet(a)
         // The one definition of copy bookkeeping: feeds the panel's Frequent scope.
         SnippetStore.recordCopy(snippet, in: context)
-        let resolution = SnippetLinker.resolve(entry: snippet)
+        let resolution = SnippetLinker.resolve(entry: LiveLinkable(snippet))
         return [
             "id": .string(snippet.uuid?.uuidString ?? ""),
             "title": .string(snippet.title),
@@ -67,6 +65,22 @@ final class SnippetMCPTools: MCPToolProvider {
             }),
             "excluded": .array(resolution.excluded.map(JSONValue.string)),
         ]
+    }
+
+    /// Trashing is a soft delete that leaves `dependencies` intact, so the
+    /// in-app linker still sees trashed helpers. Agents must not: this view
+    /// of a snippet drops them, at every depth.
+    private struct LiveLinkable: LinkableSnippet {
+        let snippet: Snippet
+        init(_ snippet: Snippet) { self.snippet = snippet }
+
+        var linkID: PersistentIdentifier { snippet.persistentModelID }
+        var linkTitle: String { snippet.title }
+        var linkLanguage: SupportedLanguage { SupportedLanguage(rawValue: snippet.language) ?? .unknown }
+        var linkCode: String { snippet.code }
+        var linkDependencies: [LiveLinkable] {
+            snippet.dependencies.filter { !$0.isDeleted }.map(LiveLinkable.init)
+        }
     }
 
     // MARK: - Write tools (Task 3)

@@ -142,6 +142,31 @@ final class MCPToolsTests: XCTestCase {
         XCTAssertEqual(result["excluded"], ["Model"])
     }
 
+    func test_use_excludesTrashedDependencies() throws {
+        let trashed = try insert("Old theme", language: "CSS", code: "trashed-css", trashed: true)
+        let live = try insert("Theme", language: "CSS", code: "live-css")
+        let entry = try insert("Page", language: "HTML", code: "html")
+        entry.dependencies = [trashed, live]
+        try context.save()
+
+        let result = try tools.call("use_snippet", arguments: ["id": id(entry)])
+        XCTAssertEqual(result["sources"], [["language": "CSS", "code": "live-css"], ["language": "HTML", "code": "html"]])
+        XCTAssertEqual(result["excluded"], [])
+    }
+
+    func test_use_excludesTrashedTransitiveDependencies() throws {
+        let trashed = try insert("Old reset", language: "CSS", code: "trashed-css", trashed: true)
+        let live = try insert("Theme", language: "CSS", code: "live-css")
+        live.dependencies = [trashed]
+        let entry = try insert("Page", language: "HTML", code: "html")
+        entry.dependencies = [live]
+        try context.save()
+
+        let result = try tools.call("use_snippet", arguments: ["id": id(entry)])
+        XCTAssertEqual(result["sources"], [["language": "CSS", "code": "live-css"], ["language": "HTML", "code": "html"]])
+        XCTAssertEqual(result["excluded"], [])
+    }
+
     func test_use_countsAsACopyWithoutReorderingTheGallery() throws {
         let past = Date(timeIntervalSince1970: 1_000)
         let s = try insert("S", updatedAt: past)
