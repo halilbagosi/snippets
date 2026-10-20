@@ -324,7 +324,10 @@ struct AppearanceView: View {
             behaviorRow(
                 icon: "point.3.connected.trianglepath.dotted",
                 title: "Allow Agent Access",
-                caption: "Let AI agents like Claude Code find and use your snippets over MCP",
+                // On with nothing serving behind it must say so, not look healthy.
+                caption: access.isEnabled && !access.isServing
+                    ? access.startProblem ?? "Starting…"
+                    : "Let AI agents like Claude Code find and use your snippets over MCP",
                 isOn: $access.isEnabled
             )
 

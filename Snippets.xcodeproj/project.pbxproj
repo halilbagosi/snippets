@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		4D435000000000000000B104 /* MCPStdioShimTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A104 /* MCPStdioShimTests.swift */; };
 		4D435000000000000000B103 /* MCPSocketServerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A103 /* MCPSocketServerTests.swift */; };
+		4D435000000000000000B110 /* AgentAccessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A110 /* AgentAccessTests.swift */; };
 		4D435000000000000000B102 /* MCPToolsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A102 /* MCPToolsTests.swift */; };
 		4D435000000000000000B101 /* MCPProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A101 /* MCPProtocolTests.swift */; };
 		4D435000000000000000B005 /* AgentAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A005 /* AgentAccess.swift */; };
@@ -190,6 +191,7 @@
 /* Begin PBXFileReference section */
 		4D435000000000000000A104 /* MCPStdioShimTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPStdioShimTests.swift; sourceTree = "<group>"; };
 		4D435000000000000000A103 /* MCPSocketServerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSocketServerTests.swift; sourceTree = "<group>"; };
+		4D435000000000000000A110 /* AgentAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentAccessTests.swift; sourceTree = "<group>"; };
 		4D435000000000000000A102 /* MCPToolsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPToolsTests.swift; sourceTree = "<group>"; };
 		4D435000000000000000A101 /* MCPProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPProtocolTests.swift; sourceTree = "<group>"; };
 		4D435000000000000000A005 /* AgentAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentAccess.swift; sourceTree = "<group>"; };
@@ -601,6 +603,7 @@
 				5E57E570000000000000010F /* SnippetIntentLogicTests.swift */,
 				4D435000000000000000A104 /* MCPStdioShimTests.swift */,
 				4D435000000000000000A103 /* MCPSocketServerTests.swift */,
+				4D435000000000000000A110 /* AgentAccessTests.swift */,
 				4D435000000000000000A102 /* MCPToolsTests.swift */,
 				4D435000000000000000A101 /* MCPProtocolTests.swift */,
 				5E57E5700000000000000110 /* SnippetLinkerTests.swift */,
@@ -1074,6 +1077,7 @@
 				5E57E570000000000000020F /* SnippetIntentLogicTests.swift in Sources */,
 				4D435000000000000000B104 /* MCPStdioShimTests.swift in Sources */,
 				4D435000000000000000B103 /* MCPSocketServerTests.swift in Sources */,
+				4D435000000000000000B110 /* AgentAccessTests.swift in Sources */,
 				4D435000000000000000B102 /* MCPToolsTests.swift in Sources */,
 				4D435000000000000000B101 /* MCPProtocolTests.swift in Sources */,
 				5E57E5700000000000000210 /* SnippetLinkerTests.swift in Sources */,

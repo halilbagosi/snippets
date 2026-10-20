@@ -117,6 +117,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return false
     }
 
+    #if !APP_STORE
+    /// Another copy of Snippets may have let go of the agent socket since.
+    func applicationDidBecomeActive(_ notification: Notification) {
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+        AgentAccess.shared.start()
+    }
+    #endif
+
     /// The app now lives in the menu bar after its last window closes, which is
     /// the whole point of the quick-copy panel — it must be reachable while the
     /// user is working somewhere else. The panel footer carries Quit, because
