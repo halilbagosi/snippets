@@ -120,6 +120,24 @@ Replace or Stop, with Apply to all. Preview permissions are never exported,
 and a replaced snippet loses its own. This is also how to move a library into
 the sandboxed App Store build, whose container starts empty.
 
+### Agents (MCP)
+
+The direct-download build can serve your library to AI agents over the
+[Model Context Protocol](https://modelcontextprotocol.io). Turn on
+**Settings ▸ Agents ▸ Allow Agent Access**, then add Snippets to your agent.
+For Claude Code, **Copy Setup Command** gives you:
+
+    claude mcp add snippets -- '/Applications/Snippets.app/Contents/MacOS/Snippets' --mcp-stdio
+
+Agents can `find_snippets`, `get_snippet` and `use_snippet` (code ready to
+paste, with its linked snippets resolved in order). With **Allow Agents to
+Edit** on, they can also `create_snippet` and `update_snippet`. There is no
+delete. The agent's process relays to the running app over a socket only
+you can open, starting Snippets if it isn't running; an agent-launched
+Snippets starts in the background. Only one copy of Snippets can serve
+agents at a time: a second copy (a debug build, say) leaves the running
+one's socket alone. It isn't in the App Store build.
+
 ## Project Structure
 
 - Sources/Snippets/SnippetsApp.swift: app entry point, SwiftData setup, and app environment configuration
@@ -138,9 +156,10 @@ the sandboxed App Store build, whose container starts empty.
 - Sources/Snippets/Features/Preview: preview engines, snippet linking, preview parameters, and the preview trust model
 - Sources/Snippets/Features/QuickCapture: clipboard capture policy and the code-shape heuristics behind it
 - Sources/Snippets/Features/Transfer: the `.snippets` archive format, exporter, importer, and the controller that connects them to panels and alerts
+- Sources/Snippets/Features/MCP: the MCP protocol dispatcher, the snippet tools agents call, and the `--mcp-stdio` relay (direct-download build only)
 - Sources/Snippets/Features/QuickCopy: quick-copy scopes, results, selection arithmetic, and view model
 - Sources/Snippets/Intents: App Intents, entities, and App Shortcuts for Shortcuts/Siri
-- Sources/Snippets/Services: theme, language detection, media handling, the menu bar controller, the clipboard monitor, and other shared services
+- Sources/Snippets/Services: theme, language detection, media handling, the menu bar controller, the clipboard monitor, agent access and its socket server, and other shared services
 - Sources/Snippets/Core/Services: service protocols shared across the app
 - Sources/Snippets/Resources: app icon assets and the vendored web-preview runtimes
 - Tests/SnippetsTests: unit tests for view models and app behavior
