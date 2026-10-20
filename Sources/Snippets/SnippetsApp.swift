@@ -87,6 +87,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             MenuBarController.shared.install()
         }
         ClipboardMonitor.shared.start()
+        #if !APP_STORE
+        AgentAccess.shared.start()
+        #endif
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(50))
             NSApp.activate(ignoringOtherApps: true)
@@ -123,7 +126,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 #endif
 
+/// The process entry point. Agents launch this same binary with
+/// `--mcp-stdio`, which must relay and exit without ever starting the UI.
 @main
+enum SnippetsMain {
+    @MainActor
+    static func main() {
+        #if !APP_STORE
+        if CommandLine.arguments.contains(MCPStdioShim.flag) {
+            MCPStdioShim.run()
+        }
+        #endif
+        SnippetsApp.main()
+    }
+}
+
 struct SnippetsApp: App {
     #if canImport(AppKit)
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
