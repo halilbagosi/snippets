@@ -24,13 +24,18 @@ struct SettingsView: View {
     /// start sliding under the titlebar and its traffic lights.
     @State private var isScrolled = false
 
+    /// Reopening Settings returns to the tab it was left on, as macOS
+    /// Settings windows do.
+    @AppStorage("settings.selectedPane") private var pane: SettingsPane = .general
+
     var body: some View {
         DSGlassContainer(spacing: 20) {
             ScrollView {
-                AppearanceView()
+                AppearanceView(pane: pane)
                     .padding(.horizontal, 24)
-                    // Clears the (transparent) titlebar strip and its traffic lights.
-                    .padding(.top, 44)
+                    // Clears the (transparent) titlebar strip, where the tab
+                    // picker sits beside the traffic lights.
+                    .padding(.top, 48)
                     .padding(.bottom, 28)
             }
             .scrollIndicators(.automatic)
@@ -40,6 +45,8 @@ struct SettingsView: View {
             // the panes pass under the traffic lights, where the veil below
             // blurs and fades them.
             .scrollEdgeEffectStyle(.soft, for: .top)
+            // A new tab starts at its top, not at the old tab's offset.
+            .id(pane)
             .onScrollGeometryChange(for: Bool.self) { geometry in
                 geometry.contentOffset.y + geometry.contentInsets.top > 1
             } action: { _, scrolled in
@@ -51,6 +58,7 @@ struct SettingsView: View {
                 .opacity(isScrolled ? 1 : 0)
                 .allowsHitTesting(false)
         }
+        .overlay(alignment: .top) { panePicker }
         .background {
             ZStack {
                 Color.clear.ignoresSafeArea()
@@ -65,6 +73,21 @@ struct SettingsView: View {
         #if canImport(AppKit)
         .background(SettingsWindowConfigurator())
         #endif
+    }
+}
+
+extension SettingsView {
+    /// Centred in the titlebar strip, level with the traffic lights, so it
+    /// stays put while the panes scroll under it.
+    private var panePicker: some View {
+        Picker("Settings tab", selection: $pane) {
+            ForEach(SettingsPane.allCases) { Text($0.title).tag($0) }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .fixedSize()
+        .padding(.top, 4)
+        .ignoresSafeArea(edges: .top)
     }
 }
 

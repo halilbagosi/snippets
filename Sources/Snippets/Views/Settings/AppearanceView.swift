@@ -1,8 +1,26 @@
 import SwiftUI
 
-/// Appearance pane in the Settings window.
-/// Controls colour scheme, focused mode, hover effects, and theme accent colour.
+/// The two tabs of the Settings window, in tab order.
+enum SettingsPane: String, CaseIterable, Identifiable {
+    case general
+    case appearance
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general: "Settings"
+        case .appearance: "Appearance"
+        }
+    }
+}
+
+/// The cards of one Settings tab. Settings holds what the app does —
+/// deletion, previews, clipboard capture, agents; Appearance holds how it
+/// looks — colour scheme, focused mode, hover effects and accent colour.
 struct AppearanceView: View {
+    let pane: SettingsPane
+
     @Environment(AppearanceSettings.self) private var appearanceSettings
     @Environment(PreviewTrust.self) private var previewTrust
     @Environment(Onboarding.self) private var onboarding
@@ -44,15 +62,20 @@ struct AppearanceView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            schemeCard
-            behaviorCard
-            #if !APP_STORE
-            agentsCard
-            #endif
-            accentCard
-            #if DEBUG
-            debugCard
-            #endif
+            switch pane {
+            case .general:
+                behaviorCard
+                #if !APP_STORE
+                agentsCard
+                #endif
+                #if DEBUG
+                debugCard
+                #endif
+            case .appearance:
+                schemeCard
+                effectsCard
+                accentCard
+            }
         }
     }
 
@@ -176,15 +199,13 @@ struct AppearanceView: View {
         }
     }
 
-    // MARK: - Behavior
+    // MARK: - Effects
 
-    private var behaviorCard: some View {
+    private var effectsCard: some View {
         @Bindable var settings = appearanceSettings
-        @Bindable var trust = previewTrust
-        @Bindable var capture = ClipboardMonitor.shared
 
         return glassCard {
-            sectionLabel("Behavior")
+            sectionLabel("Effects")
 
             behaviorRow(
                 icon: "scope",
@@ -201,8 +222,18 @@ struct AppearanceView: View {
                 caption: "Turn off hover animations on snippet cards",
                 isOn: $settings.disableHoverEffects
             )
+        }
+    }
 
-            Divider().opacity(0.5)
+    // MARK: - Behavior
+
+    private var behaviorCard: some View {
+        @Bindable var settings = appearanceSettings
+        @Bindable var trust = previewTrust
+        @Bindable var capture = ClipboardMonitor.shared
+
+        return glassCard {
+            sectionLabel("Behavior")
 
             behaviorRow(
                 icon: "exclamationmark.triangle",
