@@ -120,6 +120,42 @@ Replace or Stop, with Apply to all. Preview permissions are never exported,
 and a replaced snippet loses its own. This is also how to move a library into
 the sandboxed App Store build, whose container starts empty.
 
+### Agents (MCP)
+
+The direct-download build serves your library to any AI agent that speaks
+the [Model Context Protocol](https://modelcontextprotocol.io) — Claude Code,
+Codex, VS Code's Copilot, Cursor, Gemini CLI, Windsurf, Claude Desktop, Zed
+and others. Turn on **Settings ▸ Agents ▸ Allow Agent Access**, then pick
+your agent from **Copy Setup**:
+
+| Agent | What Copy Setup gives you |
+| --- | --- |
+| Claude Code | `claude mcp add --scope user snippets -- '/Applications/Snippets.app/Contents/MacOS/Snippets' --mcp-stdio` |
+| Codex | `codex mcp add snippets -- '/Applications/Snippets.app/Contents/MacOS/Snippets' --mcp-stdio` |
+| VS Code (Copilot) | `code --add-mcp '{"args":["--mcp-stdio"],"command":"…/Snippets","name":"snippets"}'` |
+| Anything else | `{"mcpServers": {"snippets": {"command": "…/Snippets", "args": ["--mcp-stdio"]}}}`, to merge into the agent's MCP config (Cursor's `~/.cursor/mcp.json`, Gemini CLI's `~/.gemini/settings.json`, …) |
+
+Whatever the agent, the server is the same stdio command:
+`Snippets.app/Contents/MacOS/Snippets --mcp-stdio`.
+
+Agents can `find_snippets`, `list_collections`, `get_snippet` and
+`use_snippet` (code ready to paste, with its linked snippets resolved in
+order). With **Allow Agents to Edit** on, they can also `create_snippet` and
+`update_snippet`, so "save this function as a snippet" works from any of
+them. The server tells the agent how: save exactly the code you pointed at,
+verbatim, with a short title, its language and a one-line description, then
+report the title. Code an agent wraps in a Markdown fence is unwrapped, and
+the fence's language tag is used. Agents that support MCP prompts also get a
+**save_snippet** prompt (`/mcp__snippets__save_snippet` in Claude Code,
+`/save_snippet` in Gemini CLI) that asks for exactly that.
+
+There is no delete; an update replaces the code, and a snippet whose code an
+agent changed asks for preview approval again. The agent's process relays to
+the running app over a socket only you can open, starting Snippets if it
+isn't running; an agent-launched Snippets starts in the background. Only one
+copy of Snippets can serve agents at a time: a second copy (a debug build,
+say) leaves the running one's socket alone. It isn't in the App Store build.
+
 ## Project Structure
 
 - Sources/Snippets/SnippetsApp.swift: app entry point, SwiftData setup, and app environment configuration
@@ -138,9 +174,10 @@ the sandboxed App Store build, whose container starts empty.
 - Sources/Snippets/Features/Preview: preview engines, snippet linking, preview parameters, and the preview trust model
 - Sources/Snippets/Features/QuickCapture: clipboard capture policy and the code-shape heuristics behind it
 - Sources/Snippets/Features/Transfer: the `.snippets` archive format, exporter, importer, and the controller that connects them to panels and alerts
+- Sources/Snippets/Features/MCP: the MCP protocol dispatcher, the snippet tools agents call, and the `--mcp-stdio` relay (direct-download build only)
 - Sources/Snippets/Features/QuickCopy: quick-copy scopes, results, selection arithmetic, and view model
 - Sources/Snippets/Intents: App Intents, entities, and App Shortcuts for Shortcuts/Siri
-- Sources/Snippets/Services: theme, language detection, media handling, the menu bar controller, the clipboard monitor, and other shared services
+- Sources/Snippets/Services: theme, language detection, media handling, the menu bar controller, the clipboard monitor, agent access and its socket server, and other shared services
 - Sources/Snippets/Core/Services: service protocols shared across the app
 - Sources/Snippets/Resources: app icon assets and the vendored web-preview runtimes
 - Tests/SnippetsTests: unit tests for view models and app behavior
@@ -237,7 +274,10 @@ mirrors `site/`, so without it the domain would be dropped.
   come in `-light` and `-dark` versions. The app's Help menu links
   (`AppLinks.swift`) and the EULA point at https://snippets.halilbagosi.com.
 - The support, privacy and license pages are generated: edit
-  `site/pages/<page>.html` (or `EULA.txt` for the license), then run
+  `site/pages/<page>.html` (or `EULA.txt` for the license), then run the
+  build below. Run it after editing `style.css`, `home.css` or `site.js` too:
+  it fingerprints their links (`style.css?v=…`) so browsers don't keep a
+  stale copy. Then run
 
   ```sh
   python3 site/build.py

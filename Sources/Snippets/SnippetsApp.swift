@@ -77,16 +77,34 @@ struct WindowChromeConfigurator: NSViewRepresentable {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
+        #if !APP_STORE
+        // An agent-launched copy must not steal focus from the user's editor.
+        let launchedByAgent = CommandLine.arguments.contains(MCPStdioShim.launchedByAgentFlag)
+        #else
+        let launchedByAgent = false
+        #endif
+        if !launchedByAgent { NSApp.activate(ignoringOtherApps: true) }
         ColorPanelCenterer.shared.install()
         // Creating the status item costs ~45ms of window-server round trips,
         // all of it ahead of the main window's first frame. A run-loop turn
         // later the window has already been committed; nothing reads the
         // status item before the user can click it.
-        DispatchQueue.main.async {
-            MenuBarController.shared.install()
+        // Nothing runs from the menu bar until the license is agreed to; on a
+        // first launch the agreement's Agree button installs these instead.
+        if LicenseAgreement.isAccepted(in: .standard) {
+            DispatchQueue.main.async {
+                MenuBarController.shared.install()
+            }
+            ClipboardMonitor.shared.start()
         }
-        ClipboardMonitor.shared.start()
+        #if !APP_STORE
+        // Test runs must never serve the user's real socket. Not gated on the
+        // license: access is off until the user turns it on in Settings.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil {
+            AgentAccess.shared.start()
+        }
+        #endif
+        guard !launchedByAgent else { return }
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(50))
             NSApp.activate(ignoringOtherApps: true)
@@ -103,6 +121,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MainWindowOpener.activate()
         return false
     }
+
+    #if !APP_STORE
+    /// Another copy of Snippets may have let go of the agent socket since.
+    func applicationDidBecomeActive(_ notification: Notification) {
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+        AgentAccess.shared.start()
+    }
+    #endif
 
     /// The app now lives in the menu bar after its last window closes, which is
     /// the whole point of the quick-copy panel — it must be reachable while the
@@ -123,7 +149,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 #endif
 
+/// The process entry point. Agents launch this same binary with
+/// `--mcp-stdio`, which must relay and exit without ever starting the UI.
 @main
+enum SnippetsMain {
+    @MainActor
+    static func main() {
+        #if !APP_STORE
+        if CommandLine.arguments.contains(MCPStdioShim.flag) {
+            MCPStdioShim.run()
+        }
+        #endif
+        SnippetsApp.main()
+    }
+}
+
 struct SnippetsApp: App {
     #if canImport(AppKit)
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
@@ -132,11 +172,15 @@ struct SnippetsApp: App {
     @State private var appearanceSettings = AppearanceSettings()
     @State private var previewTrust: PreviewTrust
     @State private var onboarding = Onboarding()
+    @State private var licenseAgreement = LicenseAgreement()
 
     init() {
         let trust = PreviewTrust()
         _previewTrust = State(initialValue: trust)
         SnippetTransferController.shared.previewTrust = trust
+        #if !APP_STORE
+        AgentAccess.shared.previewTrust = trust
+        #endif
     }
 
     static let mainWindowID = "main"
@@ -148,7 +192,9 @@ struct SnippetsApp: App {
             ContentView()
                 .previewTrustPrompt()
                 .onboardingTour()
+                .licenseAgreementGate()
                 .environment(onboarding)
+                .environment(licenseAgreement)
                 .environment(environment)
                 .environment(appearanceSettings)
                 .environment(previewTrust)
