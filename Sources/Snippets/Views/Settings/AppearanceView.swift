@@ -13,6 +13,16 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: "Appearance"
         }
     }
+
+    var symbolName: String {
+        switch self {
+        case .general: "gearshape.fill"
+        case .appearance: "paintbrush.pointed.fill"
+        }
+    }
+
+    /// Position in the tab bar, left to right.
+    var index: Int { Self.allCases.firstIndex(of: self) ?? 0 }
 }
 
 /// The cards of one Settings tab. Settings holds what the app does —
