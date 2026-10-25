@@ -274,7 +274,10 @@ mirrors `site/`, so without it the domain would be dropped.
   come in `-light` and `-dark` versions. The app's Help menu links
   (`AppLinks.swift`) and the EULA point at https://snippets.halilbagosi.com.
 - The support, privacy and license pages are generated: edit
-  `site/pages/<page>.html` (or `EULA.txt` for the license), then run
+  `site/pages/<page>.html` (or `EULA.txt` for the license), then run the
+  build below. Run it after editing `style.css`, `home.css` or `site.js` too:
+  it fingerprints their links (`style.css?v=…`) so browsers don't keep a
+  stale copy. Then run
 
   ```sh
   python3 site/build.py

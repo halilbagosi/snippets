@@ -117,6 +117,7 @@ final class PreviewTrust {
 private struct PreviewTrustPrompt: ViewModifier {
     @Environment(PreviewTrust.self) private var trust
     @Environment(Onboarding.self) private var onboarding
+    @Environment(LicenseAgreement.self) private var agreement
 
     /// Real state, deliberately.
     ///
@@ -137,6 +138,7 @@ private struct PreviewTrustPrompt: ViewModifier {
             // first; the question lands once its sheet has gone.
             .task { presentIfDue() }
             .onChange(of: onboarding.hasCompleted) { presentIfDue() }
+            .onChange(of: agreement.isAccepted) { presentIfDue() }
             .alert("Previews run snippet code", isPresented: $isPresented) {
                 // Which button is *default* is a security decision, so it is
                 // stated outright rather than left to declaration order —
@@ -169,7 +171,11 @@ private struct PreviewTrustPrompt: ViewModifier {
     }
 
     private func presentIfDue() {
-        if !trust.hasPromptedForPolicy && onboarding.hasCompleted { isPresented = true }
+        // After the license agreement too: an existing user asked to accept
+        // new terms has already finished the tour.
+        if !trust.hasPromptedForPolicy && onboarding.hasCompleted && agreement.isAccepted {
+            isPresented = true
+        }
     }
 }
 

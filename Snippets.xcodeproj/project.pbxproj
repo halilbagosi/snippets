@@ -17,6 +17,11 @@
 		4D435000000000000000B003 /* MCPStdioShim.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A003 /* MCPStdioShim.swift */; };
 		4D435000000000000000B002 /* MCPTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A002 /* MCPTools.swift */; };
 		4D435000000000000000B001 /* MCPProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A001 /* MCPProtocol.swift */; };
+		0B0A2D0100000000000000A5 /* LicenseAgreementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D0100000000000000A6 /* LicenseAgreementTests.swift */; };
+		0B0A2D0100000000000000A3 /* LicenseAgreementPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D0100000000000000A4 /* LicenseAgreementPrompt.swift */; };
+		0B0A2D0100000000000000A1 /* LicenseAgreement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D0100000000000000A2 /* LicenseAgreement.swift */; };
+		1E6A1D0C0000000000000003 /* LegalDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6A1D0C0000000000000004 /* LegalDocumentTests.swift */; };
+		1E6A1D0C0000000000000001 /* LegalDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6A1D0C0000000000000002 /* LegalDocument.swift */; };
 		002912E32D5AD77A965C6669 /* SnippetCollectionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72351DDB378B8C22EB8FD8EE /* SnippetCollectionCard.swift */; };
 		01E24B2BB3789E64F91EB040 /* PreviewParams.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06154F76A632D66D3A6AA3D2 /* PreviewParams.swift */; };
 		05C84AB0AD5549D7F7069E6E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 757E7F34577C563AEFCB24FA /* PrivacyInfo.xcprivacy */; };
@@ -67,6 +72,7 @@
 		5E57E5700000000000000200 /* AppearanceSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000100 /* AppearanceSettingsTests.swift */; };
 		5E57E5700000000000000201 /* CollectionMoveTreeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000101 /* CollectionMoveTreeTests.swift */; };
 		5E57E5700000000000000202 /* LanguageDetectorCorpusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000102 /* LanguageDetectorCorpusTests.swift */; };
+		5E57E57000000000000002A7 /* LanguageDetectorShortFunctionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E57000000000000001A7 /* LanguageDetectorShortFunctionTests.swift */; };
 		5E57E5700000000000000203 /* LanguageDetectorHardeningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000103 /* LanguageDetectorHardeningTests.swift */; };
 		5E57E5700000000000000204 /* LanguageDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000104 /* LanguageDetectorTests.swift */; };
 		5E57E5700000000000000205 /* MetalShaderSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000105 /* MetalShaderSourceTests.swift */; };
@@ -199,6 +205,11 @@
 		4D435000000000000000A003 /* MCPStdioShim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPStdioShim.swift; sourceTree = "<group>"; };
 		4D435000000000000000A002 /* MCPTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPTools.swift; sourceTree = "<group>"; };
 		4D435000000000000000A001 /* MCPProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPProtocol.swift; sourceTree = "<group>"; };
+		0B0A2D0100000000000000A6 /* LicenseAgreementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseAgreementTests.swift; sourceTree = "<group>"; };
+		0B0A2D0100000000000000A4 /* LicenseAgreementPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseAgreementPrompt.swift; sourceTree = "<group>"; };
+		0B0A2D0100000000000000A2 /* LicenseAgreement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseAgreement.swift; sourceTree = "<group>"; };
+		1E6A1D0C0000000000000004 /* LegalDocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocumentTests.swift; sourceTree = "<group>"; };
+		1E6A1D0C0000000000000002 /* LegalDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocument.swift; sourceTree = "<group>"; };
 		01362798D5520FFC54DBDD42 /* DSGlassContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSGlassContainer.swift; sourceTree = "<group>"; };
 		06154F76A632D66D3A6AA3D2 /* PreviewParams.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewParams.swift; sourceTree = "<group>"; };
 		0B0A2D010000000000000002 /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
@@ -240,6 +251,7 @@
 		5E57E5700000000000000100 /* AppearanceSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000101 /* CollectionMoveTreeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionMoveTreeTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000102 /* LanguageDetectorCorpusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetectorCorpusTests.swift; sourceTree = "<group>"; };
+		5E57E57000000000000001A7 /* LanguageDetectorShortFunctionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetectorShortFunctionTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000103 /* LanguageDetectorHardeningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetectorHardeningTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000104 /* LanguageDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetectorTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000105 /* MetalShaderSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalShaderSourceTests.swift; sourceTree = "<group>"; };
@@ -395,6 +407,7 @@
 			isa = PBXGroup;
 			children = (
 				0B0A2D010000000000000002 /* Onboarding.swift */,
+				0B0A2D0100000000000000A2 /* LicenseAgreement.swift */,
 			);
 			path = Onboarding;
 			sourceTree = "<group>";
@@ -403,6 +416,7 @@
 			isa = PBXGroup;
 			children = (
 				0B0A2D010000000000000004 /* OnboardingView.swift */,
+				0B0A2D0100000000000000A4 /* LicenseAgreementPrompt.swift */,
 			);
 			path = Onboarding;
 			sourceTree = "<group>";
@@ -589,6 +603,7 @@
 				5E57E5700000000000000101 /* CollectionMoveTreeTests.swift */,
 				5E57E5700000000000000102 /* LanguageDetectorCorpusTests.swift */,
 				5E57E5700000000000000103 /* LanguageDetectorHardeningTests.swift */,
+				5E57E57000000000000001A7 /* LanguageDetectorShortFunctionTests.swift */,
 				5E57E5700000000000000104 /* LanguageDetectorTests.swift */,
 				5E57E5700000000000000105 /* MetalShaderSourceTests.swift */,
 				5E57E5700000000000000106 /* PreviewParamConfigPersistenceTests.swift */,
@@ -616,6 +631,8 @@
 				5E57E5700000000000000116 /* UUIDBackfillTests.swift */,
 				5E57E5700000000000000A16 /* PreviewTrustTests.swift */,
 				0B0A2D010000000000000006 /* OnboardingTests.swift */,
+				0B0A2D0100000000000000A6 /* LicenseAgreementTests.swift */,
+				1E6A1D0C0000000000000004 /* LegalDocumentTests.swift */,
 				5E57E5700000000000000816 /* MediaFileNameTests.swift */,
 				5E57E5700000000000000117 /* WebPreviewHTMLBuilderTests.swift */,
 			);
@@ -696,6 +713,7 @@
 				3FE6005FDBD6D97E65546E29 /* AppearanceView.swift */,
 				F8540F55E9369EE99D79F3CF /* SettingsView.swift */,
 				271373FECC71F698C4601723 /* ThirdPartyNoticesView.swift */,
+				1E6A1D0C0000000000000002 /* LegalDocument.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -945,6 +963,7 @@
 				B5B0E85A3DC87178E69928BA /* SnippetExporter.swift in Sources */,
 				75BA5AA7792F8E5F50152054 /* SnippetArchive.swift in Sources */,
 				F46B79656507314308974187 /* ThirdPartyNoticesView.swift in Sources */,
+				1E6A1D0C0000000000000001 /* LegalDocument.swift in Sources */,
 				40D4ED353970535DB11DCF63 /* HelpCommands.swift in Sources */,
 				CF9418FAE91E4369C97CBFF2 /* AppLinks.swift in Sources */,
 				D4A378895A23F8FD4EF5248F /* AppIntentNavigator.swift in Sources */,
@@ -1029,7 +1048,9 @@
 				A1B2C3D40001QUICKROW /* QuickCopyRow.swift in Sources */,
 				A1B2C3D40001CLIPCAPTURE /* ClipboardCapture.swift in Sources */,
 				0B0A2D010000000000000001 /* Onboarding.swift in Sources */,
+				0B0A2D0100000000000000A1 /* LicenseAgreement.swift in Sources */,
 				0B0A2D010000000000000003 /* OnboardingView.swift in Sources */,
+				0B0A2D0100000000000000A3 /* LicenseAgreementPrompt.swift in Sources */,
 				A1B2C3D40001CODESHAPE /* CodeShapeHeuristics.swift in Sources */,
 				A1B2C3D40001QUICKVM /* QuickCopyViewModel.swift in Sources */,
 				A1B2C3D40001QUICKSELECT /* QuickCopySelection.swift in Sources */,
@@ -1063,6 +1084,7 @@
 				5E57E5700000000000000201 /* CollectionMoveTreeTests.swift in Sources */,
 				5E57E5700000000000000202 /* LanguageDetectorCorpusTests.swift in Sources */,
 				5E57E5700000000000000203 /* LanguageDetectorHardeningTests.swift in Sources */,
+				5E57E57000000000000002A7 /* LanguageDetectorShortFunctionTests.swift in Sources */,
 				5E57E5700000000000000204 /* LanguageDetectorTests.swift in Sources */,
 				5E57E5700000000000000205 /* MetalShaderSourceTests.swift in Sources */,
 				5E57E5700000000000000206 /* PreviewParamConfigPersistenceTests.swift in Sources */,
@@ -1094,6 +1116,8 @@
 				5E57E5700000000000000216 /* UUIDBackfillTests.swift in Sources */,
 				5E57E5700000000000000B16 /* PreviewTrustTests.swift in Sources */,
 				0B0A2D010000000000000005 /* OnboardingTests.swift in Sources */,
+				0B0A2D0100000000000000A5 /* LicenseAgreementTests.swift in Sources */,
+				1E6A1D0C0000000000000003 /* LegalDocumentTests.swift in Sources */,
 				5E57E5700000000000000916 /* MediaFileNameTests.swift in Sources */,
 				5E57E5700000000000000217 /* WebPreviewHTMLBuilderTests.swift in Sources */,
 			);
