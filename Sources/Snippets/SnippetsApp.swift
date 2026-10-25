@@ -89,12 +89,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // all of it ahead of the main window's first frame. A run-loop turn
         // later the window has already been committed; nothing reads the
         // status item before the user can click it.
-        DispatchQueue.main.async {
-            MenuBarController.shared.install()
+        // Nothing runs from the menu bar until the license is agreed to; on a
+        // first launch the agreement's Agree button installs these instead.
+        if LicenseAgreement.isAccepted(in: .standard) {
+            DispatchQueue.main.async {
+                MenuBarController.shared.install()
+            }
+            ClipboardMonitor.shared.start()
         }
-        ClipboardMonitor.shared.start()
         #if !APP_STORE
-        // Test runs must never serve the user's real socket.
+        // Test runs must never serve the user's real socket. Not gated on the
+        // license: access is off until the user turns it on in Settings.
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil {
             AgentAccess.shared.start()
         }
@@ -116,6 +121,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MainWindowOpener.activate()
         return false
     }
+
+    #if !APP_STORE
+    /// Another copy of Snippets may have let go of the agent socket since.
+    func applicationDidBecomeActive(_ notification: Notification) {
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+        AgentAccess.shared.start()
+    }
+    #endif
 
     /// The app now lives in the menu bar after its last window closes, which is
     /// the whole point of the quick-copy panel — it must be reachable while the
@@ -159,6 +172,7 @@ struct SnippetsApp: App {
     @State private var appearanceSettings = AppearanceSettings()
     @State private var previewTrust: PreviewTrust
     @State private var onboarding = Onboarding()
+    @State private var licenseAgreement = LicenseAgreement()
 
     init() {
         let trust = PreviewTrust()
@@ -178,7 +192,9 @@ struct SnippetsApp: App {
             ContentView()
                 .previewTrustPrompt()
                 .onboardingTour()
+                .licenseAgreementGate()
                 .environment(onboarding)
+                .environment(licenseAgreement)
                 .environment(environment)
                 .environment(appearanceSettings)
                 .environment(previewTrust)
