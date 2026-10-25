@@ -38,14 +38,17 @@ struct CreateSnippetIntent: AppIntent {
         return .result(value: SnippetEntity(snippet), dialog: "Created \(name).")
     }
 
-    /// Core logic, context-injected for tests.
+    /// Core logic, context-injected for tests. `description` lets callers
+    /// other than Shortcuts (agents) store one in the same save.
     @MainActor
     static func execute(
         title: String, code: String, language: String,
-        collectionID: UUID?, in context: ModelContext
+        collectionID: UUID?, in context: ModelContext,
+        description: String = ""
     ) throws -> Snippet {
         let snippet = Snippet(
             title: title,
+            snippetDescription: description,
             language: language,
             code: code
         )

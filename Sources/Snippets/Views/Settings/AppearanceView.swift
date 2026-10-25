@@ -1,8 +1,26 @@
 import SwiftUI
 
-/// Appearance pane in the Settings window.
-/// Controls colour scheme, focused mode, hover effects, and theme accent colour.
+/// The two tabs of the Settings window, in tab order.
+enum SettingsPane: String, CaseIterable, Identifiable {
+    case general
+    case appearance
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general: "Settings"
+        case .appearance: "Appearance"
+        }
+    }
+}
+
+/// The cards of one Settings tab. Settings holds what the app does —
+/// deletion, previews, clipboard capture, agents; Appearance holds how it
+/// looks — colour scheme, focused mode, hover effects and accent colour.
 struct AppearanceView: View {
+    let pane: SettingsPane
+
     @Environment(AppearanceSettings.self) private var appearanceSettings
     @Environment(PreviewTrust.self) private var previewTrust
     @Environment(Onboarding.self) private var onboarding
@@ -44,12 +62,20 @@ struct AppearanceView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            schemeCard
-            behaviorCard
-            accentCard
-            #if DEBUG
-            debugCard
-            #endif
+            switch pane {
+            case .general:
+                behaviorCard
+                #if !APP_STORE
+                agentsCard
+                #endif
+                #if DEBUG
+                debugCard
+                #endif
+            case .appearance:
+                schemeCard
+                effectsCard
+                accentCard
+            }
         }
     }
 
@@ -173,15 +199,13 @@ struct AppearanceView: View {
         }
     }
 
-    // MARK: - Behavior
+    // MARK: - Effects
 
-    private var behaviorCard: some View {
+    private var effectsCard: some View {
         @Bindable var settings = appearanceSettings
-        @Bindable var trust = previewTrust
-        @Bindable var capture = ClipboardMonitor.shared
 
         return glassCard {
-            sectionLabel("Behavior")
+            sectionLabel("Effects")
 
             behaviorRow(
                 icon: "scope",
@@ -198,8 +222,18 @@ struct AppearanceView: View {
                 caption: "Turn off hover animations on snippet cards",
                 isOn: $settings.disableHoverEffects
             )
+        }
+    }
 
-            Divider().opacity(0.5)
+    // MARK: - Behavior
+
+    private var behaviorCard: some View {
+        @Bindable var settings = appearanceSettings
+        @Bindable var trust = previewTrust
+        @Bindable var capture = ClipboardMonitor.shared
+
+        return glassCard {
+            sectionLabel("Behavior")
 
             behaviorRow(
                 icon: "exclamationmark.triangle",
@@ -306,6 +340,82 @@ struct AppearanceView: View {
                 .tint(accent)
         }
     }
+
+    // MARK: - Agents
+
+    #if !APP_STORE
+    /// MCP access for AI agents. Edits need their own switch, and there is
+    /// no way for an agent to delete, so the caption can promise that.
+    private var agentsCard: some View {
+        @Bindable var access = AgentAccess.shared
+
+        return glassCard {
+            sectionLabel("Agents")
+
+            behaviorRow(
+                icon: "point.3.connected.trianglepath.dotted",
+                title: "Allow Agent Access",
+                // On with nothing serving behind it must say so, not look healthy.
+                caption: access.isEnabled && !access.isServing
+                    ? access.startProblem ?? "Starting…"
+                    : "Let AI agents — Claude Code, Codex, Cursor and any other MCP client — find and use your snippets",
+                isOn: $access.isEnabled
+            )
+
+            Divider().opacity(0.5)
+
+            behaviorRow(
+                icon: "square.and.pencil",
+                title: "Allow Agents to Edit",
+                caption: "Lets agents save code you point them at as new snippets, and change existing ones. They can never delete; edits replace the existing code.",
+                isOn: $access.allowsEdits
+            )
+            .disabled(!access.isEnabled)
+
+            Divider().opacity(0.5)
+
+            HStack(spacing: 12) {
+                Image(systemName: "terminal")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(theme.safeAccentText(accent))
+                    .frame(width: 30, height: 30)
+                    .liquidGlassSurface(
+                        in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+                        tint: accent.opacity(0.12),
+                        shadowRadius: 3,
+                        shadowY: 1
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Connect an Agent")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(theme.text)
+                    Text("Copies the setup that adds Snippets to your agent as an MCP server")
+                        .font(.system(size: 11))
+                        .foregroundStyle(theme.textMuted)
+                }
+
+                Spacer(minLength: 12)
+
+                Menu("Copy Setup") {
+                    ForEach(AgentClient.allCases) { client in
+                        Button {
+                            Clipboard.copy(client.setup(executablePath: Bundle.main.executablePath ?? ""))
+                        } label: {
+                            Text(client.name)
+                            if let detail = client.detail { Text(detail) }
+                        }
+                    }
+                }
+                .menuStyle(.button)
+                .buttonStyle(.glass)
+                .fixedSize()
+                .controlSize(.small)
+                .disabled(!access.isEnabled)
+            }
+        }
+    }
+    #endif
 
     // MARK: - Debug
 
