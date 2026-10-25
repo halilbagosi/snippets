@@ -17,6 +17,7 @@
 		4D435000000000000000B003 /* MCPStdioShim.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A003 /* MCPStdioShim.swift */; };
 		4D435000000000000000B002 /* MCPTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A002 /* MCPTools.swift */; };
 		4D435000000000000000B001 /* MCPProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A001 /* MCPProtocol.swift */; };
+		A1F0EE0B00000000000000B1 /* AppLinksTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F0EE0B00000000000000F1 /* AppLinksTests.swift */; };
 		0B0A2D0100000000000000A5 /* LicenseAgreementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D0100000000000000A6 /* LicenseAgreementTests.swift */; };
 		0B0A2D0100000000000000A3 /* LicenseAgreementPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D0100000000000000A4 /* LicenseAgreementPrompt.swift */; };
 		0B0A2D0100000000000000A1 /* LicenseAgreement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D0100000000000000A2 /* LicenseAgreement.swift */; };
@@ -205,6 +206,7 @@
 		4D435000000000000000A003 /* MCPStdioShim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPStdioShim.swift; sourceTree = "<group>"; };
 		4D435000000000000000A002 /* MCPTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPTools.swift; sourceTree = "<group>"; };
 		4D435000000000000000A001 /* MCPProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPProtocol.swift; sourceTree = "<group>"; };
+		A1F0EE0B00000000000000F1 /* AppLinksTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLinksTests.swift; sourceTree = "<group>"; };
 		0B0A2D0100000000000000A6 /* LicenseAgreementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseAgreementTests.swift; sourceTree = "<group>"; };
 		0B0A2D0100000000000000A4 /* LicenseAgreementPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseAgreementPrompt.swift; sourceTree = "<group>"; };
 		0B0A2D0100000000000000A2 /* LicenseAgreement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseAgreement.swift; sourceTree = "<group>"; };
@@ -631,6 +633,7 @@
 				5E57E5700000000000000116 /* UUIDBackfillTests.swift */,
 				5E57E5700000000000000A16 /* PreviewTrustTests.swift */,
 				0B0A2D010000000000000006 /* OnboardingTests.swift */,
+				A1F0EE0B00000000000000F1 /* AppLinksTests.swift */,
 				0B0A2D0100000000000000A6 /* LicenseAgreementTests.swift */,
 				1E6A1D0C0000000000000004 /* LegalDocumentTests.swift */,
 				5E57E5700000000000000816 /* MediaFileNameTests.swift */,
@@ -1116,6 +1119,7 @@
 				5E57E5700000000000000216 /* UUIDBackfillTests.swift in Sources */,
 				5E57E5700000000000000B16 /* PreviewTrustTests.swift in Sources */,
 				0B0A2D010000000000000005 /* OnboardingTests.swift in Sources */,
+				A1F0EE0B00000000000000B1 /* AppLinksTests.swift in Sources */,
 				0B0A2D0100000000000000A5 /* LicenseAgreementTests.swift in Sources */,
 				1E6A1D0C0000000000000003 /* LegalDocumentTests.swift in Sources */,
 				5E57E5700000000000000916 /* MediaFileNameTests.swift in Sources */,
