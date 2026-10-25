@@ -14,6 +14,7 @@ struct HelpCommands: Commands {
             }
             Divider()
             Link("Snippets Support", destination: AppLinks.support)
+            Link("Send Feedback…", destination: AppLinks.feedbackEmail())
             Link("Privacy Policy", destination: AppLinks.privacyPolicy)
             Divider()
             Button("License Agreement") {
