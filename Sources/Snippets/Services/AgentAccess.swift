@@ -53,7 +53,7 @@ final class AgentAccess {
                 editsAllowed: { AgentAccess.shared.allowsEdits },
                 forgetTrust: { AgentAccess.shared.previewTrust?.forget($0) }
             )
-            let dispatcher = MCPDispatcher(provider: tools)
+            let dispatcher = MCPDispatcher(provider: tools, prompts: SnippetMCPTools.prompts)
             return { dispatcher.handle(line: $0) }
         }
     }
@@ -105,9 +105,59 @@ final class AgentAccess {
         }
     }
 
-    /// What Settings' "Copy Setup Command" puts on the clipboard.
-    nonisolated static func setupCommand(executablePath: String) -> String {
-        "claude mcp add snippets -- '\(executablePath)' \(MCPStdioShim.flag)"
+}
+
+/// The agents Settings can write setup for. MCP is the same for every
+/// agent; only the way each one registers a server differs, so anything
+/// not listed by name takes the `mcpServers` JSON most clients share.
+enum AgentClient: String, CaseIterable, Identifiable {
+    case claudeCode, codex, vsCode, other
+
+    var id: String { rawValue }
+
+    var name: String {
+        switch self {
+        case .claudeCode: "Claude Code"
+        case .codex: "Codex"
+        case .vsCode: "VS Code (Copilot)"
+        case .other: "Other Agents (JSON)"
+        }
+    }
+
+    /// The menu's hint at who "Other" covers and where it goes.
+    var detail: String? {
+        switch self {
+        case .other: "Cursor, Gemini CLI, Windsurf, Claude Desktop, Zed…"
+        default: nil
+        }
+    }
+
+    /// What Settings' "Copy Setup" puts on the clipboard: a shell command,
+    /// or for `.other` the JSON to merge into the agent's MCP config.
+    func setup(executablePath: String) -> String {
+        let flag = MCPStdioShim.flag
+        switch self {
+        case .claudeCode:
+            // User scope: the library is the user's, not one project's.
+            return "claude mcp add --scope user snippets -- \(Self.shellQuoted(executablePath)) \(flag)"
+        case .codex:
+            return "codex mcp add snippets -- \(Self.shellQuoted(executablePath)) \(flag)"
+        case .vsCode:
+            let server: JSONValue = ["name": "snippets", "command": .string(executablePath), "args": [.string(flag)]]
+            return "code --add-mcp \(Self.shellQuoted(server.serialized()))"
+        case .other:
+            let config: JSONValue = ["mcpServers": ["snippets": [
+                "command": .string(executablePath), "args": [.string(flag)],
+            ]]]
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+            return String(decoding: (try? encoder.encode(config)) ?? Data(), as: UTF8.self)
+        }
+    }
+
+    /// Single-quoted for zsh/bash, with any `'` in the text closed and escaped.
+    static func shellQuoted(_ text: String) -> String {
+        "'" + text.replacingOccurrences(of: "'", with: #"'\''"#) + "'"
     }
 }
 #endif

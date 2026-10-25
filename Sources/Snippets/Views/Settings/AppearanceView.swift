@@ -327,7 +327,7 @@ struct AppearanceView: View {
                 // On with nothing serving behind it must say so, not look healthy.
                 caption: access.isEnabled && !access.isServing
                     ? access.startProblem ?? "Starting…"
-                    : "Let AI agents like Claude Code find and use your snippets over MCP",
+                    : "Let AI agents — Claude Code, Codex, Cursor and any other MCP client — find and use your snippets",
                 isOn: $access.isEnabled
             )
 
@@ -336,7 +336,7 @@ struct AppearanceView: View {
             behaviorRow(
                 icon: "square.and.pencil",
                 title: "Allow Agents to Edit",
-                caption: "Agents can create and change snippets, but never delete them; edits replace the existing code.",
+                caption: "Lets agents save code you point them at as new snippets, and change existing ones. They can never delete; edits replace the existing code.",
                 isOn: $access.allowsEdits
             )
             .disabled(!access.isEnabled)
@@ -356,20 +356,29 @@ struct AppearanceView: View {
                     )
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Connect Claude Code")
+                    Text("Connect an Agent")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(theme.text)
-                    Text("Copies the command that adds Snippets as an MCP server")
+                    Text("Copies the setup that adds Snippets to your agent as an MCP server")
                         .font(.system(size: 11))
                         .foregroundStyle(theme.textMuted)
                 }
 
                 Spacer(minLength: 12)
 
-                Button("Copy Setup Command") {
-                    Clipboard.copy(AgentAccess.setupCommand(executablePath: Bundle.main.executablePath ?? ""))
+                Menu("Copy Setup") {
+                    ForEach(AgentClient.allCases) { client in
+                        Button {
+                            Clipboard.copy(client.setup(executablePath: Bundle.main.executablePath ?? ""))
+                        } label: {
+                            Text(client.name)
+                            if let detail = client.detail { Text(detail) }
+                        }
+                    }
                 }
+                .menuStyle(.button)
                 .buttonStyle(.glass)
+                .fixedSize()
                 .controlSize(.small)
                 .disabled(!access.isEnabled)
             }

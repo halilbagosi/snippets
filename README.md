@@ -122,22 +122,39 @@ the sandboxed App Store build, whose container starts empty.
 
 ### Agents (MCP)
 
-The direct-download build can serve your library to AI agents over the
-[Model Context Protocol](https://modelcontextprotocol.io). Turn on
-**Settings ▸ Agents ▸ Allow Agent Access**, then add Snippets to your agent.
-For Claude Code, **Copy Setup Command** gives you:
+The direct-download build serves your library to any AI agent that speaks
+the [Model Context Protocol](https://modelcontextprotocol.io) — Claude Code,
+Codex, VS Code's Copilot, Cursor, Gemini CLI, Windsurf, Claude Desktop, Zed
+and others. Turn on **Settings ▸ Agents ▸ Allow Agent Access**, then pick
+your agent from **Copy Setup**:
 
-    claude mcp add snippets -- '/Applications/Snippets.app/Contents/MacOS/Snippets' --mcp-stdio
+| Agent | What Copy Setup gives you |
+| --- | --- |
+| Claude Code | `claude mcp add --scope user snippets -- '/Applications/Snippets.app/Contents/MacOS/Snippets' --mcp-stdio` |
+| Codex | `codex mcp add snippets -- '/Applications/Snippets.app/Contents/MacOS/Snippets' --mcp-stdio` |
+| VS Code (Copilot) | `code --add-mcp '{"args":["--mcp-stdio"],"command":"…/Snippets","name":"snippets"}'` |
+| Anything else | `{"mcpServers": {"snippets": {"command": "…/Snippets", "args": ["--mcp-stdio"]}}}`, to merge into the agent's MCP config (Cursor's `~/.cursor/mcp.json`, Gemini CLI's `~/.gemini/settings.json`, …) |
 
-Agents can `find_snippets`, `get_snippet` and `use_snippet` (code ready to
-paste, with its linked snippets resolved in order). With **Allow Agents to
-Edit** on, they can also `create_snippet` and `update_snippet`. There is no
-delete; an update replaces the code, and a snippet whose code an agent changed
-asks for preview approval again. The agent's process relays to the running app over a socket only
-you can open, starting Snippets if it isn't running; an agent-launched
-Snippets starts in the background. Only one copy of Snippets can serve
-agents at a time: a second copy (a debug build, say) leaves the running
-one's socket alone. It isn't in the App Store build.
+Whatever the agent, the server is the same stdio command:
+`Snippets.app/Contents/MacOS/Snippets --mcp-stdio`.
+
+Agents can `find_snippets`, `list_collections`, `get_snippet` and
+`use_snippet` (code ready to paste, with its linked snippets resolved in
+order). With **Allow Agents to Edit** on, they can also `create_snippet` and
+`update_snippet`, so "save this function as a snippet" works from any of
+them. The server tells the agent how: save exactly the code you pointed at,
+verbatim, with a short title, its language and a one-line description, then
+report the title. Code an agent wraps in a Markdown fence is unwrapped, and
+the fence's language tag is used. Agents that support MCP prompts also get a
+**save_snippet** prompt (`/mcp__snippets__save_snippet` in Claude Code,
+`/save_snippet` in Gemini CLI) that asks for exactly that.
+
+There is no delete; an update replaces the code, and a snippet whose code an
+agent changed asks for preview approval again. The agent's process relays to
+the running app over a socket only you can open, starting Snippets if it
+isn't running; an agent-launched Snippets starts in the background. Only one
+copy of Snippets can serve agents at a time: a second copy (a debug build,
+say) leaves the running one's socket alone. It isn't in the App Store build.
 
 ## Project Structure
 

@@ -54,6 +54,20 @@ final class MCPProtocolTests: XCTestCase {
         ), instructions)
     }
 
+    func test_initialize_instructionsExplainHowToSaveASnippet() throws {
+        let instructions = MCPDispatcher.instructions
+        for phrase in ["Saving a snippet:", "create_snippet once", "verbatim", "update_snippet", "never save the code any other way"] {
+            XCTAssertTrue(instructions.contains(phrase), phrase)
+        }
+    }
+
+    func test_initialize_declaresPromptsOnlyWhenThereAreSome() throws {
+        let without = try send(MCPDispatcher(provider: FakeProvider()), request("initialize"))
+        XCTAssertNil(without["result"]?["capabilities"]?["prompts"])
+        let with = try send(MCPDispatcher(provider: FakeProvider(), prompts: [Self.prompt]), request("initialize"))
+        XCTAssertEqual(with["result"]?["capabilities"]?["prompts"], [:])
+    }
+
     func test_initialize_unknownVersionFallsBackToLatest() throws {
         let d = MCPDispatcher(provider: FakeProvider())
         let reply = try send(d, request("initialize", params: ["protocolVersion": "1999-01-01"]))
@@ -115,6 +129,41 @@ final class MCPProtocolTests: XCTestCase {
     func test_toolsCall_unknownTool_isInvalidParams() throws {
         let reply = try send(MCPDispatcher(provider: FakeProvider()), request("tools/call", params: ["name": "nope"]))
         XCTAssertEqual(reply["error"]?["code"], .number(Double(JSONRPCErrorCode.invalidParams)))
+    }
+
+    // MARK: Prompts
+
+    private static let prompt = MCPPrompt(
+        name: "greet", title: "Greet", description: "Say hi",
+        arguments: [.init(name: "who", description: "Whom")],
+        render: { "Hi \($0["who"] ?? "you")" }
+    )
+
+    func test_promptsList_returnsDefinitionsWithOptionalArguments() throws {
+        let reply = try send(MCPDispatcher(provider: FakeProvider(), prompts: [Self.prompt]), request("prompts/list"))
+        XCTAssertEqual(reply["result"]?["prompts"], [[
+            "name": "greet", "title": "Greet", "description": "Say hi",
+            "arguments": [["name": "who", "description": "Whom", "required": false]],
+        ]])
+    }
+
+    func test_promptsGet_rendersOneUserMessage() throws {
+        let d = MCPDispatcher(provider: FakeProvider(), prompts: [Self.prompt])
+        let reply = try send(d, request("prompts/get", params: ["name": "greet", "arguments": ["who": "Ada", "n": 2]]))
+        XCTAssertEqual(reply["result"]?["messages"], [["role": "user", "content": ["type": "text", "text": "Hi Ada"]]])
+        let bare = try send(d, request("prompts/get", params: ["name": "greet"]))
+        XCTAssertEqual(bare["result"]?["messages"]?.arrayValue?.first?["content"]?["text"], "Hi you")
+    }
+
+    func test_promptsGet_unknownPrompt_isInvalidParams() throws {
+        let d = MCPDispatcher(provider: FakeProvider(), prompts: [Self.prompt])
+        let reply = try send(d, request("prompts/get", params: ["name": "nope"]))
+        XCTAssertEqual(reply["error"]?["code"], .number(Double(JSONRPCErrorCode.invalidParams)))
+    }
+
+    func test_prompts_withoutAny_isMethodNotFound() throws {
+        let reply = try send(MCPDispatcher(provider: FakeProvider()), request("prompts/list"))
+        XCTAssertEqual(reply["error"]?["code"], .number(Double(JSONRPCErrorCode.methodNotFound)))
     }
 
     // MARK: Errors

@@ -58,9 +58,9 @@ final class MCPToolsTests: XCTestCase {
 
     // MARK: Listing
 
-    func test_tools_listsTheFiveToolsWithObjectSchemas() {
+    func test_tools_listsTheSixToolsWithObjectSchemas() {
         XCTAssertEqual(tools.tools.map(\.name),
-                       ["find_snippets", "get_snippet", "use_snippet", "create_snippet", "update_snippet"])
+                       ["find_snippets", "get_snippet", "use_snippet", "list_collections", "create_snippet", "update_snippet"])
         for tool in tools.tools { XCTAssertEqual(tool.inputSchema["type"], "object", tool.name) }
     }
 
@@ -84,9 +84,43 @@ final class MCPToolsTests: XCTestCase {
         }
     }
 
-    func test_editsOffMessage_namesTheSettingsLabel() {
+    func test_editsOffMessage_namesTheSettingsLabelAndWhatToDo() {
         XCTAssertEqual(SnippetMCPTools.editsOffMessage,
-                       "Editing is off — enable \"Allow Agents to Edit\" in Snippets ▸ Settings ▸ Agents.")
+                       "Editing is off — enable \"Allow Agents to Edit\" in Snippets ▸ Settings ▸ Agents."
+                       + " Nothing was saved: ask the user to turn it on, then call this tool again.")
+    }
+
+    /// Not every client passes the server instructions to its model, so the
+    /// tool an agent reaches for when asked to save code must carry the rules.
+    func test_createDescription_carriesTheSaveWorkflow() throws {
+        let tool = try XCTUnwrap(tools.tools.first { $0.name == "create_snippet" })
+        for phrase in ["verbatim", "update_snippet", "tell the user the title", "Settings ▸ Agents"] {
+            XCTAssertTrue(tool.description.contains(phrase), phrase)
+        }
+        let code = try XCTUnwrap(tool.inputSchema["properties"]?["code"]?["description"]?.stringValue)
+        XCTAssertTrue(code.contains("No Markdown fences"), code)
+    }
+
+    // MARK: list_collections
+
+    func test_listCollections_namesLiveCollectionsWithCountsAndParents() throws {
+        let web = SnippetCollection(name: "Web")
+        let css = SnippetCollection(name: "CSS bits")
+        css.parent = web
+        let gone = SnippetCollection(name: "Gone")
+        gone.deletedAt = .now
+        for c in [web, css, gone] { context.insert(c) }
+        try insert("A", collections: [web])
+        try insert("B", collections: [web])
+        try insert("Trashed", trashed: true, collections: [web])
+
+        let result = try tools.call("list_collections", arguments: [:])
+        let rows = try XCTUnwrap(result["collections"]?.arrayValue)
+        XCTAssertEqual(rows.map { $0["name"] }, ["CSS bits", "Web"])
+        XCTAssertEqual(rows[0]["parent"], "Web")
+        XCTAssertEqual(rows[1]["parent"], .null)
+        XCTAssertEqual(rows[1]["snippetCount"], 2)
+        XCTAssertEqual(rows[1]["id"], .string(web.uuid!.uuidString))
     }
 
     // MARK: find_snippets
@@ -267,6 +301,38 @@ final class MCPToolsTests: XCTestCase {
         XCTAssertEqual(try context.fetch(FetchDescriptor<Snippet>()).count, 0)
     }
 
+    func test_create_unwrapsAMarkdownFenceAndTakesItsLanguage() throws {
+        allowEdits = true
+        let result = try tools.call("create_snippet", arguments: [
+            "title": "T", "code": "```ts\nconst a = 1\n  indented()\n```\n",
+        ])
+        XCTAssertEqual(result["code"], "const a = 1\n  indented()")
+        XCTAssertEqual(result["language"], "TypeScript")
+    }
+
+    func test_create_explicitLanguageBeatsTheFenceTag() throws {
+        allowEdits = true
+        let result = try tools.call("create_snippet", arguments: [
+            "title": "T", "code": "```js\nx\n```", "language": "React",
+        ])
+        XCTAssertEqual(result["code"], "x")
+        XCTAssertEqual(result["language"], "React")
+    }
+
+    func test_unfenced_leavesUnfencedOrMultiFenceCodeExactlyAsSent() {
+        XCTAssertEqual(SnippetMCPTools.unfenced("  x\n").code, "  x\n")
+        let two = "```\na\n```\ntext\n```\nb\n```"
+        XCTAssertEqual(SnippetMCPTools.unfenced(two).code, two)
+        XCTAssertNil(SnippetMCPTools.unfenced("```\na\n```").language)
+        XCTAssertNil(SnippetMCPTools.unfenced("```klingon\na\n```").language)
+        XCTAssertEqual(SnippetMCPTools.unfenced("```Swift title=x\na\n```").language, "Swift")
+    }
+
+    func test_create_emptyFence_isBlankCode() {
+        allowEdits = true
+        assertFails("create_snippet", ["title": "T", "code": "```swift\n  \n```"], .invalidArguments("code can't be blank"))
+    }
+
     func test_create_missingCode_isInvalidArguments() {
         allowEdits = true
         assertFails("create_snippet", ["title": "T"], .invalidArguments("Missing required argument: code"))
@@ -364,6 +430,14 @@ final class MCPToolsTests: XCTestCase {
         XCTAssertEqual(forgotten, [])
     }
 
+    func test_update_unwrapsAMarkdownFence() throws {
+        allowEdits = true
+        let s = try insert("S", language: "Swift", code: "old")
+        _ = try tools.call("update_snippet", arguments: ["id": id(s), "code": "```swift\nnew\n```"])
+        XCTAssertEqual(s.code, "new")
+        XCTAssertEqual(s.language, "Swift")
+    }
+
     func test_update_canonicalizesAKnownLanguageName() throws {
         allowEdits = true
         let s = try insert("S", language: "Swift")
@@ -412,6 +486,30 @@ final class MCPToolsTests: XCTestCase {
         allowEdits = true
         assertFails("update_snippet", ["id": id(s), "title": " ", "code": "new"], .invalidArguments("title can't be blank"))
         XCTAssertEqual(forgotten, [])
+    }
+
+    // MARK: save_snippet prompt
+
+    private func savePrompt(_ args: [String: String]) throws -> String {
+        try XCTUnwrap(SnippetMCPTools.prompts.first { $0.name == "save_snippet" }).render(args)
+    }
+
+    func test_savePrompt_withoutArguments_savesTheCodeJustDiscussed() throws {
+        let text = try savePrompt([:])
+        XCTAssertTrue(text.hasPrefix("Save the code we were just looking at to my Snippets library."), text)
+        XCTAssertTrue(text.contains("create_snippet"), text)
+        XCTAssertTrue(text.contains("a short descriptive title"), text)
+        XCTAssertFalse(text.contains("collection"), text)
+        XCTAssertTrue(text.hasSuffix("instead of saving the code anywhere else."), text)
+        XCTAssertTrue(text.contains("\n3. Tell me"), text)
+    }
+
+    func test_savePrompt_usesGivenCodeTitleAndCollection() throws {
+        let text = try savePrompt(["code": " the debounce in utils.ts ", "title": "Debounce", "collection": "Web"])
+        XCTAssertTrue(text.hasPrefix("Save the debounce in utils.ts to my Snippets library."), text)
+        XCTAssertTrue(text.contains("the title \"Debounce\""), text)
+        XCTAssertTrue(text.contains("\n3. File it in the collection \"Web\""), text)
+        XCTAssertTrue(text.contains("\n4. Tell me"), text)
     }
 
     func test_update_nothingToChange_isInvalidArguments() throws {

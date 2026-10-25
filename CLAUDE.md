@@ -22,7 +22,7 @@ xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=m
 
 ## Test
 
-585 XCTest cases in the `SnippetsTests` target, hosted by the app (so a run launches `Snippets.app` briefly):
+608 XCTest cases in the `SnippetsTests` target, hosted by the app (so a run launches `Snippets.app` briefly):
 
 ```sh
 xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' test
