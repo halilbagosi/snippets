@@ -46,6 +46,9 @@ struct AppearanceView: View {
         VStack(spacing: 20) {
             schemeCard
             behaviorCard
+            #if !APP_STORE
+            agentsCard
+            #endif
             accentCard
             #if DEBUG
             debugCard
@@ -306,6 +309,70 @@ struct AppearanceView: View {
                 .tint(accent)
         }
     }
+
+    // MARK: - Agents
+
+    #if !APP_STORE
+    /// MCP access for AI agents. Edits need their own switch, and there is
+    /// no way for an agent to delete, so the caption can promise that.
+    private var agentsCard: some View {
+        @Bindable var access = AgentAccess.shared
+
+        return glassCard {
+            sectionLabel("Agents")
+
+            behaviorRow(
+                icon: "point.3.connected.trianglepath.dotted",
+                title: "Allow Agent Access",
+                caption: "Let AI agents like Claude Code find and use your snippets over MCP",
+                isOn: $access.isEnabled
+            )
+
+            Divider().opacity(0.5)
+
+            behaviorRow(
+                icon: "square.and.pencil",
+                title: "Allow Agents to Edit",
+                caption: "Agents can create and change snippets, but never delete them; edits replace the existing code.",
+                isOn: $access.allowsEdits
+            )
+            .disabled(!access.isEnabled)
+
+            Divider().opacity(0.5)
+
+            HStack(spacing: 12) {
+                Image(systemName: "terminal")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(theme.safeAccentText(accent))
+                    .frame(width: 30, height: 30)
+                    .liquidGlassSurface(
+                        in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+                        tint: accent.opacity(0.12),
+                        shadowRadius: 3,
+                        shadowY: 1
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Connect Claude Code")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(theme.text)
+                    Text("Copies the command that adds Snippets as an MCP server")
+                        .font(.system(size: 11))
+                        .foregroundStyle(theme.textMuted)
+                }
+
+                Spacer(minLength: 12)
+
+                Button("Copy Setup Command") {
+                    Clipboard.copy(AgentAccess.setupCommand(executablePath: Bundle.main.executablePath ?? ""))
+                }
+                .buttonStyle(.glass)
+                .controlSize(.small)
+                .disabled(!access.isEnabled)
+            }
+        }
+    }
+    #endif
 
     // MARK: - Debug
 

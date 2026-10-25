@@ -7,6 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4D435000000000000000B104 /* MCPStdioShimTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A104 /* MCPStdioShimTests.swift */; };
+		4D435000000000000000B103 /* MCPSocketServerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A103 /* MCPSocketServerTests.swift */; };
+		4D435000000000000000B102 /* MCPToolsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A102 /* MCPToolsTests.swift */; };
+		4D435000000000000000B101 /* MCPProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A101 /* MCPProtocolTests.swift */; };
+		4D435000000000000000B005 /* AgentAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A005 /* AgentAccess.swift */; };
+		4D435000000000000000B004 /* MCPSocketServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A004 /* MCPSocketServer.swift */; };
+		4D435000000000000000B003 /* MCPStdioShim.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A003 /* MCPStdioShim.swift */; };
+		4D435000000000000000B002 /* MCPTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A002 /* MCPTools.swift */; };
+		4D435000000000000000B001 /* MCPProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A001 /* MCPProtocol.swift */; };
 		002912E32D5AD77A965C6669 /* SnippetCollectionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72351DDB378B8C22EB8FD8EE /* SnippetCollectionCard.swift */; };
 		01E24B2BB3789E64F91EB040 /* PreviewParams.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06154F76A632D66D3A6AA3D2 /* PreviewParams.swift */; };
 		05C84AB0AD5549D7F7069E6E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 757E7F34577C563AEFCB24FA /* PrivacyInfo.xcprivacy */; };
@@ -179,6 +188,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		4D435000000000000000A104 /* MCPStdioShimTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPStdioShimTests.swift; sourceTree = "<group>"; };
+		4D435000000000000000A103 /* MCPSocketServerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSocketServerTests.swift; sourceTree = "<group>"; };
+		4D435000000000000000A102 /* MCPToolsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPToolsTests.swift; sourceTree = "<group>"; };
+		4D435000000000000000A101 /* MCPProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPProtocolTests.swift; sourceTree = "<group>"; };
+		4D435000000000000000A005 /* AgentAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentAccess.swift; sourceTree = "<group>"; };
+		4D435000000000000000A004 /* MCPSocketServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSocketServer.swift; sourceTree = "<group>"; };
+		4D435000000000000000A003 /* MCPStdioShim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPStdioShim.swift; sourceTree = "<group>"; };
+		4D435000000000000000A002 /* MCPTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPTools.swift; sourceTree = "<group>"; };
+		4D435000000000000000A001 /* MCPProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPProtocol.swift; sourceTree = "<group>"; };
 		01362798D5520FFC54DBDD42 /* DSGlassContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSGlassContainer.swift; sourceTree = "<group>"; };
 		06154F76A632D66D3A6AA3D2 /* PreviewParams.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewParams.swift; sourceTree = "<group>"; };
 		0B0A2D010000000000000002 /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
@@ -529,6 +547,8 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D40002CLIPMONITOR /* ClipboardMonitor.swift */,
+				4D435000000000000000A005 /* AgentAccess.swift */,
+				4D435000000000000000A004 /* MCPSocketServer.swift */,
 				A1B2C3D40002MENUBAR /* MenuBarController.swift */,
 				6C86D0794EADE7F8B51B1BAF /* Clipboard.swift */,
 				45DB595C53F53F1E91521AED /* LanguageDetector.swift */,
@@ -579,6 +599,10 @@
 				5E57E570000000000000010D /* SnippetFilterCacheTests.swift */,
 				5E57E570000000000000010E /* SnippetGalleryViewModelTests.swift */,
 				5E57E570000000000000010F /* SnippetIntentLogicTests.swift */,
+				4D435000000000000000A104 /* MCPStdioShimTests.swift */,
+				4D435000000000000000A103 /* MCPSocketServerTests.swift */,
+				4D435000000000000000A102 /* MCPToolsTests.swift */,
+				4D435000000000000000A101 /* MCPProtocolTests.swift */,
 				5E57E5700000000000000110 /* SnippetLinkerTests.swift */,
 				5E57E5700000000000000130 /* QuickCopyResultsTests.swift */,
 				5E57E5700000000000000111 /* SnippetQueryFilterTests.swift */,
@@ -774,10 +798,21 @@
 			path = Modifiers;
 			sourceTree = "<group>";
 		};
+		4D435000000000000000A000 /* MCP */ = {
+			isa = PBXGroup;
+			children = (
+				4D435000000000000000A001 /* MCPProtocol.swift */,
+				4D435000000000000000A002 /* MCPTools.swift */,
+				4D435000000000000000A003 /* MCPStdioShim.swift */,
+			);
+			path = MCP;
+			sourceTree = "<group>";
+		};
 		D162801B5F6E0AE5BCE07169 /* Features */ = {
 			isa = PBXGroup;
 			children = (
 				0B0A2D010000000000000007 /* Onboarding */,
+				4D435000000000000000A000 /* MCP */,
 				1BCA38E9F7E2A72176C796D0 /* Transfer */,
 				A1B2C3D448A6474682646B42 /* QuickCapture */,
 				A1B2C3D4364B5CA722DD5D13 /* QuickCopy */,
@@ -981,6 +1016,11 @@
 				A1B2C3D40001PREVIEWTRUST /* PreviewTrust.swift in Sources */,
 				A1B2C3D40001CAPBANNER /* CaptureBanner.swift in Sources */,
 				A1B2C3D40001CLIPMONITOR /* ClipboardMonitor.swift in Sources */,
+				4D435000000000000000B005 /* AgentAccess.swift in Sources */,
+				4D435000000000000000B004 /* MCPSocketServer.swift in Sources */,
+				4D435000000000000000B003 /* MCPStdioShim.swift in Sources */,
+				4D435000000000000000B002 /* MCPTools.swift in Sources */,
+				4D435000000000000000B001 /* MCPProtocol.swift in Sources */,
 				A1B2C3D40001MENUBAR /* MenuBarController.swift in Sources */,
 				A1B2C3D40001QUICKPANEL /* QuickCopyPanel.swift in Sources */,
 				A1B2C3D40001QUICKROW /* QuickCopyRow.swift in Sources */,
@@ -1032,6 +1072,10 @@
 				5E57E570000000000000020D /* SnippetFilterCacheTests.swift in Sources */,
 				5E57E570000000000000020E /* SnippetGalleryViewModelTests.swift in Sources */,
 				5E57E570000000000000020F /* SnippetIntentLogicTests.swift in Sources */,
+				4D435000000000000000B104 /* MCPStdioShimTests.swift in Sources */,
+				4D435000000000000000B103 /* MCPSocketServerTests.swift in Sources */,
+				4D435000000000000000B102 /* MCPToolsTests.swift in Sources */,
+				4D435000000000000000B101 /* MCPProtocolTests.swift in Sources */,
 				5E57E5700000000000000210 /* SnippetLinkerTests.swift in Sources */,
 				A1B2C3D40001TCLIPCAPTURE /* ClipboardCaptureTests.swift in Sources */,
 				A1B2C3D40001TCODESHAPE /* CodeShapeHeuristicsTests.swift in Sources */,
