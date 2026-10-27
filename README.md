@@ -181,6 +181,7 @@ say) leaves the running one's socket alone. It isn't in the App Store build.
 - Sources/Snippets/Core/Services: service protocols shared across the app
 - Sources/Snippets/Resources: app icon assets and the vendored web-preview runtimes
 - Tests/SnippetsTests: unit tests for view models and app behavior
+- scripts: `release.sh` and its `ExportOptions.plist` for the notarized direct-download DMG
 
 ## Requirements
 
@@ -217,6 +218,38 @@ not in `~/Library/Application Support`.
 ```sh
 xcodebuild -project Snippets.xcodeproj -scheme Snippets -destination 'platform=macOS' -configuration AppStore build
 ```
+
+### Direct-download (Developer ID) build
+
+Release is signed with the hardened runtime, which notarization requires, and
+`Snippets-Release.entitlements`. Its one entitlement,
+`com.apple.security.cs.disable-library-validation`, is what lets Swift previews
+work. `swiftc` ad-hoc signs the dylibs it builds, and library validation would
+refuse to `dlopen` anything without this team's signature. Debug doesn't use
+the hardened runtime.
+
+`scripts/release.sh` archives Release, exports it with Developer ID, packages
+`build/release/Snippets.dmg`, notarizes and staples it, then checks it with
+Gatekeeper. The build number defaults to the commit count. One-time setup:
+
+1. Sign in to the team in Xcode ▸ Settings ▸ Accounts. The export creates the
+   Developer ID Application certificate if you don't have one.
+2. Store notary credentials (with an app-specific password from
+   account.apple.com):
+
+   ```sh
+   xcrun notarytool store-credentials snippets-notary --apple-id <apple-id> --team-id KCH5545G6F
+   ```
+
+Then:
+
+```sh
+scripts/release.sh                      # build, notarize, staple
+scripts/release.sh --upload owner/repo  # ...and attach to a GitHub prerelease
+```
+
+A prerelease is not what `releases/latest` resolves to, so the website keeps
+serving the last full release. Send testers the prerelease's own link.
 
 ### Adding files
 
