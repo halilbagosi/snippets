@@ -326,6 +326,7 @@
 		A29E430CBE6D1CCAF9D1B5B9 /* SnippetPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetPreviewView.swift; sourceTree = "<group>"; };
 		A4BA448BBE813C0F4A7135E4 /* ShaderPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShaderPipeline.swift; sourceTree = "<group>"; };
 		A4D3F65EC1966AF5DF35CA28 /* Snippets-AppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Snippets-AppStore.entitlements"; sourceTree = SOURCE_ROOT; };
+		B7E2D1A40C5F4E8899A1F3C2 /* Snippets-Release.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Snippets-Release.entitlements"; sourceTree = SOURCE_ROOT; };
 		A526673AFEB2D7D97B6A125F /* FilterTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterTag.swift; sourceTree = "<group>"; };
 		A8EF3384EF715D1C281D899A /* CodeEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeEditor.swift; sourceTree = "<group>"; };
 		A90285C260B1BC9E05BE3F39 /* GallerySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GallerySection.swift; sourceTree = "<group>"; };
@@ -454,6 +455,7 @@
 			children = (
 				C124BF442FF9B12E008B595C /* Snippets-Info.plist */,
 				A4D3F65EC1966AF5DF35CA28 /* Snippets-AppStore.entitlements */,
+				B7E2D1A40C5F4E8899A1F3C2 /* Snippets-Release.entitlements */,
 				0B9284FC624AB4701E78C6EA /* SnippetsApp.swift */,
 				52340538EFD250B44AE38B68 /* App */,
 				B996AA964155DC8F483D4FD4 /* Core */,
@@ -1362,10 +1364,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = SnippetsIcon;
+				CODE_SIGN_ENTITLEMENTS = "Snippets-Release.entitlements";
 				COMBINE_HIDPI_IMAGES = YES;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "Snippets-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Snippets;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
