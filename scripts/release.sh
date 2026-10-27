@@ -38,7 +38,19 @@ if [[ -n "$(git status --porcelain)" ]]; then
     echo "warning: working tree has uncommitted changes; they will be in this build" >&2
 fi
 
+# Accept a clone URL too: gh wants owner/repo, and reports a misleading
+# "workflow scope" error for a name it can't resolve.
+UPLOAD_REPO="${UPLOAD_REPO#https://github.com/}"
+UPLOAD_REPO="${UPLOAD_REPO#git@github.com:}"
+UPLOAD_REPO="${UPLOAD_REPO%.git}"
+
 # Fail before a multi-minute build, not after it.
+if [[ -n "$UPLOAD_REPO" ]]; then
+    gh repo view "$UPLOAD_REPO" --json name >/dev/null || {
+        echo "error: can't reach GitHub repo '$UPLOAD_REPO' (expected owner/repo)" >&2
+        exit 1
+    }
+fi
 xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null || {
     echo "error: no notary credentials in keychain profile '$NOTARY_PROFILE' (see the setup notes in $0)" >&2
     exit 1
