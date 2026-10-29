@@ -98,4 +98,20 @@ final class OnboardingTests: XCTestCase {
             }
         }
     }
+
+    func test_everyPresetAccentHasAGalleryShot() {
+        for preset in AppearanceView.presetColors {
+            let image = OnboardingPage.accentWindowImage(forHex: preset.hex)
+            XCTAssertEqual(image, "OnboardingAccent\(preset.name)")
+            XCTAssertNotNil(NSImage(named: image), image)
+        }
+    }
+
+    func test_customAccentGetsTheNearestPresetsShot() {
+        XCTAssertEqual(OnboardingPage.accentWindowImage(forHex: "#ff0a84ff"), "OnboardingAccentBlue")
+        XCTAssertEqual(OnboardingPage.accentWindowImage(forHex: "#0a84ff"), "OnboardingAccentBlue")
+        XCTAssertEqual(OnboardingPage.accentWindowImage(forHex: "#E0FF00"), "OnboardingAccentYellow")
+        XCTAssertEqual(OnboardingPage.accentWindowImage(forHex: "#B00000"), "OnboardingAccentRed")
+        XCTAssertEqual(OnboardingPage.accentWindowImage(forHex: "not a colour"), "OnboardingAccentBlue")
+    }
 }
