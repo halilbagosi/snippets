@@ -10,6 +10,8 @@
 #   - Notary credentials in the keychain, with an app-specific password:
 #       xcrun notarytool store-credentials snippets-notary \
 #         --apple-id <apple-id> --team-id KCH5545G6F
+#   - dmgbuild, which lays out the DMG window:
+#       python3 -m pip install --user dmgbuild
 #
 # Env: NOTARY_PROFILE (default snippets-notary), BUILD_NUMBER (default: the
 # commit count, so every release from a newer commit sorts higher).
@@ -22,7 +24,7 @@ UPLOAD_REPO=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --upload) UPLOAD_REPO="${2:?--upload needs owner/repo}"; shift 2 ;;
-        -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,/^set -euo/p' "$0" | sed '$d'; exit 0 ;;
         *) echo "unknown argument: $1" >&2; exit 64 ;;
     esac
 done
@@ -45,6 +47,10 @@ UPLOAD_REPO="${UPLOAD_REPO#git@github.com:}"
 UPLOAD_REPO="${UPLOAD_REPO%.git}"
 
 # Fail before a multi-minute build, not after it.
+python3 -c "import dmgbuild" 2>/dev/null || {
+    echo "error: dmgbuild is missing; install it with: python3 -m pip install --user dmgbuild" >&2
+    exit 1
+}
 if [[ -n "$UPLOAD_REPO" ]]; then
     gh repo view "$UPLOAD_REPO" --json name >/dev/null || {
         echo "error: can't reach GitHub repo '$UPLOAD_REPO' (expected owner/repo)" >&2
@@ -89,12 +95,11 @@ grep -q "flags=.*runtime" <<<"$SIGNATURE" || {
 VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist")
 
 echo "==> Building DMG"
-STAGING="$OUT/dmg"
-mkdir -p "$STAGING"
-cp -R "$APP" "$STAGING/"
-ln -s /Applications "$STAGING/Applications"
-hdiutil create -volname Snippets -srcfolder "$STAGING" -ov -format UDZO "$DMG" -quiet
-rm -rf "$STAGING"
+# Window layout and background: scripts/dmg/ (render-background.swift draws it).
+python3 -m dmgbuild -s scripts/dmg/settings.py \
+    -D app="$APP" -D background=scripts/dmg/background.png \
+    Snippets "$DMG" 2>&1 | grep -v "is deprecated" || true
+[[ -f "$DMG" ]] || { echo "error: dmgbuild didn't produce $DMG" >&2; exit 1; }
 
 # A cloud-managed certificate has no local private key; the DMG can go
 # unsigned then, since notarization covers the app inside it.

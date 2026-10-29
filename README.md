@@ -181,7 +181,7 @@ say) leaves the running one's socket alone. It isn't in the App Store build.
 - Sources/Snippets/Core/Services: service protocols shared across the app
 - Sources/Snippets/Resources: app icon assets and the vendored web-preview runtimes
 - Tests/SnippetsTests: unit tests for view models and app behavior
-- scripts: `release.sh` and its `ExportOptions.plist` for the notarized direct-download DMG
+- scripts: `release.sh` and its `ExportOptions.plist` for the notarized direct-download DMG; `dmg/` holds the DMG window layout and background
 
 ## Requirements
 
@@ -230,7 +230,10 @@ the hardened runtime.
 
 `scripts/release.sh` archives Release, exports it with Developer ID, packages
 `build/release/Snippets.dmg`, notarizes and staples it, then checks it with
-Gatekeeper. The build number defaults to the commit count. One-time setup:
+Gatekeeper. The build number defaults to the commit count. The DMG window's
+layout is in `scripts/dmg/settings.py`; its background is drawn by
+`swift scripts/dmg/render-background.swift` with the onboarding wallpaper, and
+the two must agree on icon positions. One-time setup:
 
 1. Sign in to the team in Xcode ▸ Settings ▸ Accounts. The export creates the
    Developer ID Application certificate if you don't have one.
@@ -240,6 +243,7 @@ Gatekeeper. The build number defaults to the commit count. One-time setup:
    ```sh
    xcrun notarytool store-credentials snippets-notary --apple-id <apple-id> --team-id KCH5545G6F
    ```
+3. Install dmgbuild: `python3 -m pip install --user dmgbuild`.
 
 Then:
 
