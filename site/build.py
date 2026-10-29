@@ -33,7 +33,7 @@ EULA = ROOT / "Sources/Snippets/Resources/EULA.txt"
 SPONSOR = "https://github.com/sponsors/halilbagosi"
 
 # The DMG the latest (non-pre-) release in the Pages repo carries.
-DOWNLOAD = "https://github.com/halilbagosi/halilbagosi.github.io/releases/latest/download/Snippets.dmg"
+DOWNLOAD = "https://github.com/halilbagosi/snippetsPage/releases/latest/download/Snippets.dmg"
 
 SHELL = """<!doctype html>
 <html lang="en">
