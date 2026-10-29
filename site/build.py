@@ -46,7 +46,7 @@ SHELL = """<!doctype html>
   <meta name="theme-color" content="#0e1014" media="(prefers-color-scheme: dark)">
 {favicons}
   <link rel="stylesheet" href="../style.css">
-  <script>try{{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}}catch(e){{}}</script>
+  <script>try{{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}}catch(e){{}}try{{var n=navigator;if(/iPhone|iPad|iPod|Android/i.test(n.userAgent))document.documentElement.dataset.device="mobile"}}catch(e){{}}</script>
   <script src="../site.js" defer></script>
 </head>
 <body>
