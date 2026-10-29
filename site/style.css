@@ -342,9 +342,14 @@ img, video { display: block; max-width: 100%; }
 
 .btn-lg { font-size: 17px; padding: 14px 26px; }
 
-/* A button for something not available yet: greyed, not clickable. */
+/* A button for something not available yet: greyed, not clickable.
+   Download buttons are disabled on browsers that say they run on iOS or
+   Android (Snippets is a Mac app) — never by touch support, since Macs
+   have touchscreens too. The <head> script marks those devices before
+   first paint, and site.js then takes the link away. */
 .btn.is-disabled,
-.btn.is-disabled:hover {
+.btn.is-disabled:hover,
+:root[data-device="mobile"] .btn[href$="Snippets.dmg"] {
   color: var(--text-3);
   background: var(--glass-edge);
   border-color: var(--glass-edge);
@@ -353,6 +358,7 @@ img, video { display: block; max-width: 100%; }
   cursor: not-allowed;
 }
 .btn.is-disabled:active { transform: none; }
+:root[data-device="mobile"] .btn[href$="Snippets.dmg"] { pointer-events: none; }
 
 .soon {
   margin: 16px 0 0;
@@ -508,7 +514,6 @@ code, kbd {
 
 .card { padding: 24px 26px; margin: 24px 0; }
 .card > :last-child { margin-bottom: 0; }
-.card-accent { box-shadow: inset 3px 0 0 var(--accent), inset 0 1px 0 var(--glass-rim), var(--glass-shadow); }
 
 .contact { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .contact p { margin: 0; font-family: var(--mono); font-size: 14.5px; }
@@ -567,13 +572,14 @@ code, kbd {
   .wrap { padding: 0 18px; }
   .doc { padding-top: 48px; }
 }
+/* Icon-only nav buttons are exact circles, so the glyph sits dead centre. */
 @media (max-width: 980px) {
   .nav .btn-sponsor span { display: none; }
-  .nav .btn-sponsor { padding: 7px 10px; }
+  .nav .btn-sponsor { width: 36px; height: 36px; padding: 0; }
 }
 @media (max-width: 420px) {
   .nav .btn span { display: none; }
-  .nav .btn { padding: 7px 10px; }
+  .nav .btn { width: 36px; height: 36px; padding: 0; }
 }
 
 /* ───────────── Accessibility preferences ───────────── */
