@@ -301,7 +301,7 @@ from esm.sh are not bundled and stay under their own licences.
 
 The download page and the support, privacy policy and license pages that the
 Help menu links to are in `site/`, served by GitHub Pages from the public
-`halilbagosi/halilbagosi.github.io` repo (this repo is private), on the custom
+`halilbagosi/snippetsPage` repo (this repo is private), on the custom
 domain in `site/CNAME` (snippets.halilbagosi.com). Keep that file: publishing
 mirrors `site/`, so without it the domain would be dropped.
 
