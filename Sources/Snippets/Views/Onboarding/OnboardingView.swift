@@ -19,11 +19,16 @@ struct OnboardingView: View {
         /// The stage runs under the copy, so a zoomed screen can fade out
         /// behind the title rather than stop at a hard edge.
         static let stageHeight: CGFloat = 470
+        /// Where a page's controls sit: under a Mac shrunk to make room,
+        /// above the page dots.
+        static let controlsTop: CGFloat = 290
+        static let controlsHeight: CGFloat = 136
     }
 
     var body: some View {
         ZStack(alignment: .top) {
             stage
+            controls
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
                 copy
@@ -69,6 +74,30 @@ struct OnboardingView: View {
         }
         .scaleEffect(page.zoom, anchor: page.focus)
         .padding(.top, Layout.deviceTop)
+    }
+
+    // MARK: Controls
+
+    private var controls: some View {
+        ZStack {
+            if let kind = page.controls {
+                OnboardingControls(kind: kind)
+                    .id(kind)
+                    // Out quickly, in just after: two sets of controls
+                    // fading through each other read as one garbled panel,
+                    // and coming in late lets the Mac shrink out of the way
+                    // first.
+                    .transition(.asymmetric(
+                        insertion: (reduceMotion
+                            ? AnyTransition.opacity
+                            : AnyTransition.opacity.combined(with: .offset(y: 14))
+                        ).animation(DSToken.Motion.pageTurn.delay(0.16)),
+                        removal: AnyTransition.opacity.animation(.easeOut(duration: 0.14))
+                    ))
+            }
+        }
+        .frame(width: Layout.cardSize.width, height: Layout.controlsHeight)
+        .padding(.top, Layout.controlsTop)
     }
 
     // MARK: Copy
@@ -300,6 +329,7 @@ private struct MacBookFrame<Screen: View>: View {
 private struct OnboardingDesktop: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(AppearanceSettings.self) private var appearanceSettings
 
     let page: OnboardingPage
 
@@ -320,6 +350,9 @@ private struct OnboardingDesktop: View {
     /// shows at its corners, and the shadow is drawn here. Change the
     /// wallpaper, the window frame or the gallery shot and these need retaking.
     private static let panelFrame = CGRect(x: 1047, y: 37, width: 340, height: 420)
+    private static let accentDissolve: Animation = .easeInOut(duration: 0.45)
+    /// The agent session drawn over the window on the agents page.
+    private static let terminalFrame = CGRect(x: 660, y: 330, width: 760, height: 470)
 
     var body: some View {
         GeometryReader { proxy in
@@ -328,30 +361,59 @@ private struct OnboardingDesktop: View {
             ZStack(alignment: .topLeading) {
                 Wallpaper()
 
-                screenshot(page.windowImage, clip: page.windowClip, in: Self.windowFrame, scale: scale)
-                    // One layer, one shadow. Without the group SwiftUI shadows
-                    // each layer on its own, and a clip laid over the shot casts
-                    // a rectangular shadow across the window it sits in.
-                    .compositingGroup()
-                    .shadow(color: .black.opacity(0.45), radius: 30 * scale, y: 14 * scale)
+                // Its own stack, so ``Dissolve``'s z-order only sorts one
+                // shot against the one it replaces.
+                ZStack(alignment: .topLeading) {
+                    screenshot(windowImage, clip: page.windowClip, in: Self.windowFrame, scale: scale)
+                }
+                // One layer, one shadow. Without the group SwiftUI shadows
+                // each layer on its own, and a clip laid over the shot casts
+                // a rectangular shadow across the window it sits in. The
+                // group also keeps the shadow steady while one shot
+                // dissolves into the next.
+                .compositingGroup()
+                .shadow(color: .black.opacity(0.45), radius: 30 * scale, y: 14 * scale)
+                // Picking an accent swaps the whole shot. The swatch's own
+                // spring is a quick press response, which makes the swap read
+                // as a cut; the shots dissolve on a slower curve instead.
+                .animation(Self.accentDissolve, value: appearanceSettings.themeColorHex)
+
+                if page.controls == .agents {
+                    AgentSession(scale: scale)
+                        .frame(width: Self.terminalFrame.width * scale, height: Self.terminalFrame.height * scale)
+                        .shadow(color: .black.opacity(0.4), radius: 26 * scale, y: 12 * scale)
+                        .offset(x: Self.terminalFrame.minX * scale, y: Self.terminalFrame.minY * scale)
+                        .transition(.opacity.combined(with: .offset(y: 24 * scale)))
+                }
 
                 MenuBar(scale: scale, statusItemCenter: Self.panelFrame.midX, isStatusItemOpen: page.panelImage != nil)
                     .frame(width: proxy.size.width, height: Self.menuBarHeight * scale)
 
-                if let panel = page.panelImage {
-                    screenshot(panel, in: Self.panelFrame, scale: scale)
-                        .shadow(color: .black.opacity(0.35), radius: 22 * scale, y: 10 * scale)
+                ZStack(alignment: .topLeading) {
+                    if let panel = page.panelImage {
+                        screenshot(panel, in: Self.panelFrame, scale: scale, isPanel: true)
+                    }
                 }
+                .compositingGroup()
+                .shadow(color: .black.opacity(0.35), radius: 22 * scale, y: 10 * scale)
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
         }
+    }
+
+    /// The appearance page shows the gallery in the accent you pick: one shot
+    /// per preset, and the nearest of them for a custom colour.
+    private var windowImage: String {
+        guard page.controls == .appearance else { return page.windowImage }
+        return OnboardingPage.accentWindowImage(forHex: appearanceSettings.themeColorHex)
     }
 
     private func screenshot(
         _ name: String,
         clip: OnboardingClip? = nil,
         in frame: CGRect,
-        scale: CGFloat
+        scale: CGFloat,
+        isPanel: Bool = false
     ) -> some View {
         Image(name)
             .resizable()
@@ -366,11 +428,62 @@ private struct OnboardingDesktop: View {
                         .offset(x: clip.frame.minX * scale, y: clip.frame.minY * scale)
                 }
             }
-            // Keyed by image, so pages that share a shot keep it still while
-            // the zoom moves, and only a real change blurs across.
-            .id(name)
-            .transition(.blurReplace)
             .offset(x: frame.minX * scale, y: frame.minY * scale)
+            // Keyed by image, so pages that share a shot keep it still while
+            // the zoom moves, and only a real change dissolves across.
+            .id(name)
+            .transition(Dissolve.transition(holdingUntilCovered: !isPanel))
+    }
+}
+
+/// Brings a shot in over the one it replaces, which stays opaque underneath
+/// until the new one has covered it.
+///
+/// A plain cross-fade (or `.blurReplace`) fades both shots at once, so
+/// halfway through neither covers the window and the wallpaper flashes
+/// through it on every page turn. So the incoming shot fades in on top, and
+/// the outgoing one is held, fully opaque and below it, until the fade is
+/// over: its removal animation waits out ``holdDuration`` and then cuts.
+///
+/// No blur: magnified by the zoom, a blurred shot smears the window's edge
+/// into the wallpaper, and the whole window goes to a pale haze for the
+/// first frames of the turn.
+private enum Dissolve {
+    /// Longer than any fade it covers: the page turn's spring and the accent
+    /// swap both settle well inside it.
+    static let holdDuration: TimeInterval = 0.9
+
+    /// The window always has a shot, so one leaving is always being
+    /// covered. A menu bar panel can leave for nothing — the page after the
+    /// last panel has none — and held, it would sit there whole for the
+    /// length of the hold and then vanish. So a panel only waits long enough
+    /// for a replacement to cover most of it, then fades.
+    @MainActor
+    static func transition(holdingUntilCovered: Bool) -> some Transition {
+        AsymmetricTransition(
+            insertion: Reveal(),
+            removal: Hold().animation(
+                holdingUntilCovered
+                    ? .linear(duration: 0.01).delay(holdDuration)
+                    : .easeOut(duration: 0.25).delay(0.2)
+            )
+        )
+    }
+
+    private struct Reveal: Transition {
+        func body(content: Content, phase: TransitionPhase) -> some View {
+            content
+                .zIndex(1)
+                .opacity(phase.isIdentity ? 1 : 0)
+        }
+    }
+
+    private struct Hold: Transition {
+        func body(content: Content, phase: TransitionPhase) -> some View {
+            content
+                .zIndex(0)
+                .opacity(phase.isIdentity ? 1 : 0)
+        }
     }
 }
 
@@ -514,6 +627,162 @@ private struct MenuBar: View {
         .frame(maxHeight: .infinity)
     }
 }
+
+// MARK: - Agent session
+
+/// A terminal with an agent using Snippets over MCP, drawn to scale on the
+/// desktop. Drawn, not captured: it stands for any agent, and stays crisp at
+/// whatever size the tour shows it.
+private struct AgentSession: View {
+    let scale: CGFloat
+
+    private struct Line: Identifiable {
+        let id: Int
+        let text: String
+        var color = Color(white: 0.86)
+        var indent: CGFloat = 0
+    }
+
+    private static let green = Color(red: 0.42, green: 0.85, blue: 0.52)
+    private static let violet = Color(red: 0.70, green: 0.62, blue: 1.0)
+    private static let muted = Color(white: 0.55)
+
+    private static let lines: [Line] = [
+        Line(id: 0, text: "> use my debounce snippet in SearchField.swift", color: .white),
+        Line(id: 1, text: "⏺ snippets · find_snippets(\"debounce\")", color: violet),
+        Line(id: 2, text: "⎿  Debounce — swift · utilities", color: muted, indent: 22),
+        Line(id: 3, text: "⏺ snippets · use_snippet(\"Debounce\")", color: violet),
+        Line(id: 4, text: "⎿  14 lines", color: muted, indent: 22),
+        Line(id: 5, text: "⏺ Updated SearchField.swift", color: green),
+        Line(id: 6, text: "⎿  +14 lines, search now waits 300 ms", color: muted, indent: 22),
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8 * scale) {
+                Circle().fill(Color(red: 1, green: 0.37, blue: 0.34))
+                Circle().fill(Color(red: 1, green: 0.74, blue: 0.18))
+                Circle().fill(Color(red: 0.16, green: 0.79, blue: 0.25))
+            }
+            .frame(height: 13 * scale)
+            .padding(.leading, 18 * scale)
+            .frame(height: 40 * scale)
+
+            VStack(alignment: .leading, spacing: 13 * scale) {
+                ForEach(Self.lines) { line in
+                    Text(line.text)
+                        .foregroundStyle(line.color)
+                        .padding(.leading, line.indent * scale)
+                }
+            }
+            .font(.system(size: 21 * scale, design: .monospaced))
+            .lineLimit(1)
+            .padding(.horizontal, 26 * scale)
+            .padding(.top, 14 * scale)
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color(red: 0.09, green: 0.09, blue: 0.11), in: .rect(cornerRadius: 16 * scale, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16 * scale, style: .continuous)
+                .strokeBorder(.white.opacity(0.14), lineWidth: max(0.5, scale))
+        }
+    }
+}
+
+// MARK: - Controls
+
+/// The settings a page lets you change during the tour. They are the real
+/// settings, applied as they change — the tour is in the window it styles.
+private struct OnboardingControls: View {
+    let kind: OnboardingPage.Controls
+
+    var body: some View {
+        switch kind {
+        case .agents:
+            #if !APP_STORE
+            AgentControls()
+            #else
+            EmptyView()
+            #endif
+        case .appearance:
+            VStack(spacing: DSToken.Spacing.sm) {
+                ColorSchemePicker(tileSize: CGSize(width: 78, height: 50), spacing: 16)
+                AccentColorPicker(spacing: 4)
+            }
+        }
+    }
+}
+
+#if !APP_STORE
+/// Agent access, its status, and the setup to paste into an agent.
+private struct AgentControls: View {
+    @Environment(AppearanceSettings.self) private var appearanceSettings
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var theme: Theme { Theme.current(colorScheme) }
+    private var accent: Color { appearanceSettings.themeColor }
+
+    var body: some View {
+        @Bindable var access = AgentAccess.shared
+
+        VStack(spacing: DSToken.Spacing.sm) {
+            HStack(spacing: 12) {
+                Image(systemName: "point.3.connected.trianglepath.dotted")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(theme.safeAccentText(accent))
+                    .frame(width: 30, height: 30)
+                    .liquidGlassSurface(
+                        in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+                        tint: accent.opacity(0.12),
+                        shadowRadius: 3,
+                        shadowY: 1
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Allow Agent Access")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(theme.text)
+                    Text(status(access))
+                        .font(.system(size: 11))
+                        .foregroundStyle(theme.textMuted)
+                        .contentTransition(.opacity)
+                }
+
+                Spacer(minLength: 12)
+
+                Toggle("Allow Agent Access", isOn: $access.isEnabled)
+                    .toggleStyle(.switch)
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .tint(accent)
+            }
+            .padding(.horizontal, DSToken.Spacing.md)
+            .padding(.vertical, DSToken.Spacing.sm)
+            .frame(width: 400)
+            .liquidGlassSurface(
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                shadowRadius: 10,
+                shadowY: 4
+            )
+
+            AgentSetupPicker()
+                .controlSize(.regular)
+                .disabled(!access.isEnabled)
+        }
+    }
+
+    /// On with nothing serving behind it must say so, not look healthy.
+    private func status(_ access: AgentAccess) -> String {
+        if !access.isEnabled { return "Off — nothing listens until you turn it on" }
+        if !access.isServing { return access.startProblem ?? "Starting…" }
+        return access.allowsEdits
+            ? "On — agents can find, use and save snippets"
+            : "On — agents can find and use snippets; edits are in Settings"
+    }
+}
+#endif
 
 // MARK: - Presentation
 

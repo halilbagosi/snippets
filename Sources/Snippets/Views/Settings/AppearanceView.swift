@@ -54,22 +54,6 @@ struct AppearanceView: View {
         ("Red",    "#FF453A"),
     ]
 
-    private enum SchemeOption: String, CaseIterable, Identifiable {
-        case system
-        case light
-        case dark
-
-        var id: String { rawValue }
-
-        var label: String {
-            switch self {
-            case .system: return "System"
-            case .light: return "Light"
-            case .dark: return "Dark"
-            }
-        }
-    }
-
     var body: some View {
         VStack(spacing: 20) {
             switch pane {
@@ -116,96 +100,8 @@ struct AppearanceView: View {
         glassCard {
             sectionLabel("Appearance")
 
-            HStack(spacing: 18) {
-                Spacer(minLength: 0)
-                ForEach(SchemeOption.allCases) { option in
-                    schemeTile(option)
-                }
-                Spacer(minLength: 0)
-            }
-        }
-    }
-
-    private func schemeTile(_ option: SchemeOption) -> some View {
-        let isSelected = appearanceSettings.preferredColorScheme == option.rawValue
-        return Button {
-            withAnimation(DSToken.Motion.toggle) {
-                appearanceSettings.preferredColorScheme = option.rawValue
-            }
-        } label: {
-            VStack(spacing: 8) {
-                schemePreview(option)
-                    .frame(width: 104, height: 68)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(
-                                isSelected ? accent : theme.border,
-                                lineWidth: isSelected ? 2 : 1
-                            )
-                    }
-                    .shadow(
-                        color: .black.opacity(isSelected ? 0.18 : 0.08),
-                        radius: isSelected ? 8 : 4,
-                        y: 3
-                    )
-                    .scaleEffect(isSelected ? 1.0 : 0.97)
-
-                Text(option.label)
-                    .font(.system(size: 11, weight: isSelected ? .semibold : .medium, design: .rounded))
-                    .foregroundStyle(isSelected ? theme.text : theme.textMuted)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Color scheme: \(option.label)")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
-    @ViewBuilder
-    private func schemePreview(_ option: SchemeOption) -> some View {
-        switch option {
-        case .light:
-            miniWindow(dark: false)
-        case .dark:
-            miniWindow(dark: true)
-        case .system:
-            ZStack {
-                miniWindow(dark: false)
-                miniWindow(dark: true)
-                    .mask(TrailingDiagonalHalf())
-            }
-        }
-    }
-
-    /// A miniature mock of the app window — canvas, traffic lights, and one
-    /// snippet card — mirroring the System Settings appearance-tile idiom.
-    private func miniWindow(dark: Bool) -> some View {
-        let t = Theme.current(dark ? .dark : .light)
-        return ZStack {
-            t.canvas
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 2.5) {
-                    Circle().fill(t.trafficRed).frame(width: 4, height: 4)
-                    Circle().fill(t.trafficYellow).frame(width: 4, height: 4)
-                    Circle().fill(t.trafficGreen).frame(width: 4, height: 4)
-                    Spacer(minLength: 0)
-                }
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(t.surface)
-                    .overlay(alignment: .topLeading) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Capsule().fill(accent.opacity(0.9)).frame(width: 20, height: 3.5)
-                            Capsule().fill(t.textFaint.opacity(0.55)).frame(width: 34, height: 2.5)
-                            Capsule().fill(t.textFaint.opacity(0.35)).frame(width: 26, height: 2.5)
-                        }
-                        .padding(6)
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .strokeBorder(t.border, lineWidth: 0.5)
-                    }
-            }
-            .padding(7)
+            ColorSchemePicker()
+                .frame(maxWidth: .infinity)
         }
     }
 
@@ -384,7 +280,7 @@ struct AppearanceView: View {
 
             Divider().opacity(0.5)
 
-            HStack(spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "terminal")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(theme.safeAccentText(accent))
@@ -396,32 +292,22 @@ struct AppearanceView: View {
                         shadowY: 1
                     )
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Connect an Agent")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(theme.text)
-                    Text("Copies the setup that adds Snippets to your agent as an MCP server")
-                        .font(.system(size: 11))
-                        .foregroundStyle(theme.textMuted)
-                }
-
-                Spacer(minLength: 12)
-
-                Menu("Copy Setup") {
-                    ForEach(AgentClient.allCases) { client in
-                        Button {
-                            Clipboard.copy(client.setup(executablePath: Bundle.main.executablePath ?? ""))
-                        } label: {
-                            Text(client.name)
-                            if let detail = client.detail { Text(detail) }
-                        }
+                VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Connect an Agent")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(theme.text)
+                        Text("Pick your agent and copy the setup that adds Snippets to it as an MCP server")
+                            .font(.system(size: 11))
+                            .foregroundStyle(theme.textMuted)
                     }
+
+                    AgentSetupPicker()
+                        .controlSize(.small)
+                        .disabled(!access.isEnabled)
                 }
-                .menuStyle(.button)
-                .buttonStyle(.glass)
-                .fixedSize()
-                .controlSize(.small)
-                .disabled(!access.isEnabled)
+
+                Spacer(minLength: 0)
             }
         }
     }
@@ -476,118 +362,151 @@ struct AppearanceView: View {
         glassCard {
             sectionLabel("Accent Color")
 
-            HStack(spacing: 10) {
-                Spacer(minLength: 0)
-                ForEach(Self.presetColors, id: \.hex) { preset in
-                    presetSwatch(preset)
-                }
-                customColorWell
-                Spacer(minLength: 0)
-            }
+            AccentColorPicker()
+                .frame(maxWidth: .infinity)
         }
     }
+}
 
-    private func presetSwatch(_ preset: (name: String, hex: String)) -> some View {
-        let swatchColor = Color(hex: preset.hex) ?? theme.accent
-        let isActive = appearanceSettings.themeColorHex.lowercased() == preset.hex.lowercased()
-        return Button {
-            withAnimation(DSToken.Motion.toggle) {
-                appearanceSettings.themeColorHex = preset.hex
-            }
-        } label: {
-            ZStack {
-                Circle()
-                    .fill(swatchColor.opacity(0.35))
-                    .frame(width: 38, height: 38)
-                    .blur(radius: 6)
-                    .opacity(isActive ? 1 : 0)
+#if !APP_STORE
+/// Which agent to set up, and a button that copies its setup. Shared by
+/// Settings and the welcome tour, which remember the same choice.
+struct AgentSetupPicker: View {
+    @AppStorage("agentAccess.setupClient") private var client: AgentClient = .claudeCode
+    /// Bumped on every copy; drives the button's confirmation.
+    @State private var copies = 0
+    @State private var showsCopied = false
 
-                Circle()
-                    .fill(swatchColor)
-                    .frame(width: 28, height: 28)
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.controlSize) private var controlSize
+    @Environment(\.isEnabled) private var isEnabled
 
-                Circle()
-                    .strokeBorder(.white, lineWidth: 2.5)
-                    .frame(width: 28, height: 28)
-                    .opacity(isActive ? 1 : 0)
-            }
-            .frame(width: 38, height: 38)
-            .scaleEffect(isActive ? 1.08 : 1.0)
-            .animation(DSToken.Motion.toggle, value: isActive)
-        }
-        .buttonStyle(.plain)
-        .help(preset.name)
-        .accessibilityLabel("Theme color: \(preset.name)")
-    }
+    /// One capsule for both controls. The system draws a glass menu with
+    /// less padding than a glass button, so styled by the system the two sat
+    /// at different heights side by side.
+    private var height: CGFloat { controlSize == .small || controlSize == .mini ? 24 : 30 }
+    private var fontSize: CGFloat { controlSize == .small || controlSize == .mini ? 12 : 13 }
 
-    /// Custom colour affordance — same rainbow-ring recipe as the Collection
-    /// editor's colour strip. Shows the current colour when a custom (non-
-    /// preset) accent is active.
-    private var customColorWell: some View {
-        @Bindable var settings = appearanceSettings
-        let isCustomActive = !Self.presetColors.contains {
-            $0.hex.lowercased() == settings.themeColorHex.lowercased()
-        }
-
-        return ZStack {
-            Circle()
-                .fill(accent.opacity(0.35))
-                .frame(width: 38, height: 38)
-                .blur(radius: 6)
-                .opacity(isCustomActive ? 1 : 0)
-
-            ColorPicker("", selection: Binding(
-                get: { settings.themeColor },
-                set: { newColor in
-                    settings.themeColorHex = newColor.hexString(fallback: AppearanceSettings.defaultThemeColorHex)
-                }
-            ), supportsOpacity: false)
-            .labelsHidden()
-            .frame(width: 28, height: 28)
-            .clipShape(Circle())
-            .overlay {
-                ZStack {
-                    Circle().fill(theme.surface)
-                    if isCustomActive {
-                        Circle().fill(accent)
-                        Circle().strokeBorder(.white, lineWidth: 2.5)
-                    } else {
-                        Circle().fill(accent.opacity(0.15))
-                        Image(systemName: "plus")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(colorScheme == .dark ? .white : .black)
+    var body: some View {
+        HStack(spacing: 6) {
+            Menu {
+                Picker("Agent", selection: $client) {
+                    ForEach(AgentClient.allCases) { option in
+                        Label {
+                            Text(option.name)
+                            if let detail = option.detail { Text(detail) }
+                        } icon: {
+                            option.logo
+                        }
+                        .tag(option)
                     }
-                    Circle()
-                        .strokeBorder(
-                            AngularGradient(
-                                colors: [.red, .orange, .yellow, .green, .blue, .purple, .pink, .red],
-                                center: .center
-                            ),
-                            lineWidth: 2.0
-                        )
                 }
-                .frame(width: 28, height: 28)
-                .allowsHitTesting(false)
+                .pickerStyle(.inline)
+                .labelsHidden()
+            } label: {
+                HStack(spacing: 6) {
+                    client.logo
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundStyle(client.color)
+                        .frame(width: 14, height: 14)
+                    Text(client.name)
+                        .contentTransition(.opacity)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: fontSize - 3, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .chrome(height: height, fontSize: fontSize, isEnabled: isEnabled)
             }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .accessibilityLabel("Agent")
+            .accessibilityValue(Text(client.name))
+
+            Button(action: copy) {
+                HStack(spacing: 5) {
+                    // The same box as the agent's mark, so both buttons are
+                    // one height: the document symbol is taller than text.
+                    Image(systemName: showsCopied ? "checkmark" : "doc.on.doc")
+                        .resizable()
+                        .scaledToFit()
+                        .contentTransition(.symbolEffect(.replace))
+                        .symbolEffect(.bounce, options: .nonRepeating, value: reduceMotion ? 0 : copies)
+                        .frame(width: 14, height: 14)
+                    // Both words always laid out, so the button is as wide as
+                    // "Copied" from the start, and swapped by opacity rather
+                    // than morphed: the text morph drew each word in a layer
+                    // of its own, which outlined the text with a faint box.
+                    ZStack(alignment: .leading) {
+                        Text("Copy").opacity(showsCopied ? 0 : 1)
+                        Text("Copied").opacity(showsCopied ? 1 : 0)
+                    }
+                }
+                .foregroundStyle(showsCopied ? Color.green : Color.primary)
+                .chrome(height: height, fontSize: fontSize, isEnabled: isEnabled)
+            }
+            .buttonStyle(.plain)
+            .help("Copy the setup for \(client.name)")
         }
-        .frame(width: 38, height: 38)
-        .scaleEffect(isCustomActive ? 1.08 : 1.0)
-        .animation(DSToken.Motion.toggle, value: isCustomActive)
-        .help("Custom color")
-        .accessibilityLabel("Custom theme color")
+        .animation(DSToken.Motion.toggle, value: client)
+    }
+
+    private func copy() {
+        Clipboard.copy(client.setup(executablePath: Bundle.main.executablePath ?? ""))
+        copies += 1
+        let copy = copies
+        withAnimation(DSToken.Motion.toggle) { showsCopied = true }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.6))
+            // A later copy restarts the confirmation.
+            guard copy == copies else { return }
+            withAnimation(DSToken.Motion.toggle) { showsCopied = false }
+        }
     }
 }
 
-/// Right-leaning diagonal half used by the "System" scheme tile
-/// (light on the left, dark on the right).
-private struct TrailingDiagonalHalf: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX + rect.width * 0.62, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.38, y: rect.maxY))
-        path.closeSubpath()
-        return path
+private extension View {
+    /// The agent picker's capsule: a fixed height, so its two halves match.
+    func chrome(height: CGFloat, fontSize: CGFloat, isEnabled: Bool) -> some View {
+        font(.system(size: fontSize, weight: .medium))
+            .padding(.horizontal, height * 0.42)
+            .frame(height: height)
+            .contentShape(Capsule())
+            // Glass behind the label, not around it: a label inside
+            // `glassEffect` is composited into the glass, and while the Copy
+            // button's text and symbol swap, the swapping content showed as
+            // a dark box inside the capsule.
+            .background {
+                Capsule()
+                    .fill(.clear)
+                    .glassEffect(.regular.interactive(), in: Capsule())
+            }
+            .opacity(isEnabled ? 1 : 0.45)
     }
 }
+
+extension AgentClient {
+    /// The agent's mark: Simple Icons' (CC0) Claude, OpenAI and GitHub
+    /// Copilot logos, bundled as template vectors, and a symbol for the rest.
+    var logo: Image {
+        switch self {
+        case .claudeCode: Image("AgentLogoClaude")
+        case .codex: Image("AgentLogoOpenAI")
+        case .vsCode: Image("AgentLogoCopilot")
+        case .other: Image(systemName: "ellipsis.curlybraces")
+        }
+    }
+
+    /// The agent's signature colour, for its mark.
+    var color: Color {
+        switch self {
+        case .claudeCode: Color(red: 0.851, green: 0.467, blue: 0.341)   // Claude's #D97757
+        case .codex: .primary                                              // OpenAI's black / white
+        case .vsCode: Color(red: 0.0, green: 0.478, blue: 0.8)             // VS Code's #007ACC
+        case .other: .secondary
+        }
+    }
+}
+#endif

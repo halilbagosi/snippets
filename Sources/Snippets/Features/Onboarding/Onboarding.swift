@@ -129,8 +129,89 @@ struct OnboardingPage: Identifiable, Sendable {
     /// …and the point of the device (frame included) that stays put while it
     /// is. Picking the feature's own position keeps it in view.
     let focus: UnitPoint
+    /// Settings the page lets you change on the spot, drawn between the Mac
+    /// and the copy. Pages with controls shrink the Mac to make room.
+    var controls: Controls? = nil
 
-    static let all: [OnboardingPage] = [
+    enum Controls: Sendable {
+        /// Agent access over MCP, with the setup to copy into an agent; an
+        /// agent session is drawn over the window. Not in App Store builds.
+        case agents
+        /// Colour scheme and accent colour, applied as they are picked.
+        case appearance
+    }
+
+    static let all: [OnboardingPage] = {
+        var pages = features
+        #if !APP_STORE
+        pages.append(agents)
+        #endif
+        pages.append(appearance)
+        return pages
+    }()
+
+    #if !APP_STORE
+    static let agents = OnboardingPage(
+        id: "agents",
+        title: "Bring Your Agents",
+        subtitle: "Claude Code, Codex, Cursor and any MCP client\ncan find and use your snippets.",
+        windowImage: "OnboardingGallery",
+        panelImage: nil,
+        zoom: 0.7,
+        focus: .top,
+        controls: .agents
+    )
+    #endif
+
+    static let appearance = OnboardingPage(
+        id: "appearance",
+        title: "Make It Yours",
+        subtitle: "Pick a look and an accent colour.\nBoth are in Settings whenever you change your mind.",
+        // Stands in for the default accent; the page shows the shot for the
+        // accent you pick. See ``accentWindowImage(forHex:)``.
+        windowImage: "OnboardingAccentBlue",
+        panelImage: nil,
+        zoom: 0.7,
+        focus: .top,
+        controls: .appearance
+    )
+
+    /// The gallery shot for an accent on the appearance page. Each preset
+    /// accent has its own capture, `OnboardingAccent<Name>`, taken with the
+    /// gallery's drifting gradient held still so only the accent differs
+    /// between them; a custom colour gets the nearest preset's.
+    @MainActor
+    static func accentWindowImage(forHex hex: String) -> String {
+        let presets = AppearanceView.presetColors
+        let name: String
+        if let rgb = rgb(hex) {
+            name = presets.min { a, b in
+                distance(rgb, Self.rgb(a.hex)) < distance(rgb, Self.rgb(b.hex))
+            }?.name ?? presets[0].name
+        } else {
+            name = presets[0].name
+        }
+        return "OnboardingAccent\(name)"
+    }
+
+    /// `#RRGGBB` as 0–1 components; nil when it isn't one.
+    private static func rgb(_ hex: String) -> SIMD3<Double>? {
+        let digits = hex.hasPrefix("#") ? hex.dropFirst() : Substring(hex)
+        guard digits.count == 6, let value = UInt32(digits, radix: 16) else { return nil }
+        return SIMD3(
+            Double((value >> 16) & 0xFF),
+            Double((value >> 8) & 0xFF),
+            Double(value & 0xFF)
+        ) / 255
+    }
+
+    private static func distance(_ a: SIMD3<Double>, _ b: SIMD3<Double>?) -> Double {
+        guard let b else { return .infinity }
+        let d = a - b
+        return (d * d).sum()
+    }
+
+    private static let features: [OnboardingPage] = [
         OnboardingPage(
             id: "welcome",
             title: "Welcome to Snippets",
