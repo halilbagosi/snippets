@@ -425,32 +425,44 @@ struct AgentSetupPicker: View {
             .accessibilityLabel("Agent")
             .accessibilityValue(Text(client.name))
 
-            Button(action: copy) {
-                HStack(spacing: 5) {
-                    // The same box as the agent's mark, so both buttons are
-                    // one height: the document symbol is taller than text.
-                    Image(systemName: showsCopied ? "checkmark" : "doc.on.doc")
-                        .resizable()
-                        .scaledToFit()
-                        .contentTransition(.symbolEffect(.replace))
-                        .symbolEffect(.bounce, options: .nonRepeating, value: reduceMotion ? 0 : copies)
-                        .frame(width: 14, height: 14)
-                    // Both words always laid out, so the button is as wide as
-                    // "Copied" from the start, and swapped by opacity rather
-                    // than morphed: the text morph drew each word in a layer
-                    // of its own, which outlined the text with a faint box.
-                    ZStack(alignment: .leading) {
-                        Text("Copy").opacity(showsCopied ? 0 : 1)
-                        Text("Copied").opacity(showsCopied ? 1 : 0)
-                    }
+            // The button hugs "Copy" and grows for "Copied" into room held
+            // for it here, so the agent menu beside it never moves.
+            ZStack(alignment: .leading) {
+                copyLabel(copied: true).hidden()
+
+                Button(action: copy) {
+                    copyLabel(copied: showsCopied)
                 }
-                .foregroundStyle(showsCopied ? Color.green : Color.primary)
-                .chrome(height: height, fontSize: fontSize, isEnabled: isEnabled)
+                .buttonStyle(.plain)
+                .help("Copy the setup for \(client.name)")
             }
-            .buttonStyle(.plain)
-            .help("Copy the setup for \(client.name)")
         }
         .animation(DSToken.Motion.toggle, value: client)
+    }
+
+    private func copyLabel(copied: Bool) -> some View {
+        HStack(spacing: 5) {
+            // The same box as the agent's mark, so both buttons are
+            // one height: the document symbol is taller than text.
+            Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                .resizable()
+                .scaledToFit()
+                .contentTransition(.symbolEffect(.replace))
+                .symbolEffect(.bounce, options: .nonRepeating, value: reduceMotion ? 0 : copies)
+                .frame(width: 14, height: 14)
+            // Both words always laid out and swapped by opacity rather than
+            // morphed: the text morph drew each word in a layer of its own,
+            // which outlined the text with a faint box. Only the showing
+            // word sets the width, and the clip keeps the longer one inside
+            // the capsule while it widens.
+            WidthOfSelection(selection: copied ? 1 : 0) {
+                Text("Copy").opacity(copied ? 0 : 1)
+                Text("Copied").opacity(copied ? 1 : 0)
+            }
+            .clipped()
+        }
+        .foregroundStyle(copied ? Color.green : Color.primary)
+        .chrome(height: height, fontSize: fontSize, isEnabled: isEnabled)
     }
 
     private func copy() {
@@ -463,6 +475,25 @@ struct AgentSetupPicker: View {
             // A later copy restarts the confirmation.
             guard copy == copies else { return }
             withAnimation(DSToken.Motion.toggle) { showsCopied = false }
+        }
+    }
+}
+
+/// Stacks its subviews on the leading edge but takes the size of the
+/// selected one, so swapping words resizes what holds them.
+private struct WidthOfSelection: Layout {
+    var selection: Int
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard subviews.indices.contains(selection) else { return .zero }
+        let width = subviews[selection].sizeThatFits(.unspecified).width
+        let height = subviews.map { $0.sizeThatFits(.unspecified).height }.max() ?? 0
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for subview in subviews {
+            subview.place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading, proposal: .unspecified)
         }
     }
 }
