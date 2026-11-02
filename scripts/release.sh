@@ -3,6 +3,9 @@
 #
 #   scripts/release.sh                      # build/release/Snippets.dmg
 #   scripts/release.sh --upload owner/repo  # ...and attach it to a GitHub prerelease
+#   scripts/release.sh --upload owner/repo --final notes.html
+#                                           # ...as a full release, added to
+#                                           # site/appcast.xml for in-app updates
 #
 # One-time setup:
 #   - Xcode ▸ Settings ▸ Accounts signed in to team KCH5545G6F (export creates
@@ -12,6 +15,7 @@
 #         --apple-id <apple-id> --team-id KCH5545G6F
 #   - dmgbuild, which lays out the DMG window:
 #       python3 -m pip install --user dmgbuild
+#   - The Sparkle EdDSA key in the login keychain (generate_keys; see README).
 #
 # Env: NOTARY_PROFILE (default snippets-notary), BUILD_NUMBER (default: the
 # commit count, so every release from a newer commit sorts higher).
@@ -21,9 +25,11 @@ cd "$(dirname "$0")/.."
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 
 UPLOAD_REPO=""
+FINAL_NOTES=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --upload) UPLOAD_REPO="${2:?--upload needs owner/repo}"; shift 2 ;;
+        --final) FINAL_NOTES="${2:?--final needs a release-notes HTML file}"; shift 2 ;;
         -h|--help) sed -n '2,/^set -euo/p' "$0" | sed '$d'; exit 0 ;;
         *) echo "unknown argument: $1" >&2; exit 64 ;;
     esac
@@ -57,6 +63,26 @@ if [[ -n "$UPLOAD_REPO" ]]; then
         exit 1
     }
 fi
+PACKAGES=build/packages
+SPARKLE_BIN="$PACKAGES/artifacts/sparkle/Sparkle/bin"
+if [[ -n "$FINAL_NOTES" ]]; then
+    [[ -n "$UPLOAD_REPO" ]] || { echo "error: --final needs --upload owner/repo" >&2; exit 64; }
+    [[ -f "$FINAL_NOTES" ]] || { echo "error: no release notes at $FINAL_NOTES" >&2; exit 1; }
+    [[ -z "$(git status --porcelain)" ]] || {
+        echo "error: a final release must be built from a clean tree" >&2
+        exit 1
+    }
+    security find-generic-password -s "https://sparkle-project.org" -a ed25519 >/dev/null 2>&1 || {
+        echo "error: no Sparkle signing key in the keychain (run generate_keys; see README)" >&2
+        exit 1
+    }
+    MARKETING_VERSION=$(xcodebuild -project Snippets.xcodeproj -scheme Snippets -configuration Release \
+        -showBuildSettings 2>/dev/null | sed -n 's/^ *MARKETING_VERSION = //p' | head -1)
+    if gh release view "v$MARKETING_VERSION" --repo "$UPLOAD_REPO" >/dev/null 2>&1; then
+        echo "error: v$MARKETING_VERSION is already released; bump MARKETING_VERSION first" >&2
+        exit 1
+    fi
+fi
 xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null || {
     echo "error: no notary credentials in keychain profile '$NOTARY_PROFILE' (see the setup notes in $0)" >&2
     exit 1
@@ -69,6 +95,7 @@ echo "==> Archiving (build $BUILD_NUMBER)"
 xcodebuild archive \
     -project Snippets.xcodeproj -scheme Snippets -configuration Release \
     -destination 'generic/platform=macOS' -archivePath "$ARCHIVE" \
+    -clonedSourcePackagesDirPath "$PACKAGES" \
     CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
     -quiet
 
@@ -133,7 +160,26 @@ trap - EXIT
 
 echo "==> $DMG — Snippets $VERSION ($BUILD_NUMBER)"
 
-if [[ -n "$UPLOAD_REPO" ]]; then
+if [[ -n "$FINAL_NOTES" ]]; then
+    TAG="v$VERSION"
+    # sign_update prints: sparkle:edSignature="…" length="…"
+    SIGNED=$("$SPARKLE_BIN/sign_update" "$DMG")
+    SIGNATURE=$(sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p' <<<"$SIGNED")
+    LENGTH=$(sed -n 's/.*length="\([0-9]*\)".*/\1/p' <<<"$SIGNED")
+    [[ -n "$SIGNATURE" && -n "$LENGTH" ]] || { echo "error: sign_update gave: $SIGNED" >&2; exit 1; }
+
+    echo "==> Publishing $TAG to $UPLOAD_REPO"
+    gh release create "$TAG" "$DMG" --repo "$UPLOAD_REPO" --latest \
+        --title "Snippets $VERSION" --notes-file "$FINAL_NOTES"
+
+    python3 scripts/appcast.py --appcast site/appcast.xml \
+        --version "$VERSION" --build "$BUILD_NUMBER" \
+        --url "https://github.com/$UPLOAD_REPO/releases/download/$TAG/Snippets.dmg" \
+        --length "$LENGTH" --signature "$SIGNATURE" --min-system 26.0 \
+        --notes-file "$FINAL_NOTES"
+    echo "==> site/appcast.xml now offers $VERSION ($BUILD_NUMBER)."
+    echo "    Commit it and publish site/ to the Pages repo; installed copies see it on their next check."
+elif [[ -n "$UPLOAD_REPO" ]]; then
     TAG="v$VERSION-beta.$BUILD_NUMBER"
     echo "==> Publishing $TAG to $UPLOAD_REPO"
     gh release create "$TAG" "$DMG" --repo "$UPLOAD_REPO" --prerelease \
