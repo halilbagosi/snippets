@@ -80,7 +80,7 @@ PAGES = {
     "support": ("Snippets Support",
                 "Get help with Snippets for macOS: answers to common questions and how to contact support."),
     "privacy": ("Privacy Policy · Snippets",
-                "Snippets collects no personal data. Everything you create stays on your Mac."),
+                "Snippets collects no personal data. Your library stays on your Mac unless you connect an AI agent."),
     "license": ("License Agreement · Snippets",
                 "The end user licence agreement for Snippets for macOS: free for personal and commercial use."),
 }
