@@ -13,7 +13,9 @@ SP = "{http://www.andymatuschak.org/xml-namespaces/sparkle}"
 
 class AppcastTests(unittest.TestCase):
     def setUp(self):
-        self.dir = pathlib.Path(tempfile.mkdtemp())
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.dir = pathlib.Path(tmp.name)
         self.feed = self.dir / "appcast.xml"
         self.feed.write_text(SEED.read_text())
         self.notes = self.dir / "notes.html"
@@ -26,6 +28,12 @@ class AppcastTests(unittest.TestCase):
              "--url", f"https://github.com/o/r/releases/download/v{version}/Snippets.dmg",
              "--length", "1234", "--signature", "c2ln", "--min-system", "26.0",
              "--notes-file", str(self.notes)],
+            capture_output=True, text=True)
+
+    def check(self, build):
+        return subprocess.run(
+            [sys.executable, "-I", str(SCRIPT), "--appcast", str(self.feed),
+             "--build", str(build), "--check"],
             capture_output=True, text=True)
 
     def items(self):
@@ -54,6 +62,30 @@ class AppcastTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("812", result.stderr)
         self.assertEqual(len(self.items()), 1)
+
+    def test_check_passes_a_newer_build_without_writing(self):
+        self.add("1.1", 812)
+        before = self.feed.read_bytes()
+        self.assertEqual(self.check(813).returncode, 0)
+        self.assertEqual(self.feed.read_bytes(), before)
+
+    def test_check_refuses_a_build_that_is_not_newer(self):
+        self.add("1.1", 812)
+        before = self.feed.read_bytes()
+        result = self.check(812)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("812", result.stderr)
+        self.assertEqual(self.feed.read_bytes(), before)
+
+    def test_adding_requires_the_item_fields(self):
+        result = subprocess.run(
+            [sys.executable, "-I", str(SCRIPT), "--appcast", str(self.feed),
+             "--version", "1.1", "--build", "812", "--length", "1234",
+             "--signature", "c2ln", "--min-system", "26.0",
+             "--notes-file", str(self.notes)],
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--url", result.stderr)
 
     def test_keeps_the_sparkle_prefix(self):
         self.add("1.1", 812)

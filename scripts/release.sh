@@ -78,6 +78,9 @@ if [[ -n "$FINAL_NOTES" ]]; then
     }
     MARKETING_VERSION=$(xcodebuild -project Snippets.xcodeproj -scheme Snippets -configuration Release \
         -showBuildSettings 2>/dev/null | sed -n 's/^ *MARKETING_VERSION = //p' | head -1)
+    [[ -n "$MARKETING_VERSION" ]] || { echo "error: couldn't read MARKETING_VERSION" >&2; exit 1; }
+    # A build number the feed would refuse is cheaper to find now than after the archive.
+    python3 scripts/appcast.py --appcast site/appcast.xml --build "$BUILD_NUMBER" --check
     if gh release view "v$MARKETING_VERSION" --repo "$UPLOAD_REPO" >/dev/null 2>&1; then
         echo "error: v$MARKETING_VERSION is already released; bump MARKETING_VERSION first" >&2
         exit 1
@@ -168,15 +171,20 @@ if [[ -n "$FINAL_NOTES" ]]; then
     LENGTH=$(sed -n 's/.*length="\([0-9]*\)".*/\1/p' <<<"$SIGNED")
     [[ -n "$SIGNATURE" && -n "$LENGTH" ]] || { echo "error: sign_update gave: $SIGNED" >&2; exit 1; }
 
-    echo "==> Publishing $TAG to $UPLOAD_REPO"
-    gh release create "$TAG" "$DMG" --repo "$UPLOAD_REPO" --latest \
-        --title "Snippets $VERSION" --notes-file "$FINAL_NOTES"
-
+    # Feed first: if it fails, nothing public exists yet and a rerun isn't blocked.
     python3 scripts/appcast.py --appcast site/appcast.xml \
         --version "$VERSION" --build "$BUILD_NUMBER" \
         --url "https://github.com/$UPLOAD_REPO/releases/download/$TAG/Snippets.dmg" \
         --length "$LENGTH" --signature "$SIGNATURE" --min-system 26.0 \
         --notes-file "$FINAL_NOTES"
+
+    echo "==> Publishing $TAG to $UPLOAD_REPO"
+    if ! gh release create "$TAG" "$DMG" --repo "$UPLOAD_REPO" --latest \
+        --title "Snippets $VERSION" --notes-file "$FINAL_NOTES"; then
+        git checkout -- site/appcast.xml
+        echo "error: release not published; site/appcast.xml restored" >&2
+        exit 1
+    fi
     echo "==> site/appcast.xml now offers $VERSION ($BUILD_NUMBER)."
     echo "    Commit it and publish site/ to the Pages repo; installed copies see it on their next check."
 elif [[ -n "$UPLOAD_REPO" ]]; then

@@ -14,23 +14,37 @@ SPARKLE = "http://www.andymatuschak.org/xml-namespaces/sparkle"
 SP = "{%s}" % SPARKLE
 
 
+def require_newer(channel, build, path):
+    listed = [int(v.text) for v in channel.iter(SP + "version")]
+    if listed and build <= max(listed):
+        print(f"error: build {build} is not newer than {max(listed)}, already in {path}",
+              file=sys.stderr)
+        sys.exit(1)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    for name in ("appcast", "version", "url", "signature", "min-system", "notes-file"):
-        p.add_argument("--" + name, required=True)
+    p.add_argument("--appcast", required=True)
     p.add_argument("--build", required=True, type=int)
-    p.add_argument("--length", required=True, type=int)
+    # release.sh runs this before the archive, so a stale build fails in seconds.
+    p.add_argument("--check", action="store_true",
+                   help="only verify --build is newer; write nothing")
+    for name in ("version", "url", "signature", "min-system", "notes-file", "length"):
+        p.add_argument("--" + name, type=int if name == "length" else str)
     a = p.parse_args()
+    if not a.check:
+        missing = [n for n in ("version", "url", "signature", "min_system", "notes_file", "length")
+                   if getattr(a, n) is None]
+        if missing:
+            p.error("required without --check: " + ", ".join("--" + n.replace("_", "-") for n in missing))
 
     ET.register_namespace("sparkle", SPARKLE)
     tree = ET.parse(a.appcast)
     channel = tree.getroot().find("channel")
 
-    listed = [int(v.text) for v in channel.iter(SP + "version")]
-    if listed and a.build <= max(listed):
-        print(f"error: build {a.build} is not newer than {max(listed)}, already in {a.appcast}",
-              file=sys.stderr)
-        sys.exit(1)
+    require_newer(channel, a.build, a.appcast)
+    if a.check:
+        return
 
     item = ET.Element("item")
     ET.SubElement(item, "title").text = f"Snippets {a.version}"
