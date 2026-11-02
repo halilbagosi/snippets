@@ -96,6 +96,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 MenuBarController.shared.install()
             }
             ClipboardMonitor.shared.start()
+            #if !APP_STORE
+            UpdateController.shared.startIfAllowed(licenseAccepted: true)
+            #endif
         }
         #if !APP_STORE
         // Test runs must never serve the user's real socket. Not gated on the
@@ -226,6 +229,9 @@ struct SnippetsApp: App {
             CommandGroup(replacing: .newItem) { }
             HelpCommands(onboarding: onboarding)
             TransferCommands()
+            #if !APP_STORE
+            UpdateCommands()
+            #endif
             CommandGroup(after: .windowArrangement) {
                 Button("Toggle Full Screen") {
                     NSApp.keyWindow?.toggleFullScreen(nil)

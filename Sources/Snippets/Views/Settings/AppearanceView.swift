@@ -61,6 +61,7 @@ struct AppearanceView: View {
                 behaviorCard
                 #if !APP_STORE
                 agentsCard
+                updatesCard
                 #endif
                 #if DEBUG
                 debugCard
@@ -308,6 +309,52 @@ struct AppearanceView: View {
                 }
 
                 Spacer(minLength: 0)
+            }
+        }
+    }
+    #endif
+
+    // MARK: - Updates
+
+    #if !APP_STORE
+    /// Sparkle's switch and a manual check. The caption names the one host
+    /// the check contacts, as the privacy policy does.
+    private var updatesCard: some View {
+        let updates = UpdateController.shared
+        let info = Bundle.main.infoDictionary ?? [:]
+
+        return glassCard {
+            sectionLabel("Updates")
+
+            behaviorRow(
+                icon: "arrow.down.circle",
+                title: "Check for Updates Automatically",
+                caption: updates.isRunning
+                    ? "Once a day, ask snippets.halilbagosi.com whether a newer version is out"
+                    : "Updates are off in development builds",
+                isOn: Binding(
+                    get: { updates.automaticallyChecks },
+                    set: { updates.setAutomaticallyChecks($0) }
+                )
+            )
+            .disabled(!updates.isRunning)
+
+            Divider().opacity(0.5)
+
+            HStack {
+                Text(UpdatePolicy.statusLine(
+                    version: info["CFBundleShortVersionString"] as? String ?? "?",
+                    build: info["CFBundleVersion"] as? String ?? "?",
+                    lastCheck: updates.lastUpdateCheckDate
+                ))
+                .font(.system(size: 11))
+                .foregroundStyle(theme.textMuted)
+
+                Spacer(minLength: 12)
+
+                Button("Check Now") { updates.checkForUpdates() }
+                    .controlSize(.small)
+                    .disabled(!updates.canCheckForUpdates)
             }
         }
     }

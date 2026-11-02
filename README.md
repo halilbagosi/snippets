@@ -244,6 +244,20 @@ the two must agree on icon positions. One-time setup:
    xcrun notarytool store-credentials snippets-notary --apple-id <apple-id> --team-id KCH5545G6F
    ```
 3. Install dmgbuild: `python3 -m pip install --user dmgbuild`.
+4. Create the Sparkle signing key, once and never again:
+
+   ```sh
+   xcodebuild -project Snippets.xcodeproj -scheme Snippets -resolvePackageDependencies -clonedSourcePackagesDirPath build/packages
+   build/packages/artifacts/sparkle/Sparkle/bin/generate_keys
+   build/packages/artifacts/sparkle/Sparkle/bin/generate_keys -x <somewhere-safe>/sparkle-private-key.txt
+   ```
+
+   The public half is `SUPublicEDKey` in `Snippets-Info.plist`. The private half
+   stays in the login keychain, and the exported copy is its backup. Without it,
+   no installed copy can ever be updated again. On another Mac, import the
+   backup with `generate_keys -f <backup>`; never run plain `generate_keys`
+   there, and never change `SUPublicEDKey`, which would strand every installed
+   copy. `release.sh --final` refuses to run if the keychain key doesn't match it.
 
 Then:
 
@@ -254,6 +268,31 @@ scripts/release.sh --upload owner/repo  # ...and attach to a GitHub prerelease
 
 A prerelease is not what `releases/latest` resolves to, so the website keeps
 serving the last full release. Send testers the prerelease's own link.
+
+A version people should be offered in the app is a **final** release:
+
+```sh
+scripts/release.sh --upload halilbagosi/snippetsPage --final notes.html
+```
+
+Cut final releases from `main`: commit `site/appcast.xml` there and merge it
+back into `dev`. First bump `MARKETING_VERSION`. `notes.html` is an HTML fragment (`<ul><li>…</li></ul>`)
+that the app's update window shows. `BUILD_NUMBER` (env) overrides the commit count, but must exceed the newest
+feed entry; build numbers differ between branches because `main` counts merge
+commits. A build number that isn't newer than every entry in `site/appcast.xml`
+or in the live feed is refused before the build starts, as is a local feed that
+is behind the live one. The
+script publishes `v<version>` as the latest GitHub release and adds it to
+`site/appcast.xml`. Then commit that file
+and publish the site (see Website). Installed copies offer the update on their
+next daily check. Only final releases go into the appcast, so testers on a
+prerelease aren't offered anything until the next final release has a higher
+build number.
+
+Before the first final release, test one Release-to-Release update: a signed,
+notarized build at N updating to N+1 from a temporary https feed, once with a
+good signature and once with a corrupted one. The in-repo test only covered a
+Debug host.
 
 ### Adding files
 
@@ -321,6 +360,7 @@ mirrors `site/`, so without it the domain would be dropped.
   ```
 
 To publish, copy everything in `site/` except `build.py` and `pages/` into the
-Pages repo and push. The download buttons point at
+Pages repo and push. That includes `appcast.xml`, which installed copies check for
+updates. It must stay at the site root. The download buttons point at
 `releases/latest/download/Snippets.dmg` in that repo, so a release there with a
 `Snippets.dmg` asset is what visitors get.

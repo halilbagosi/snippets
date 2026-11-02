@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		SPARKLE0000000000000BLD1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = SPARKLE0000000000000PRD1 /* Sparkle */; };
 		4D435000000000000000B104 /* MCPStdioShimTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A104 /* MCPStdioShimTests.swift */; };
 		4D435000000000000000B103 /* MCPSocketServerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A103 /* MCPSocketServerTests.swift */; };
 		4D435000000000000000B110 /* AgentAccessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A110 /* AgentAccessTests.swift */; };
@@ -19,6 +20,7 @@
 		4D435000000000000000B001 /* MCPProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A001 /* MCPProtocol.swift */; };
 		A1F0EE0B00000000000000B1 /* AppLinksTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F0EE0B00000000000000F1 /* AppLinksTests.swift */; };
 		0B0A2D0100000000000000A5 /* LicenseAgreementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D0100000000000000A6 /* LicenseAgreementTests.swift */; };
+		UPDATETEST0000000000B001 /* UpdatePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPDATETEST0000000000F001 /* UpdatePolicyTests.swift */; };
 		0B0A2D0100000000000000A3 /* LicenseAgreementPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D0100000000000000A4 /* LicenseAgreementPrompt.swift */; };
 		0B0A2D0100000000000000A1 /* LicenseAgreement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D0100000000000000A2 /* LicenseAgreement.swift */; };
 		1E6A1D0C0000000000000003 /* LegalDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6A1D0C0000000000000004 /* LegalDocumentTests.swift */; };
@@ -128,6 +130,7 @@
 		A1B2C3D40001CAPBANNER /* CaptureBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002CAPBANNER /* CaptureBanner.swift */; };
 		A1B2C3D40001CLIPCAPTURE /* ClipboardCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002CLIPCAPTURE /* ClipboardCapture.swift */; };
 		A1B2C3D40001CLIPMONITOR /* ClipboardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002CLIPMONITOR /* ClipboardMonitor.swift */; };
+		UPDATECTRL0000000000B001 /* UpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPDATECTRL0000000000F001 /* UpdateController.swift */; };
 		A1B2C3D40001CODESHAPE /* CodeShapeHeuristics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002CODESHAPE /* CodeShapeHeuristics.swift */; };
 		A1B2C3D40001MENUBAR /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002MENUBAR /* MenuBarController.swift */; };
 		A1B2C3D40001PREVIEWTRUST /* PreviewTrust.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002PREVIEWTRUST /* PreviewTrust.swift */; };
@@ -176,6 +179,7 @@
 		E171FA3EFC0968C49328CD00 /* MetalDisintegrationOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = E26B11F164FE7140EB8BADA7 /* MetalDisintegrationOverlay.swift */; };
 		E275F13EA19A53681F553793 /* FilterTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = A526673AFEB2D7D97B6A125F /* FilterTag.swift */; };
 		E44E7EBA63F566394B2FF51F /* TransferCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964AFEF62C5E8FB2F8975326 /* TransferCommands.swift */; };
+		UPDATECMDS0000000000B001 /* UpdateCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPDATECMDS0000000000F001 /* UpdateCommands.swift */; };
 		E4DC41DAAC04839429AEC571 /* SnippetPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29E430CBE6D1CCAF9D1B5B9 /* SnippetPreviewView.swift */; };
 		EB29689EA72D86EE09C15C19 /* SnippetsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B9284FC624AB4701E78C6EA /* SnippetsApp.swift */; };
 		EBC24B86BF8A8F5BA787EEA2 /* SnippetLinker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E34CFE83F37D8E1D4023CA /* SnippetLinker.swift */; };
@@ -209,6 +213,7 @@
 		4D435000000000000000A001 /* MCPProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPProtocol.swift; sourceTree = "<group>"; };
 		A1F0EE0B00000000000000F1 /* AppLinksTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLinksTests.swift; sourceTree = "<group>"; };
 		0B0A2D0100000000000000A6 /* LicenseAgreementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseAgreementTests.swift; sourceTree = "<group>"; };
+		UPDATETEST0000000000F001 /* UpdatePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdatePolicyTests.swift; sourceTree = "<group>"; };
 		0B0A2D0100000000000000A4 /* LicenseAgreementPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseAgreementPrompt.swift; sourceTree = "<group>"; };
 		0B0A2D0100000000000000A2 /* LicenseAgreement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseAgreement.swift; sourceTree = "<group>"; };
 		1E6A1D0C0000000000000004 /* LegalDocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocumentTests.swift; sourceTree = "<group>"; };
@@ -301,6 +306,7 @@
 		93008995B81756F2952B4E33 /* NewSnippetIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSnippetIntent.swift; sourceTree = "<group>"; };
 		941B4888889E0A24B1E11498 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		964AFEF62C5E8FB2F8975326 /* TransferCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferCommands.swift; sourceTree = "<group>"; };
+		UPDATECMDS0000000000F001 /* UpdateCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCommands.swift; sourceTree = "<group>"; };
 		9E354289B46DE4F38455950B /* ColorPanelCenterer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorPanelCenterer.swift; sourceTree = "<group>"; };
 		9E4F3F66542C3CBC2A55DA1E /* DisintegrationShaders.metal.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = DisintegrationShaders.metal.txt; sourceTree = "<group>"; };
 		9F7660C09B90A40CD33676C8 /* react.production.min.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = react.production.min.js; sourceTree = "<group>"; };
@@ -310,6 +316,7 @@
 		A1B2C3D40002CAPBANNER /* CaptureBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureBanner.swift; sourceTree = "<group>"; };
 		A1B2C3D40002CLIPCAPTURE /* ClipboardCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardCapture.swift; sourceTree = "<group>"; };
 		A1B2C3D40002CLIPMONITOR /* ClipboardMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardMonitor.swift; sourceTree = "<group>"; };
+		UPDATECTRL0000000000F001 /* UpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateController.swift; sourceTree = "<group>"; };
 		A1B2C3D40002CODESHAPE /* CodeShapeHeuristics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeShapeHeuristics.swift; sourceTree = "<group>"; };
 		A1B2C3D40002MENUBAR /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		A1B2C3D40002PREVIEWTRUST /* PreviewTrust.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewTrust.swift; sourceTree = "<group>"; };
@@ -380,6 +387,17 @@
 		FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetImporterTests.swift; sourceTree = "<group>"; };
 		FDCE1D4586F0F153EC14552A /* MediaManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		SPARKLE0000000000000FWK1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				SPARKLE0000000000000BLD1 /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		0531673F4C20B2625BFAA76D /* ext */ = {
@@ -569,6 +587,7 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D40002CLIPMONITOR /* ClipboardMonitor.swift */,
+				UPDATECTRL0000000000F001 /* UpdateController.swift */,
 				4D435000000000000000A005 /* AgentAccess.swift */,
 				4D435000000000000000A004 /* MCPSocketServer.swift */,
 				A1B2C3D40002MENUBAR /* MenuBarController.swift */,
@@ -587,6 +606,7 @@
 			isa = PBXGroup;
 			children = (
 				964AFEF62C5E8FB2F8975326 /* TransferCommands.swift */,
+				UPDATECMDS0000000000F001 /* UpdateCommands.swift */,
 				6CE2410E27F5506076DCBF84 /* AppearanceSettings.swift */,
 				132202CF7B77D71B4D874FF4 /* HelpCommands.swift */,
 				F22332A83990D91C9C3A122D /* AppLinks.swift */,
@@ -639,6 +659,7 @@
 				0B0A2D010000000000000006 /* OnboardingTests.swift */,
 				A1F0EE0B00000000000000F1 /* AppLinksTests.swift */,
 				0B0A2D0100000000000000A6 /* LicenseAgreementTests.swift */,
+				UPDATETEST0000000000F001 /* UpdatePolicyTests.swift */,
 				1E6A1D0C0000000000000004 /* LegalDocumentTests.swift */,
 				5E57E5700000000000000816 /* MediaFileNameTests.swift */,
 				5E57E5700000000000000117 /* WebPreviewHTMLBuilderTests.swift */,
@@ -878,6 +899,7 @@
 			buildConfigurationList = 9A6CEFD86FB7856AB7344469 /* Build configuration list for PBXNativeTarget "Snippets" */;
 			buildPhases = (
 				1DF823E9F05EBAAD14B39BFC /* Sources */,
+				SPARKLE0000000000000FWK1 /* Frameworks */,
 				70AC69A876538F20EABAD2B1 /* Resources */,
 			);
 			buildRules = (
@@ -886,6 +908,7 @@
 			);
 			name = Snippets;
 			packageProductDependencies = (
+				SPARKLE0000000000000PRD1 /* Sparkle */,
 			);
 			productName = Snippets;
 			productReference = C865FC767A106A831B3B7ADC /* Snippets.app */;
@@ -920,6 +943,9 @@
 			);
 			mainGroup = 61EA2F68B57DA8FFC5853BB2;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				SPARKLE0000000000000PKG1 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BCC329E0F8754AC69CB26D35 /* Products */;
 			projectDirPath = "";
@@ -966,6 +992,7 @@
 			files = (
 				7F62BEEDE019601A65905EF2 /* AppEnvironment.swift in Sources */,
 				E44E7EBA63F566394B2FF51F /* TransferCommands.swift in Sources */,
+				UPDATECMDS0000000000B001 /* UpdateCommands.swift in Sources */,
 				3700B7C43CCFF5DA226AD2EE /* SnippetTransferController.swift in Sources */,
 				62D6BE34B6BA94FF9F3DE936 /* SnippetImporter.swift in Sources */,
 				B5B0E85A3DC87178E69928BA /* SnippetExporter.swift in Sources */,
@@ -1047,6 +1074,7 @@
 				A1B2C3D40001PREVIEWTRUST /* PreviewTrust.swift in Sources */,
 				A1B2C3D40001CAPBANNER /* CaptureBanner.swift in Sources */,
 				A1B2C3D40001CLIPMONITOR /* ClipboardMonitor.swift in Sources */,
+				UPDATECTRL0000000000B001 /* UpdateController.swift in Sources */,
 				4D435000000000000000B005 /* AgentAccess.swift in Sources */,
 				4D435000000000000000B004 /* MCPSocketServer.swift in Sources */,
 				4D435000000000000000B003 /* MCPStdioShim.swift in Sources */,
@@ -1127,6 +1155,7 @@
 				0B0A2D010000000000000005 /* OnboardingTests.swift in Sources */,
 				A1F0EE0B00000000000000B1 /* AppLinksTests.swift in Sources */,
 				0B0A2D0100000000000000A5 /* LicenseAgreementTests.swift in Sources */,
+				UPDATETEST0000000000B001 /* UpdatePolicyTests.swift in Sources */,
 				1E6A1D0C0000000000000003 /* LegalDocumentTests.swift in Sources */,
 				5E57E5700000000000000916 /* MediaFileNameTests.swift in Sources */,
 				5E57E5700000000000000217 /* WebPreviewHTMLBuilderTests.swift in Sources */,
@@ -1550,6 +1579,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		SPARKLE0000000000000PKG1 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.10.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		SPARKLE0000000000000PRD1 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SPARKLE0000000000000PKG1 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0776CFE640F03ED8FDC3F708 /* Project object */;
 }
