@@ -20,6 +20,7 @@
 		4D435000000000000000B001 /* MCPProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A001 /* MCPProtocol.swift */; };
 		A1F0EE0B00000000000000B1 /* AppLinksTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F0EE0B00000000000000F1 /* AppLinksTests.swift */; };
 		0B0A2D0100000000000000A5 /* LicenseAgreementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D0100000000000000A6 /* LicenseAgreementTests.swift */; };
+		UPDATETEST0000000000B001 /* UpdatePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPDATETEST0000000000F001 /* UpdatePolicyTests.swift */; };
 		0B0A2D0100000000000000A3 /* LicenseAgreementPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D0100000000000000A4 /* LicenseAgreementPrompt.swift */; };
 		0B0A2D0100000000000000A1 /* LicenseAgreement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D0100000000000000A2 /* LicenseAgreement.swift */; };
 		1E6A1D0C0000000000000003 /* LegalDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6A1D0C0000000000000004 /* LegalDocumentTests.swift */; };
@@ -129,6 +130,7 @@
 		A1B2C3D40001CAPBANNER /* CaptureBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002CAPBANNER /* CaptureBanner.swift */; };
 		A1B2C3D40001CLIPCAPTURE /* ClipboardCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002CLIPCAPTURE /* ClipboardCapture.swift */; };
 		A1B2C3D40001CLIPMONITOR /* ClipboardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002CLIPMONITOR /* ClipboardMonitor.swift */; };
+		UPDATECTRL0000000000B001 /* UpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPDATECTRL0000000000F001 /* UpdateController.swift */; };
 		A1B2C3D40001CODESHAPE /* CodeShapeHeuristics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002CODESHAPE /* CodeShapeHeuristics.swift */; };
 		A1B2C3D40001MENUBAR /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002MENUBAR /* MenuBarController.swift */; };
 		A1B2C3D40001PREVIEWTRUST /* PreviewTrust.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002PREVIEWTRUST /* PreviewTrust.swift */; };
@@ -210,6 +212,7 @@
 		4D435000000000000000A001 /* MCPProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPProtocol.swift; sourceTree = "<group>"; };
 		A1F0EE0B00000000000000F1 /* AppLinksTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLinksTests.swift; sourceTree = "<group>"; };
 		0B0A2D0100000000000000A6 /* LicenseAgreementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseAgreementTests.swift; sourceTree = "<group>"; };
+		UPDATETEST0000000000F001 /* UpdatePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdatePolicyTests.swift; sourceTree = "<group>"; };
 		0B0A2D0100000000000000A4 /* LicenseAgreementPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseAgreementPrompt.swift; sourceTree = "<group>"; };
 		0B0A2D0100000000000000A2 /* LicenseAgreement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseAgreement.swift; sourceTree = "<group>"; };
 		1E6A1D0C0000000000000004 /* LegalDocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocumentTests.swift; sourceTree = "<group>"; };
@@ -311,6 +314,7 @@
 		A1B2C3D40002CAPBANNER /* CaptureBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureBanner.swift; sourceTree = "<group>"; };
 		A1B2C3D40002CLIPCAPTURE /* ClipboardCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardCapture.swift; sourceTree = "<group>"; };
 		A1B2C3D40002CLIPMONITOR /* ClipboardMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardMonitor.swift; sourceTree = "<group>"; };
+		UPDATECTRL0000000000F001 /* UpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateController.swift; sourceTree = "<group>"; };
 		A1B2C3D40002CODESHAPE /* CodeShapeHeuristics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeShapeHeuristics.swift; sourceTree = "<group>"; };
 		A1B2C3D40002MENUBAR /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		A1B2C3D40002PREVIEWTRUST /* PreviewTrust.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewTrust.swift; sourceTree = "<group>"; };
@@ -581,6 +585,7 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D40002CLIPMONITOR /* ClipboardMonitor.swift */,
+				UPDATECTRL0000000000F001 /* UpdateController.swift */,
 				4D435000000000000000A005 /* AgentAccess.swift */,
 				4D435000000000000000A004 /* MCPSocketServer.swift */,
 				A1B2C3D40002MENUBAR /* MenuBarController.swift */,
@@ -651,6 +656,7 @@
 				0B0A2D010000000000000006 /* OnboardingTests.swift */,
 				A1F0EE0B00000000000000F1 /* AppLinksTests.swift */,
 				0B0A2D0100000000000000A6 /* LicenseAgreementTests.swift */,
+				UPDATETEST0000000000F001 /* UpdatePolicyTests.swift */,
 				1E6A1D0C0000000000000004 /* LegalDocumentTests.swift */,
 				5E57E5700000000000000816 /* MediaFileNameTests.swift */,
 				5E57E5700000000000000117 /* WebPreviewHTMLBuilderTests.swift */,
@@ -1064,6 +1070,7 @@
 				A1B2C3D40001PREVIEWTRUST /* PreviewTrust.swift in Sources */,
 				A1B2C3D40001CAPBANNER /* CaptureBanner.swift in Sources */,
 				A1B2C3D40001CLIPMONITOR /* ClipboardMonitor.swift in Sources */,
+				UPDATECTRL0000000000B001 /* UpdateController.swift in Sources */,
 				4D435000000000000000B005 /* AgentAccess.swift in Sources */,
 				4D435000000000000000B004 /* MCPSocketServer.swift in Sources */,
 				4D435000000000000000B003 /* MCPStdioShim.swift in Sources */,
@@ -1144,6 +1151,7 @@
 				0B0A2D010000000000000005 /* OnboardingTests.swift in Sources */,
 				A1F0EE0B00000000000000B1 /* AppLinksTests.swift in Sources */,
 				0B0A2D0100000000000000A5 /* LicenseAgreementTests.swift in Sources */,
+				UPDATETEST0000000000B001 /* UpdatePolicyTests.swift in Sources */,
 				1E6A1D0C0000000000000003 /* LegalDocumentTests.swift in Sources */,
 				5E57E5700000000000000916 /* MediaFileNameTests.swift in Sources */,
 				5E57E5700000000000000217 /* WebPreviewHTMLBuilderTests.swift in Sources */,
