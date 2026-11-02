@@ -254,7 +254,10 @@ the two must agree on icon positions. One-time setup:
 
    The public half is `SUPublicEDKey` in `Snippets-Info.plist`. The private half
    stays in the login keychain, and the exported copy is its backup. Without it,
-   no installed copy can ever be updated again.
+   no installed copy can ever be updated again. On another Mac, import the
+   backup with `generate_keys -f <backup>`; never run plain `generate_keys`
+   there, and never change `SUPublicEDKey`, which would strand every installed
+   copy. `release.sh --final` refuses to run if the keychain key doesn't match it.
 
 Then:
 
@@ -272,15 +275,24 @@ A version people should be offered in the app is a **final** release:
 scripts/release.sh --upload halilbagosi/snippetsPage --final notes.html
 ```
 
-First bump `MARKETING_VERSION`. `notes.html` is an HTML fragment (`<ul><li>…</li></ul>`)
-that the app's update window shows. A build number that isn't newer than every
-entry already in `site/appcast.xml` is refused before the build starts. The
+Cut final releases from `main`: commit `site/appcast.xml` there and merge it
+back into `dev`. First bump `MARKETING_VERSION`. `notes.html` is an HTML fragment (`<ul><li>…</li></ul>`)
+that the app's update window shows. `BUILD_NUMBER` (env) overrides the commit count, but must exceed the newest
+feed entry; build numbers differ between branches because `main` counts merge
+commits. A build number that isn't newer than every entry in `site/appcast.xml`
+or in the live feed is refused before the build starts, as is a local feed that
+is behind the live one. The
 script publishes `v<version>` as the latest GitHub release and adds it to
 `site/appcast.xml`. Then commit that file
 and publish the site (see Website). Installed copies offer the update on their
 next daily check. Only final releases go into the appcast, so testers on a
 prerelease aren't offered anything until the next final release has a higher
 build number.
+
+Before the first final release, test one Release-to-Release update: a signed,
+notarized build at N updating to N+1 from a temporary https feed, once with a
+good signature and once with a corrupted one. The in-repo test only covered a
+Debug host.
 
 ### Adding files
 
