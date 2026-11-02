@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>SUFeedURL</key>
+	<string>https://snippets.halilbagosi.com/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>TzhjW7NVf83y5fbawjC7AZC6Dbjml8ERalpNm8o8uEI=</string>
+	<key>SUEnableSystemProfiling</key>
+	<false/>
 	<key>CFBundleIconFile</key>
 	<string>SnippetsIcon</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
