@@ -36,6 +36,11 @@ class AppcastTests(unittest.TestCase):
              "--build", str(build), "--check"],
             capture_output=True, text=True)
 
+    def newest(self):
+        return subprocess.run(
+            [sys.executable, "-I", str(SCRIPT), "--appcast", str(self.feed), "--newest"],
+            capture_output=True, text=True)
+
     def items(self):
         return ET.parse(self.feed).getroot().find("channel").findall("item")
 
@@ -86,6 +91,25 @@ class AppcastTests(unittest.TestCase):
             capture_output=True, text=True)
         self.assertEqual(result.returncode, 2)
         self.assertIn("--url", result.stderr)
+
+    def test_newest_of_an_empty_feed_is_zero(self):
+        result = self.newest()
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.strip(), "0")
+
+    def test_newest_prints_the_highest_build(self):
+        self.add("1.1", 812)
+        self.add("1.2", 900)
+        self.assertEqual(self.newest().stdout.strip(), "900")
+
+    def test_non_integer_version_is_a_clean_error(self):
+        self.feed.write_text(self.feed.read_text().replace(
+            "</channel>",
+            "<item><sparkle:version>12abc</sparkle:version></item></channel>"))
+        for result in (self.check(900), self.newest()):
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("sparkle:version '12abc' is not a whole number", result.stderr)
+            self.assertNotIn("Traceback", result.stderr)
 
     def test_keeps_the_sparkle_prefix(self):
         self.add("1.1", 812)

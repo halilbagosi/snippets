@@ -79,8 +79,59 @@ if [[ -n "$FINAL_NOTES" ]]; then
     MARKETING_VERSION=$(xcodebuild -project Snippets.xcodeproj -scheme Snippets -configuration Release \
         -showBuildSettings 2>/dev/null | sed -n 's/^ *MARKETING_VERSION = //p' | head -1)
     [[ -n "$MARKETING_VERSION" ]] || { echo "error: couldn't read MARKETING_VERSION" >&2; exit 1; }
+    # The keychain key must be the one whose public half is baked into the app
+    # (SUPublicEDKey): installed copies verify updates against that, and a
+    # different key signs updates nobody will accept. `sign_update --verify`
+    # can't catch this; it derives the public key from the same keychain item
+    # it signed with. Resolving packages here makes generate_keys available
+    # before the build; it's fast once resolved. Only the public key is printed.
+    xcodebuild -project Snippets.xcodeproj -scheme Snippets -resolvePackageDependencies \
+        -clonedSourcePackagesDirPath "$PACKAGES" -quiet
+    SHIPPED_KEY=$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' Snippets-Info.plist 2>/dev/null || true)
+    KEYCHAIN_KEY=$("$SPARKLE_BIN/generate_keys" -p 2>/dev/null || true)
+    if [[ -z "$SHIPPED_KEY" || -z "$KEYCHAIN_KEY" || "$SHIPPED_KEY" != "$KEYCHAIN_KEY" ]]; then
+        echo "error: the Sparkle key in the keychain doesn't match SUPublicEDKey in Snippets-Info.plist." >&2
+        echo "       The keychain key isn't the one installed copies trust, so they would reject its updates." >&2
+        echo "       Never change SUPublicEDKey: that strands every installed copy." >&2
+        echo "       Import the backup of the original key with: $SPARKLE_BIN/generate_keys -f <backup>" >&2
+        exit 1
+    fi
     # A build number the feed would refuse is cheaper to find now than after the archive.
     python3 scripts/appcast.py --appcast site/appcast.xml --build "$BUILD_NUMBER" --check
+    # Same check against the live feed, which may be ahead of this branch's copy.
+    # (No trap: the script's EXIT trap is set and cleared around the DMG mount.)
+    LIVE_FEED=$(mktemp)
+    LIVE_STATUS=$(curl -sS -o "$LIVE_FEED" -w '%{http_code}' https://snippets.halilbagosi.com/appcast.xml) || {
+        rm -f "$LIVE_FEED"
+        echo "error: couldn't reach the live feed https://snippets.halilbagosi.com/appcast.xml" >&2
+        exit 1
+    }
+    case "$LIVE_STATUS" in
+        200)
+            python3 scripts/appcast.py --appcast "$LIVE_FEED" --build "$BUILD_NUMBER" --check || {
+                rm -f "$LIVE_FEED"
+                echo "error: build $BUILD_NUMBER isn't newer than the live feed; set BUILD_NUMBER higher" >&2
+                exit 1
+            }
+            LIVE_NEWEST=$(python3 scripts/appcast.py --appcast "$LIVE_FEED" --newest) || { rm -f "$LIVE_FEED"; exit 1; }
+            LOCAL_NEWEST=$(python3 scripts/appcast.py --appcast site/appcast.xml --newest)
+            rm -f "$LIVE_FEED"
+            if (( LIVE_NEWEST > LOCAL_NEWEST )); then
+                echo "error: the live feed lists build $LIVE_NEWEST but site/appcast.xml only $LOCAL_NEWEST;" >&2
+                echo "       your copy is stale. Check out the branch that has the latest feed (main) and retry." >&2
+                exit 1
+            fi
+            ;;
+        404)
+            rm -f "$LIVE_FEED"
+            echo "warning: no live feed yet (HTTP 404); fine for the first final release" >&2
+            ;;
+        *)
+            rm -f "$LIVE_FEED"
+            echo "error: live feed returned HTTP $LIVE_STATUS" >&2
+            exit 1
+            ;;
+    esac
     if gh release view "v$MARKETING_VERSION" --repo "$UPLOAD_REPO" >/dev/null 2>&1; then
         echo "error: v$MARKETING_VERSION is already released; bump MARKETING_VERSION first" >&2
         exit 1
@@ -123,6 +174,10 @@ grep -q "flags=.*runtime" <<<"$SIGNATURE" || {
 }
 
 VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist")
+if [[ -n "$FINAL_NOTES" && "$VERSION" != "$MARKETING_VERSION" ]]; then
+    echo "error: the built app is version $VERSION but MARKETING_VERSION is $MARKETING_VERSION" >&2
+    exit 1
+fi
 
 echo "==> Building DMG"
 # Window layout and background: scripts/dmg/ (render-background.swift draws it).
@@ -171,11 +226,14 @@ if [[ -n "$FINAL_NOTES" ]]; then
     LENGTH=$(sed -n 's/.*length="\([0-9]*\)".*/\1/p' <<<"$SIGNED")
     [[ -n "$SIGNATURE" && -n "$LENGTH" ]] || { echo "error: sign_update gave: $SIGNED" >&2; exit 1; }
 
+    MIN_SYSTEM=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist" 2>/dev/null || true)
+    [[ -n "$MIN_SYSTEM" ]] || { echo "error: $APP has no LSMinimumSystemVersion" >&2; exit 1; }
+
     # Feed first: if it fails, nothing public exists yet and a rerun isn't blocked.
     python3 scripts/appcast.py --appcast site/appcast.xml \
         --version "$VERSION" --build "$BUILD_NUMBER" \
         --url "https://github.com/$UPLOAD_REPO/releases/download/$TAG/Snippets.dmg" \
-        --length "$LENGTH" --signature "$SIGNATURE" --min-system 26.0 \
+        --length "$LENGTH" --signature "$SIGNATURE" --min-system "$MIN_SYSTEM" \
         --notes-file "$FINAL_NOTES"
 
     echo "==> Publishing $TAG to $UPLOAD_REPO"
@@ -183,6 +241,7 @@ if [[ -n "$FINAL_NOTES" ]]; then
         --title "Snippets $VERSION" --notes-file "$FINAL_NOTES"; then
         git checkout -- site/appcast.xml
         echo "error: release not published; site/appcast.xml restored" >&2
+        echo "       if a partial release or tag was created, remove it: gh release delete \"$TAG\" --repo \"$UPLOAD_REPO\" --cleanup-tag" >&2
         exit 1
     fi
     echo "==> site/appcast.xml now offers $VERSION ($BUILD_NUMBER)."

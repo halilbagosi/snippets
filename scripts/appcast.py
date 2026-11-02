@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Adds one release to the Sparkle appcast (site/appcast.xml), newest first.
 
-Called by release.sh --final; see the README's Releasing section. Refuses a
-build number that isn't higher than every one already listed, because
-Sparkle compares CFBundleVersion and would never offer it.
+Called by release.sh --final; see the README's Direct-download (Developer ID)
+build section. Refuses a build number that isn't higher than every one already
+listed, because Sparkle compares CFBundleVersion and would never offer it.
 """
 import argparse
 import email.utils
@@ -14,8 +14,20 @@ SPARKLE = "http://www.andymatuschak.org/xml-namespaces/sparkle"
 SP = "{%s}" % SPARKLE
 
 
+def listed_builds(channel, path):
+    builds = []
+    for v in channel.iter(SP + "version"):
+        text = (v.text or "").strip()
+        if not text.isascii() or not text.isdigit():
+            print(f"error: {path}: sparkle:version '{v.text}' is not a whole number",
+                  file=sys.stderr)
+            sys.exit(1)
+        builds.append(int(text))
+    return builds
+
+
 def require_newer(channel, build, path):
-    listed = [int(v.text) for v in channel.iter(SP + "version")]
+    listed = listed_builds(channel, path)
     if listed and build <= max(listed):
         print(f"error: build {build} is not newer than {max(listed)}, already in {path}",
               file=sys.stderr)
@@ -25,14 +37,18 @@ def require_newer(channel, build, path):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--appcast", required=True)
-    p.add_argument("--build", required=True, type=int)
+    p.add_argument("--build", type=int)
     # release.sh runs this before the archive, so a stale build fails in seconds.
     p.add_argument("--check", action="store_true",
                    help="only verify --build is newer; write nothing")
+    p.add_argument("--newest", action="store_true",
+                   help="print the highest sparkle:version listed (0 if none); write nothing")
     for name in ("version", "url", "signature", "min-system", "notes-file", "length"):
         p.add_argument("--" + name, type=int if name == "length" else str)
     a = p.parse_args()
-    if not a.check:
+    if not a.newest and a.build is None:
+        p.error("--build is required")
+    if not a.check and not a.newest:
         missing = [n for n in ("version", "url", "signature", "min_system", "notes_file", "length")
                    if getattr(a, n) is None]
         if missing:
@@ -41,6 +57,10 @@ def main():
     ET.register_namespace("sparkle", SPARKLE)
     tree = ET.parse(a.appcast)
     channel = tree.getroot().find("channel")
+
+    if a.newest:
+        print(max(listed_builds(channel, a.appcast), default=0))
+        return
 
     require_newer(channel, a.build, a.appcast)
     if a.check:
