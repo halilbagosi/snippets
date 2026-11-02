@@ -87,6 +87,9 @@ struct LicenseAgreementPrompt: View {
         // menu bar before the terms are accepted.
         MenuBarController.shared.install()
         ClipboardMonitor.shared.start()
+        #if !APP_STORE
+        UpdateController.shared.startIfAllowed(licenseAccepted: true)
+        #endif
         #endif
     }
 }
