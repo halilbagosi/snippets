@@ -81,13 +81,7 @@ enum SnippetsData {
         let alert = NSAlert()
         alert.alertStyle = .critical
         alert.messageText = "Snippets couldn’t open your library"
-        alert.informativeText = """
-            The library file may be damaged, or it was made by a newer version of Snippets.
-
-            \(error.localizedDescription)
-
-            Starting with an empty library moves the current file into a Backups folder; nothing is deleted.
-            """
+        alert.informativeText = StoreBootstrap.recoveryMessage(for: error)
         // Quit is first, so it is the default button: Return changes nothing.
         alert.addButton(withTitle: "Quit")
         alert.addButton(withTitle: "Show in Finder")

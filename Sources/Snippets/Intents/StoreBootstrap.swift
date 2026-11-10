@@ -91,6 +91,19 @@ enum StoreBackup {
 enum StoreRecoveryChoice { case quit, reveal, startEmpty }
 
 enum StoreBootstrap {
+    /// The recovery alert's informative text. A `SwiftDataError`'s description
+    /// is just "SwiftData.SwiftDataError error 1", which tells the user nothing,
+    /// so it is left out; other errors (such as a permission failure while
+    /// moving the file aside) do say something useful and are included.
+    static func recoveryMessage(for error: Error) -> String {
+        var paragraphs = ["The library file may be damaged, or it was made by a newer version of Snippets."]
+        if !(error is SwiftDataError) {
+            paragraphs.append(error.localizedDescription)
+        }
+        paragraphs.append("Starting with an empty library moves the current file into a Backups folder; nothing is deleted.")
+        return paragraphs.joined(separator: "\n\n")
+    }
+
     /// Opens the store, asking what to do each time it fails. Returns nil when
     /// the user chose to quit.
     @MainActor

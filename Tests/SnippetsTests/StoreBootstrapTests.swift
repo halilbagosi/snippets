@@ -127,6 +127,29 @@ final class StoreBootstrapTests: XCTestCase {
         XCTAssertTrue(fm.fileExists(atPath: destination.appending(path: "Snippets.store-shm").path))
     }
 
+    // MARK: - StoreBootstrap.recoveryMessage
+
+    private static let firstSentence = "The library file may be damaged, or it was made by a newer version of Snippets."
+    private static let lastSentence = "Starting with an empty library moves the current file into a Backups folder; nothing is deleted."
+
+    func test_recoveryMessage_swiftDataError_omitsTheRawError() {
+        let message = StoreBootstrap.recoveryMessage(for: SwiftDataError.loadIssueModelContainer)
+        XCTAssertFalse(message.contains("SwiftData"))
+        XCTAssertFalse(message.contains("error 1"))
+        XCTAssertEqual(message.components(separatedBy: "\n\n").count, 2)
+        XCTAssertTrue(message.hasPrefix(Self.firstSentence))
+        XCTAssertTrue(message.hasSuffix(Self.lastSentence))
+    }
+
+    func test_recoveryMessage_fileError_includesItsDescription() {
+        let error = CocoaError(.fileWriteNoPermission)
+        let paragraphs = StoreBootstrap.recoveryMessage(for: error).components(separatedBy: "\n\n")
+        XCTAssertEqual(paragraphs.count, 3)
+        XCTAssertEqual(paragraphs[0], Self.firstSentence)
+        XCTAssertEqual(paragraphs[1], error.localizedDescription)
+        XCTAssertEqual(paragraphs[2], Self.lastSentence)
+    }
+
     // MARK: - StoreBootstrap.open
 
     func test_open_succeedsFirstTry_neverAsks() throws {
