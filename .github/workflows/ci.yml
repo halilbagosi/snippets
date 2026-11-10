@@ -19,7 +19,7 @@ jobs:
   vendored-runtimes:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Verify vendored runtime checksums
         working-directory: Sources/Snippets/Resources/WebPreview
         run: |
@@ -32,10 +32,20 @@ jobs:
           echo "Verifying $(wc -l < /tmp/vendor.sha256) file(s):"
           shasum -a 256 -c /tmp/vendor.sha256
 
+  # appcast.py writes the feed every installed copy checks for updates. Its
+  # tests are stdlib-only and take a second; a regression here should fail a
+  # PR, not a release.
+  appcast-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Run appcast tests
+        run: python3 -I -m unittest discover -s scripts -p 'test_appcast.py'
+
   swift-tests:
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       # Tests are hosted by the app, so this builds and launches Snippets.app.
       # Signing is skipped: CI has no signing identity, and none is needed to
       # run unit tests locally on the runner.
@@ -60,8 +70,8 @@ jobs:
       run:
         working-directory: web/design-system
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
