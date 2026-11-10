@@ -164,10 +164,9 @@ struct SnippetImporter {
                 summary.skipped += 1
                 continue
             }
-            // Its code runs inside its dependents' combined previews, so their
-            // approvals go too.
-            distrusted.append(record.id)
-            distrusted += existing.dependents.compactMap(\.uuid)
+            // Its code runs inside every preview that links it, at any depth, so
+            // all of those approvals go too.
+            distrusted += existing.uuidsRunningThisCode
             replacedFiles += try overwrite(existing, with: record, collections: collectionsByID, in: context, newFiles: &newFiles)
             written.append((record, existing))
             summary.replaced += 1
