@@ -181,7 +181,8 @@ struct SnippetEditorView: View {
                 isPresented: $isPresentingCancelConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Discard", role: .destructive) { 
+                Button("Discard", role: .destructive) {
+                    viewModel.discardMediaChanges(using: mediaManager)
                     if let onRequestDismiss {
                         onRequestDismiss()
                     } else {
@@ -733,6 +734,7 @@ struct SnippetEditorView: View {
         )
 
         if didSave {
+            viewModel.commitMediaChanges(using: mediaManager)
             if let onRequestDismiss {
                 onRequestDismiss()
             } else {

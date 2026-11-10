@@ -30,6 +30,14 @@ final class SnippetEditorViewModel {
     var dependencies: [Snippet] = []
     var saveErrorMessage: String?
 
+    /// Attachments added in this editing session. Their files already exist in
+    /// the media directory (the picker copies on import) but no saved snippet
+    /// refers to them yet, so Discard must delete them.
+    @ObservationIgnored private var attachedThisSession: [MediaItem] = []
+    /// Saved attachments the user removed in this session. Their files are
+    /// deleted only once the removal is saved, so Discard loses nothing.
+    @ObservationIgnored private var removedThisSession: [MediaItem] = []
+
     private var hasLoaded = false
     private var trimmedTitle = ""
     private var trimmedCode = ""
@@ -134,16 +142,37 @@ final class SnippetEditorViewModel {
     }
 
     func attachMedia(using mediaManager: any MediaManaging) {
-        mediaItems.append(contentsOf: mediaManager.pickAndImport())
+        let added = mediaManager.pickAndImport()
+        attachedThisSession.append(contentsOf: added)
+        mediaItems.append(contentsOf: added)
     }
 
     func removeMediaItem(_ item: MediaItem, using mediaManager: any MediaManaging) {
         guard let index = mediaItems.firstIndex(where: { $0.persistentModelID == item.persistentModelID }) else {
             return
         }
-
         let removed = mediaItems.remove(at: index)
-        mediaManager.deleteFile(for: removed)
+        if let added = attachedThisSession.firstIndex(where: { $0.persistentModelID == removed.persistentModelID }) {
+            // Never saved anywhere: its file can go now.
+            attachedThisSession.remove(at: added)
+            mediaManager.deleteFile(for: removed)
+        } else {
+            removedThisSession.append(removed)
+        }
+    }
+
+    /// Call after a successful save: the removals are now real.
+    func commitMediaChanges(using mediaManager: any MediaManaging) {
+        removedThisSession.forEach(mediaManager.deleteFile(for:))
+        removedThisSession = []
+        attachedThisSession = []
+    }
+
+    /// Call when the user discards: additions never reached a saved snippet.
+    func discardMediaChanges(using mediaManager: any MediaManaging) {
+        attachedThisSession.forEach(mediaManager.deleteFile(for:))
+        attachedThisSession = []
+        removedThisSession = []
     }
 
     func headerFilename(isEditing: Bool) -> String {
