@@ -228,6 +228,11 @@ work. `swiftc` ad-hoc signs the dylibs it builds, and library validation would
 refuse to `dlopen` anything without this team's signature. Debug doesn't use
 the hardened runtime.
 
+Sparkle's exact version is pinned in the committed `Package.resolved`; release
+and CI builds refuse to re-resolve it. To upgrade, resolve in Xcode (File ▸
+Packages ▸ Update to Latest Package Versions), read Sparkle's release notes, and
+commit the changed `Package.resolved` as its own commit.
+
 `scripts/release.sh` archives Release, exports it with Developer ID, packages
 `build/release/Snippets.dmg`, notarizes and staples it, then checks it with
 Gatekeeper. The build number defaults to the commit count. The DMG window's
