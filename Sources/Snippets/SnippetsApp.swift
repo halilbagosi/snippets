@@ -163,6 +163,7 @@ enum SnippetsMain {
             MCPStdioShim.run()
         }
         #endif
+        SnippetsData.bootstrap()
         SnippetsApp.main()
     }
 }
