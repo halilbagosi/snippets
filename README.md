@@ -116,7 +116,8 @@ File ▸ Export Library… (⇧⌘E) writes every snippet outside Trash to one
 included. Export collection… (sidebar), Export… (snippet menu) and export in
 select mode write just those. File ▸ Import Snippets… (⇧⌘I), or opening a
 `.snippets` file, brings one in; a snippet already in the library asks Skip,
-Replace or Stop, with Apply to all. Preview permissions are never exported,
+Replace or Stop, with Apply to all. A `.snippets` file opened from Finder, AirDrop or a download asks before it is
+imported; File ▸ Import does not ask again. Preview permissions are never exported,
 and a replaced snippet loses its own. This is also how to move a library into
 the sandboxed App Store build, whose container starts empty.
 

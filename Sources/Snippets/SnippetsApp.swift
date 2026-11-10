@@ -145,7 +145,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// `handlesExternalEvents` is what gives a cold launch its window.
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls where url.pathExtension.lowercased() == "snippets" {
-            SnippetTransferController.shared.importFile(at: url)
+            SnippetTransferController.shared.importFile(at: url, confirmFirst: true)
         }
     }
 
