@@ -62,6 +62,7 @@
 		4926D30AB3A22D5DEFA9F689 /* react.production.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 9F7660C09B90A40CD33676C8 /* react.production.min.js */; };
 		49595C2F65E32BDA2D559953 /* babel.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 29089448FCCCF08708B6D5BE /* babel.min.js */; };
 		4A9995936C7133E38EFE0ECC /* SnippetsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE20D31F335E0361D10CC51 /* SnippetsData.swift */; };
+		5E0A00000000000000000005 /* StoreBootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0A00000000000000000006 /* StoreBootstrap.swift */; };
 		4B28ACF3E7434535A53A7557 /* MetalDisintegrationRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B2656C1F0CA0F70BF32616B /* MetalDisintegrationRenderer.swift */; };
 		4C1A7E0B93D25FA6180C4E21 /* BackButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F2D50C1A83B4E9D62C10FAB /* BackButton.swift */; };
 		4E9253E54F5DA0B1B83330E2 /* SnippetCollectionEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6AB4D23DA0BD9897EF31D0 /* SnippetCollectionEntity.swift */; };
@@ -188,6 +189,7 @@
 		F5959339759E376F7863731D /* SnippetGalleryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C656C885257DE5CAA7598C /* SnippetGalleryViewModel.swift */; };
 		F6E64CBF8C0BB58AA4AAC952 /* ColorPanelCenterer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E354289B46DE4F38455950B /* ColorPanelCenterer.swift */; };
 		F8C62E3A560D9AC54FF7E392 /* SnippetImporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */; };
+		5E0A00000000000000000003 /* StoreBootstrapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0A00000000000000000004 /* StoreBootstrapTests.swift */; };
 		5E0A00000000000000000001 /* StoreMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0A00000000000000000002 /* StoreMigrationTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -341,6 +343,7 @@
 		AB67D68F6543256833826354 /* react-dom.production.min.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "react-dom.production.min.js"; sourceTree = "<group>"; };
 		ABB52188275F693E8A62B426 /* SnippetEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetEntity.swift; sourceTree = "<group>"; };
 		ABE20D31F335E0361D10CC51 /* SnippetsData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsData.swift; sourceTree = "<group>"; };
+		5E0A00000000000000000006 /* StoreBootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreBootstrap.swift; sourceTree = "<group>"; };
 		ADD742F16AED07C5B6DA1EFE /* LanguageBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageBadge.swift; sourceTree = "<group>"; };
 		AE3C15B51B300315B4C9C82D /* SyntaxHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntaxHighlighter.swift; sourceTree = "<group>"; };
 		B0726DA6194BC768FB3E3CEF /* SnippetExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetExporter.swift; sourceTree = "<group>"; };
@@ -386,6 +389,7 @@
 		F9544908AF26BCE6FEDB330E /* MetalShaderPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalShaderPreviewView.swift; sourceTree = "<group>"; };
 		FAA046938633C6AB461C2EC3 /* Snippet+Linkable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Snippet+Linkable.swift"; sourceTree = "<group>"; };
 		FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetImporterTests.swift; sourceTree = "<group>"; };
+		5E0A00000000000000000004 /* StoreBootstrapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreBootstrapTests.swift; sourceTree = "<group>"; };
 		5E0A00000000000000000002 /* StoreMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreMigrationTests.swift; sourceTree = "<group>"; };
 		FDCE1D4586F0F153EC14552A /* MediaManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -558,6 +562,7 @@
 				C22D8859737516C8AF09273C /* SnippetQueryFilter.swift */,
 				4BE3D0EA66FC02B4904B45BB /* SnippetsAppShortcuts.swift */,
 				ABE20D31F335E0361D10CC51 /* SnippetsData.swift */,
+				5E0A00000000000000000006 /* StoreBootstrap.swift */,
 				CEC7CCF177163E4ECAF9E15C /* SnippetStore.swift */,
 				6835C4A57BCBDC4D200AAABA /* UUIDBackfill.swift */,
 				165104C8B6E69C3571DF211C /* Actions */,
@@ -621,6 +626,7 @@
 			isa = PBXGroup;
 			children = (
 				FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */,
+				5E0A00000000000000000004 /* StoreBootstrapTests.swift */,
 				5E0A00000000000000000002 /* StoreMigrationTests.swift */,
 				7EE544FC0CFAF7ADB212E29A /* SnippetExporterTests.swift */,
 				F34D7D26165772B2FBCD32A7 /* SnippetArchiveTests.swift */,
@@ -1062,6 +1068,7 @@
 				EB29689EA72D86EE09C15C19 /* SnippetsApp.swift in Sources */,
 				D0ADA8F0EE1B3C708048AA88 /* SnippetsAppShortcuts.swift in Sources */,
 				4A9995936C7133E38EFE0ECC /* SnippetsData.swift in Sources */,
+				5E0A00000000000000000005 /* StoreBootstrap.swift in Sources */,
 				43260EDC3C75C408FE45C49D /* StatusBar.swift in Sources */,
 				714157BF3E736FCB8F2A2078 /* SyntaxHighlighter.swift in Sources */,
 				CEFBD8DCF49611190B9FEAB9 /* Theme.swift in Sources */,
@@ -1119,6 +1126,7 @@
 			files = (
 				5E57E5700000000000000200 /* AppearanceSettingsTests.swift in Sources */,
 				F8C62E3A560D9AC54FF7E392 /* SnippetImporterTests.swift in Sources */,
+				5E0A00000000000000000003 /* StoreBootstrapTests.swift in Sources */,
 				5E0A00000000000000000001 /* StoreMigrationTests.swift in Sources */,
 				876B498FAF9B2921E1251B5E /* SnippetExporterTests.swift in Sources */,
 				3164264C7689400F187F3275 /* SnippetArchiveTests.swift in Sources */,
