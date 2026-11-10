@@ -20,4 +20,65 @@ final class SnippetDependenciesTests: XCTestCase {
         XCTAssertEqual(entry.dependencies.map(\.title), ["Theme"])
         XCTAssertEqual(css.dependents.map(\.title), ["Card"])
     }
+
+    @MainActor
+    private func makeContainer() throws -> ModelContainer {
+        try ModelContainer(
+            for: Snippet.self, MediaItem.self, SnippetCollection.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+    }
+
+    @MainActor
+    func test_uuidsRunningThisCode_selfFirst_thenAllDependentsAtAnyDepth() throws {
+        let container = try makeContainer(); let context = container.mainContext
+        let c = Snippet(uuid: UUID(), title: "C"), b = Snippet(uuid: UUID(), title: "B")
+        let a = Snippet(uuid: UUID(), title: "A"), unrelated = Snippet(uuid: UUID(), title: "U")
+        [c, b, a, unrelated].forEach(context.insert)
+        b.dependencies = [c]; a.dependencies = [b]
+        try context.save()
+
+        let ids = c.uuidsRunningThisCode
+        XCTAssertEqual(ids.first, c.uuid)
+        XCTAssertEqual(ids.count, 3)
+        XCTAssertEqual(Set(ids), [c.uuid!, b.uuid!, a.uuid!])
+        XCTAssertFalse(ids.contains(unrelated.uuid!))
+    }
+
+    @MainActor
+    func test_uuidsRunningThisCode_cycle_terminates_eachOnce() throws {
+        let container = try makeContainer(); let context = container.mainContext
+        let a = Snippet(uuid: UUID(), title: "A"), b = Snippet(uuid: UUID(), title: "B")
+        [a, b].forEach(context.insert)
+        a.dependencies = [b]; b.dependencies = [a]
+        try context.save()
+
+        XCTAssertEqual(a.uuidsRunningThisCode.count, 2)
+    }
+
+    @MainActor
+    func test_uuidsRunningThisCode_includesAndWalksThroughTrashed() throws {
+        let container = try makeContainer(); let context = container.mainContext
+        let c = Snippet(uuid: UUID(), title: "C")
+        let b = Snippet(uuid: UUID(), title: "B", deletedAt: Date())
+        let a = Snippet(uuid: UUID(), title: "A")
+        [c, b, a].forEach(context.insert)
+        b.dependencies = [c]; a.dependencies = [b]
+        try context.save()
+
+        XCTAssertEqual(Set(c.uuidsRunningThisCode), [c.uuid!, b.uuid!, a.uuid!])
+    }
+
+    @MainActor
+    func test_uuidsRunningThisCode_withoutUUID_skipsOnlyThatSnippet() throws {
+        let container = try makeContainer(); let context = container.mainContext
+        let c = Snippet(uuid: UUID(), title: "C")
+        let b = Snippet(uuid: nil, title: "B")
+        let a = Snippet(uuid: UUID(), title: "A")
+        [c, b, a].forEach(context.insert)
+        b.dependencies = [c]; a.dependencies = [b]
+        try context.save()
+
+        XCTAssertEqual(Set(c.uuidsRunningThisCode), [c.uuid!, a.uuid!])
+    }
 }

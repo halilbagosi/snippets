@@ -385,6 +385,24 @@ final class SnippetImporterTests: XCTestCase {
         XCTAssertEqual(forgotten.values.count, 3, "each uuid is forgotten once")
     }
 
+    func test_replace_forgetsTrustOfIndirectDependents() async throws {
+        let container = try makeContainer(); let context = container.mainContext
+        let media = MediaStore(); let libID = UUID(); let forgotten = Recorder<UUID>()
+        let lib = seed(context, media, id: libID)
+        let mid = Snippet(uuid: UUID(), title: "mid"), top = Snippet(uuid: UUID(), title: "top")
+        [mid, top].forEach(context.insert)
+        mid.dependencies = [lib]; top.dependencies = [mid]
+        try context.save()
+
+        _ = try await importer(media, forgotten: forgotten).apply(archive([record(libID)]), to: context) { _ in
+            ConflictResolution(choice: .replace, applyToAll: false)
+        }
+
+        XCTAssertEqual(forgotten.values.first, libID)
+        XCTAssertEqual(Set(forgotten.values), [libID, mid.uuid!, top.uuid!])
+        XCTAssertEqual(forgotten.values.count, 3)
+    }
+
     // MARK: Summary
 
     func test_summaryMessage() {
