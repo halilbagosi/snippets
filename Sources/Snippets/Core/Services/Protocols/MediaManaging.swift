@@ -11,4 +11,5 @@ protocol MediaManaging {
     func pickAndImport() -> [MediaItem]
 
     func deleteFile(for item: MediaItem)
+    func deleteFile(named fileName: String)
 }

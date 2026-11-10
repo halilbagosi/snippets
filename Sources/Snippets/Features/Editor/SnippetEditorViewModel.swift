@@ -34,9 +34,11 @@ final class SnippetEditorViewModel {
     /// the media directory (the picker copies on import) but no saved snippet
     /// refers to them yet, so Discard must delete them.
     @ObservationIgnored private var attachedThisSession: [MediaItem] = []
-    /// Saved attachments the user removed in this session. Their files are
-    /// deleted only once the removal is saved, so Discard loses nothing.
-    @ObservationIgnored private var removedThisSession: [MediaItem] = []
+    /// File names of saved attachments the user removed in this session. Their
+    /// files are deleted only once the removal is saved, so Discard loses
+    /// nothing. Names, not models: save() deletes the models from the context,
+    /// and reading a deleted-and-saved SwiftData model can trap.
+    @ObservationIgnored private var removedFileNamesThisSession: [String] = []
 
     private var hasLoaded = false
     private var trimmedTitle = ""
@@ -157,14 +159,14 @@ final class SnippetEditorViewModel {
             attachedThisSession.remove(at: added)
             mediaManager.deleteFile(for: removed)
         } else {
-            removedThisSession.append(removed)
+            removedFileNamesThisSession.append(removed.fileName)
         }
     }
 
     /// Call after a successful save: the removals are now real.
     func commitMediaChanges(using mediaManager: any MediaManaging) {
-        removedThisSession.forEach(mediaManager.deleteFile(for:))
-        removedThisSession = []
+        removedFileNamesThisSession.forEach(mediaManager.deleteFile(named:))
+        removedFileNamesThisSession = []
         attachedThisSession = []
     }
 
@@ -172,7 +174,7 @@ final class SnippetEditorViewModel {
     func discardMediaChanges(using mediaManager: any MediaManaging) {
         attachedThisSession.forEach(mediaManager.deleteFile(for:))
         attachedThisSession = []
-        removedThisSession = []
+        removedFileNamesThisSession = []
     }
 
     func headerFilename(isEditing: Bool) -> String {
