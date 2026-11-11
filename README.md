@@ -121,6 +121,12 @@ imported; File ▸ Import does not ask again. Preview permissions are never expo
 and a replaced snippet loses its own. This is also how to move a library into
 the sandboxed App Store build, whose container starts empty.
 
+The library lives at `~/Library/Application Support/Snippets.store`. Snippets
+copies it to `~/Library/Application Support/Snippets/Backups/` the first time
+each new version opens it, keeping the newest five. A library that cannot be
+opened is never deleted: choosing Start with an Empty Library moves the file
+into that folder instead.
+
 ### Agents (MCP)
 
 The direct-download build serves your library to any AI agent that speaks
