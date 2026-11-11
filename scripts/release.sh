@@ -57,6 +57,11 @@ python3 -c "import dmgbuild" 2>/dev/null || {
     echo "error: dmgbuild is missing; install it with: python3 -m pip install --user dmgbuild" >&2
     exit 1
 }
+RESOLVED=Snippets.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+git ls-files --error-unmatch "$RESOLVED" >/dev/null 2>&1 || {
+    echo "error: $RESOLVED is not committed; releases must build pinned dependencies" >&2
+    exit 1
+}
 if [[ -n "$UPLOAD_REPO" ]]; then
     gh repo view "$UPLOAD_REPO" --json name >/dev/null || {
         echo "error: can't reach GitHub repo '$UPLOAD_REPO' (expected owner/repo)" >&2
@@ -86,6 +91,7 @@ if [[ -n "$FINAL_NOTES" ]]; then
     # it signed with. Resolving packages here makes generate_keys available
     # before the build; it's fast once resolved. Only the public key is printed.
     xcodebuild -project Snippets.xcodeproj -scheme Snippets -resolvePackageDependencies \
+        -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile \
         -clonedSourcePackagesDirPath "$PACKAGES" -quiet
     SHIPPED_KEY=$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' Snippets-Info.plist 2>/dev/null || true)
     KEYCHAIN_KEY=$("$SPARKLE_BIN/generate_keys" -p 2>/dev/null || true)
@@ -150,6 +156,7 @@ xcodebuild archive \
     -project Snippets.xcodeproj -scheme Snippets -configuration Release \
     -destination 'generic/platform=macOS' -archivePath "$ARCHIVE" \
     -clonedSourcePackagesDirPath "$PACKAGES" \
+    -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile \
     CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
     -quiet
 
