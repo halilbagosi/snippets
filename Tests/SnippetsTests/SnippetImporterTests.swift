@@ -421,6 +421,28 @@ final class SnippetImporterTests: XCTestCase {
         XCTAssertEqual(message(1, 1), "Exported 1 snippet · 1 attachment missing")
     }
 
+    func test_importConfirmationTitle_singularAndPlural() {
+        let title = SnippetTransferController.importConfirmationTitle
+        XCTAssertEqual(title(1, 0, "A.snippets"), "Import 1 snippet from “A.snippets”?")
+        XCTAssertEqual(title(12, 3, "Team Utils.snippets"), "Import 12 snippets from “Team Utils.snippets”?")
+    }
+
+    func test_importConfirmationTitle_collectionsOnly() {
+        let title = SnippetTransferController.importConfirmationTitle
+        XCTAssertEqual(title(0, 2, "A.snippets"), "Import 2 collections from “A.snippets”?")
+        XCTAssertEqual(title(0, 1, "A.snippets"), "Import 1 collection from “A.snippets”?")
+    }
+
+    func test_importConfirmationTitle_sanitisesFileName() {
+        let title = SnippetTransferController.importConfirmationTitle(
+            snippetCount: 1, collectionCount: 0,
+            fileName: "evil\nname" + String(repeating: "x", count: 100) + ".snippets")
+        XCTAssertFalse(title.contains("\n"))
+        let quoted = title.split(separator: "“", maxSplits: 1)[1].split(separator: "”")[0]
+        XCTAssertLessThanOrEqual(quoted.count, 61)
+        XCTAssertTrue(quoted.hasSuffix("…"))
+    }
+
     func test_fileName_isSafeAsADefaultSaveName() {
         let name = SnippetTransferController.fileName
         XCTAssertEqual(name("My: Snippets/2"), "My- Snippets-2.snippets")
