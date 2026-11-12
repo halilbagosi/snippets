@@ -29,6 +29,35 @@ enum UpdatePolicy {
             ?? "Not checked yet"
         return "Version \(version) (\(build)) · \(checked)"
     }
+
+    /// The version the home screen's update button offers, after `event`.
+    /// It appears once a check finds an update and stays through "Remind Me
+    /// Later", so the user can come back to it; it goes once they skip or
+    /// start installing that version, or a later check finds nothing.
+    static func availableVersion(_ current: String?, after event: UpdateEvent) -> String? {
+        switch event {
+        case .found(let version): version
+        case .noneFound, .skipped, .installing: nil
+        case .dismissed: current
+        }
+    }
+
+    /// Sparkle's scheduled check found an update: show its window only when
+    /// it would come up in focus (just launched, or back from idle). Otherwise
+    /// the home screen's update button is the reminder, instead of a window
+    /// opening behind whatever the user is doing.
+    static func sparkleShowsScheduledUpdate(immediateFocus: Bool) -> Bool {
+        immediateFocus
+    }
+}
+
+/// What Sparkle reported, without Sparkle's types.
+enum UpdateEvent: Equatable {
+    case found(version: String)
+    case noneFound
+    case skipped
+    case installing
+    case dismissed
 }
 
 /// Owns Sparkle. Sparkle schedules the daily check and draws its own update
@@ -42,9 +71,12 @@ final class UpdateController {
     private(set) var canCheckForUpdates = false
     /// Sparkle's own setting, which its second-launch prompt also changes.
     private(set) var automaticallyChecks = false
+    /// The version a check found and the user hasn't installed or skipped —
+    /// drives the update button on the home screen.
+    private(set) var availableVersion: String?
 
     @ObservationIgnored private var controller: SPUStandardUpdaterController?
-    @ObservationIgnored private var feedDelegate: FeedOverrideDelegate?
+    @ObservationIgnored private var delegate: UpdaterDelegate?
     @ObservationIgnored private var observers: Set<AnyCancellable> = []
 
     var lastUpdateCheckDate: Date? { controller?.updater.lastUpdateCheckDate }
@@ -61,10 +93,15 @@ final class UpdateController {
         #endif
         guard UpdatePolicy.shouldStart(isDebugBuild: isDebugBuild, environment: environment, licenseAccepted: licenseAccepted) else { return }
 
-        feedDelegate = UpdatePolicy.feedOverride(isDebugBuild: isDebugBuild, environment: environment)
-            .map(FeedOverrideDelegate.init(feed:))
+        let delegate = UpdaterDelegate(
+            feed: UpdatePolicy.feedOverride(isDebugBuild: isDebugBuild, environment: environment)
+        ) { [weak self] event in
+            guard let self else { return }
+            availableVersion = UpdatePolicy.availableVersion(availableVersion, after: event)
+        }
+        self.delegate = delegate
         let controller = SPUStandardUpdaterController(
-            startingUpdater: true, updaterDelegate: feedDelegate, userDriverDelegate: nil
+            startingUpdater: true, updaterDelegate: delegate, userDriverDelegate: delegate
         )
         self.controller = controller
         isRunning = true
@@ -89,10 +126,54 @@ final class UpdateController {
     }
 }
 
-/// Points a Debug build at `SNIPPETS_UPDATE_FEED` instead of `SUFeedURL`.
-private final class FeedOverrideDelegate: NSObject, SPUUpdaterDelegate {
-    let feed: String
-    init(feed: String) { self.feed = feed }
+/// Reports what Sparkle finds and what the user chooses, opts into gentle
+/// scheduled reminders, and points a Debug build at `SNIPPETS_UPDATE_FEED`
+/// instead of `SUFeedURL`. Sparkle calls all of these on the main thread;
+/// only `SPUUpdaterDelegate` says so in its header, hence `@preconcurrency`.
+@MainActor
+private final class UpdaterDelegate: NSObject, SPUUpdaterDelegate, @preconcurrency SPUStandardUserDriverDelegate {
+    let feed: String?
+    let report: (UpdateEvent) -> Void
+
+    init(feed: String?, report: @escaping (UpdateEvent) -> Void) {
+        self.feed = feed
+        self.report = report
+    }
+
+    // MARK: SPUUpdaterDelegate
+
     func feedURLString(for updater: SPUUpdater) -> String? { feed }
+
+    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        report(.found(version: item.displayVersionString))
+    }
+
+    func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
+        report(.noneFound)
+    }
+
+    func updater(
+        _ updater: SPUUpdater,
+        userDidMake choice: SPUUserUpdateChoice,
+        forUpdate updateItem: SUAppcastItem,
+        state: SPUUserUpdateState
+    ) {
+        switch choice {
+        case .skip: report(.skipped)
+        case .install: report(.installing)
+        case .dismiss: report(.dismissed)
+        @unknown default: break
+        }
+    }
+
+    // MARK: SPUStandardUserDriverDelegate
+
+    var supportsGentleScheduledUpdateReminders: Bool { true }
+
+    func standardUserDriverShouldHandleShowingScheduledUpdate(
+        _ update: SUAppcastItem, andInImmediateFocus immediateFocus: Bool
+    ) -> Bool {
+        UpdatePolicy.sparkleShowsScheduledUpdate(immediateFocus: immediateFocus)
+    }
 }
 #endif
