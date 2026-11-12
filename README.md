@@ -357,9 +357,11 @@ domain in `site/CNAME` (snippets.halilbagosi.com). Keep that file: publishing
 mirrors `site/`, so without it the domain would be dropped.
 
 - `site/index.html`, `home.css`, `style.css` and `site.js` are written by
-  hand. The page follows the system's light or dark appearance and
-  has a toggle to override it; screenshots and clips in `site/media/`
-  come in `-light` and `-dark` versions. The app's Help menu links
+  hand. The page always follows the system's light or dark appearance;
+  screenshots and clips in `site/media/` come in `-light` and `-dark`
+  versions. The version under the hero's download button is filled in by
+  the build below from the newest release in `site/appcast.xml`, and
+  `release.sh --final` runs it once a release is published. The app's Help menu links
   (`AppLinks.swift`) and the EULA point at https://snippets.halilbagosi.com.
 - The support, privacy and license pages are generated: edit
   `site/pages/<page>.html` (or `EULA.txt` for the license), then run the
