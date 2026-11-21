@@ -1228,7 +1228,7 @@ private enum ImageFileLoader {
 #endif
 
 #if canImport(AppKit)
-private struct HighlightedCodeView: NSViewRepresentable {
+struct HighlightedCodeView: NSViewRepresentable {
     let code: String
     let language: SupportedLanguage
     let theme: Theme
@@ -1281,7 +1281,10 @@ private struct HighlightedCodeView: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSScrollView, context: Context) {
         guard let textView = nsView.documentView as? NSTextView else { return }
-        textView.textColor = NSColor(theme.text)
+        // No `textView.textColor` here: it recolours every character and
+        // would flatten the syntax colours below on each SwiftUI update.
+        // The highlighter already paints untokenized text in `theme.text`,
+        // and an appearance change re-runs it via `needsUpdate`.
         textView.backgroundColor = .clear
         nsView.backgroundColor = .clear
 
@@ -1333,7 +1336,7 @@ private struct HighlightedCodeView: NSViewRepresentable {
 }
 
 #else
-private struct HighlightedCodeView: View {
+struct HighlightedCodeView: View {
     let code: String
     let language: SupportedLanguage
     let theme: Theme

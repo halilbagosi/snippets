@@ -97,6 +97,7 @@
 		5E57E5700000000000000214 /* SwiftPreviewHarnessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000114 /* SwiftPreviewHarnessTests.swift */; };
 		5E57E5700000000000000215 /* TrashLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000115 /* TrashLifecycleTests.swift */; };
 		5E57E5700000000000000216 /* UUIDBackfillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000116 /* UUIDBackfillTests.swift */; };
+		5E57E5700000000000000240 /* CodeTextHighlightingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000140 /* CodeTextHighlightingTests.swift */; };
 		5E57E5700000000000000217 /* WebPreviewHTMLBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000117 /* WebPreviewHTMLBuilderTests.swift */; };
 		5E57E5700000000000000230 /* QuickCopyResultsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000130 /* QuickCopyResultsTests.swift */; };
 		5E57E5700000000000000916 /* MediaFileNameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E57E5700000000000000816 /* MediaFileNameTests.swift */; };
@@ -284,6 +285,7 @@
 		5E57E5700000000000000114 /* SwiftPreviewHarnessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftPreviewHarnessTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000115 /* TrashLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashLifecycleTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000116 /* UUIDBackfillTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UUIDBackfillTests.swift; sourceTree = "<group>"; };
+		5E57E5700000000000000140 /* CodeTextHighlightingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeTextHighlightingTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000117 /* WebPreviewHTMLBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebPreviewHTMLBuilderTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000130 /* QuickCopyResultsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickCopyResultsTests.swift; sourceTree = "<group>"; };
 		5E57E5700000000000000816 /* MediaFileNameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaFileNameTests.swift; sourceTree = "<group>"; };
@@ -671,6 +673,7 @@
 				UPDATETEST0000000000F001 /* UpdatePolicyTests.swift */,
 				1E6A1D0C0000000000000004 /* LegalDocumentTests.swift */,
 				5E57E5700000000000000816 /* MediaFileNameTests.swift */,
+				5E57E5700000000000000140 /* CodeTextHighlightingTests.swift */,
 				5E57E5700000000000000117 /* WebPreviewHTMLBuilderTests.swift */,
 			);
 			name = SnippetsTests;
@@ -1170,6 +1173,7 @@
 				UPDATETEST0000000000B001 /* UpdatePolicyTests.swift in Sources */,
 				1E6A1D0C0000000000000003 /* LegalDocumentTests.swift in Sources */,
 				5E57E5700000000000000916 /* MediaFileNameTests.swift in Sources */,
+				5E57E5700000000000000240 /* CodeTextHighlightingTests.swift in Sources */,
 				5E57E5700000000000000217 /* WebPreviewHTMLBuilderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
