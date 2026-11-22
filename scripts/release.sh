@@ -251,8 +251,12 @@ if [[ -n "$FINAL_NOTES" ]]; then
         echo "       if a partial release or tag was created, remove it: gh release delete \"$TAG\" --repo \"$UPLOAD_REPO\" --cleanup-tag" >&2
         exit 1
     fi
-    echo "==> site/appcast.xml now offers $VERSION ($BUILD_NUMBER)."
-    echo "    Commit it and publish site/ to the Pages repo; installed copies see it on their next check."
+    # The landing page shows the newest version in the feed; refresh it now
+    # that the release is public.
+    python3 site/build.py >/dev/null \
+        || echo "warning: site/build.py failed; run it before publishing site/" >&2
+    echo "==> site/appcast.xml now offers $VERSION ($BUILD_NUMBER); site/index.html shows it."
+    echo "    Commit them and publish site/ to the Pages repo; installed copies see it on their next check."
 elif [[ -n "$UPLOAD_REPO" ]]; then
     TAG="v$VERSION-beta.$BUILD_NUMBER"
     echo "==> Publishing $TAG to $UPLOAD_REPO"
