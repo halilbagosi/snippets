@@ -182,7 +182,12 @@ struct CodeEditor: NSViewRepresentable {
 
             let textColor = cachedTextColor ?? NSColor(theme.text)
             let accentColor = cachedAccentColor ?? NSColor(theme.accent)
-            textView.textColor = textColor
+            // Only the typing colour: `textView.textColor` would recolour every
+            // character and wipe the syntax highlighting on each SwiftUI update.
+            // Existing text follows appearance changes via `needsHighlight`.
+            if !(textView.typingAttributes[.foregroundColor] as? NSColor == textColor) {
+                textView.typingAttributes[.foregroundColor] = textColor
+            }
             textView.insertionPointColor = accentColor
             textView.selectedTextAttributes = [
                 .backgroundColor: accentColor.withAlphaComponent(0.28)
