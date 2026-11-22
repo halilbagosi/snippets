@@ -1001,6 +1001,29 @@ struct SnippetGalleryView: View {
         .animation(DSToken.Motion.filterReflow, value: specs.map(\.id))
     }
 
+    /// Shown once Sparkle finds an update (on its own daily check or a manual
+    /// one) and until the user installs or skips it. Clicking it brings up
+    /// Sparkle's update window for that version.
+    @ViewBuilder
+    private var updateTag: some View {
+        #if !APP_STORE
+        if !isTrashMode, !viewModel.isSelectMode,
+           let version = UpdateController.shared.availableVersion {
+            FilterTag(
+                label: "update \(version)",
+                icon: "arrow.down.circle",
+                accent: theme.accent,
+                isSelected: true
+            ) {
+                UpdateController.shared.checkForUpdates()
+            }
+            .help("Snippets \(version) is available")
+            .accessibilityLabel("Update to Snippets \(version)")
+            .transition(.opacity)
+        }
+        #endif
+    }
+
     private var topBar: some View {
         DSGlassContainer(spacing: 10) {
             VStack(alignment: .leading, spacing: 6) {
@@ -1024,6 +1047,8 @@ struct SnippetGalleryView: View {
                         .frame(maxWidth: .infinity)
                     
                     HStack(spacing: 8) {
+                        updateTag
+
                         FilterTag(
                             label: viewModel.isSelectMode ? "done" : "select",
                             icon: viewModel.isSelectMode ? "checkmark.circle" : "checklist",

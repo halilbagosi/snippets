@@ -160,11 +160,9 @@ final class SnippetMCPTools: MCPToolProvider {
 
     /// Preview approvals are keyed on the snippet, so they'd outlive the code
     /// the user approved. Its code also runs inside its dependents' combined
-    /// previews, so theirs go too — the same rule as replacing on import.
+    /// previews, so theirs go too, at any depth — the same rule as replacing on import.
     private func forgetPreviewTrust(for snippet: Snippet) {
-        var seen = Set<UUID>()
-        let ids = [snippet.uuid] + snippet.dependents.filter { !$0.isDeleted }.map(\.uuid)
-        ids.compactMap { $0 }.filter { seen.insert($0).inserted }.forEach(forgetTrust)
+        snippet.uuidsRunningThisCode.forEach(forgetTrust)
     }
 
     /// The editor never saves a blank title or code (`canSave`) and stores the

@@ -58,7 +58,7 @@ enum SwiftToolchain {
 ///
 /// `SwiftPreviewBuilder` reuses a cached dylib whenever one exists at the
 /// content-hash path, and `dlopen` on that path loads whatever is there into
-/// this process — which is unsandboxed, with the hardened runtime off. The
+/// this process — which is unsandboxed and, so that it can load these unsigned dylibs at all, runs with library validation disabled. The
 /// cache lives under `~/Library/Caches`, so anything else running as this user
 /// can drop a file at a predictable name and be loaded, inheriting every TCC
 /// grant the app holds. That presumes the attacker already has user-level

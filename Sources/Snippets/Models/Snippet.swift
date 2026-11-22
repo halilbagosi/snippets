@@ -72,3 +72,24 @@ final class Snippet {
         self.collections = collections
     }
 }
+
+extension Snippet {
+    /// The uuids whose preview approvals stop being valid when this snippet's
+    /// code is replaced: its own, then every snippet whose combined preview
+    /// runs it — dependents, their dependents, and so on. Trashed snippets
+    /// are included and walked through: a restored snippet must not come
+    /// back holding approval for code that changed while it was in Trash.
+    /// Each uuid appears once; this snippet's own comes first.
+    var uuidsRunningThisCode: [UUID] {
+        var visited: Set<PersistentIdentifier> = [persistentModelID]
+        var ordered: [UUID] = uuid.map { [$0] } ?? []
+        var queue = dependents
+        while !queue.isEmpty {
+            let next = queue.removeFirst()
+            guard visited.insert(next.persistentModelID).inserted else { continue }
+            if let id = next.uuid { ordered.append(id) }
+            queue.append(contentsOf: next.dependents)
+        }
+        return ordered
+    }
+}

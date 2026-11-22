@@ -1,6 +1,26 @@
 import SwiftData
+import UniformTypeIdentifiers
 import XCTest
 @testable import Snippets
+
+private final class FakeMediaManager: MediaManaging {
+    var toImport: [MediaItem] = []
+    private(set) var deleted: [String] = []
+    private(set) var deletedByModelCount = 0
+    private(set) var deletedByNameCount = 0
+    var allowedTypes: [UTType] { [] }
+    func resolvedURL(for fileName: String) -> URL { URL(fileURLWithPath: "/dev/null/\(fileName)") }
+    func kind(for url: URL) -> MediaKind { .image }
+    func pickAndImport() -> [MediaItem] { toImport }
+    func deleteFile(for item: MediaItem) {
+        deletedByModelCount += 1
+        deleted.append(item.fileName)
+    }
+    func deleteFile(named fileName: String) {
+        deletedByNameCount += 1
+        deleted.append(fileName)
+    }
+}
 
 @MainActor
 final class SnippetEditorViewModelTests: XCTestCase {
@@ -114,5 +134,128 @@ final class SnippetEditorViewModelTests: XCTestCase {
         sut.toggleCollection(collection)
 
         XCTAssertTrue(sut.selectedCollectionIDs.contains(collection.persistentModelID))
+    }
+
+    // MARK: - Attachment changes apply on save
+
+    private func makeSnippetWithSavedMedia(
+        in context: ModelContext
+    ) throws -> (snippet: Snippet, media: MediaItem) {
+        let snippet = Snippet(title: "Card", language: "React", code: "c")
+        let media = MediaItem(fileName: "saved.png", kind: .image)
+        context.insert(snippet)
+        context.insert(media)
+        media.snippet = snippet
+        snippet.mediaItems = [media]
+        try context.save()
+        return (snippet, media)
+    }
+
+    func test_removeSavedAttachment_thenDiscard_deletesNoFile() throws {
+        let container = try makeInMemoryContainer()
+        let (snippet, media) = try makeSnippetWithSavedMedia(in: container.mainContext)
+        let fake = FakeMediaManager()
+        let sut = SnippetEditorViewModel()
+        sut.load(mode: .edit(snippet))
+
+        sut.removeMediaItem(media, using: fake)
+        sut.discardMediaChanges(using: fake)
+
+        XCTAssertTrue(fake.deleted.isEmpty)
+    }
+
+    func test_removeSavedAttachment_thenSaveAndCommit_deletesItsFile() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let (snippet, media) = try makeSnippetWithSavedMedia(in: context)
+        let name = media.fileName
+        let fake = FakeMediaManager()
+        let sut = SnippetEditorViewModel()
+        sut.load(mode: .edit(snippet))
+
+        sut.removeMediaItem(media, using: fake)
+        XCTAssertTrue(sut.save(mode: .edit(snippet), availableCollections: [], modelContext: context, onSave: { _ in }))
+        sut.commitMediaChanges(using: fake)
+
+        XCTAssertEqual(fake.deleted, [name])
+    }
+
+    func test_commit_afterSave_neverReadsTheDeletedModel() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let (snippet, media) = try makeSnippetWithSavedMedia(in: context)
+        let name = media.fileName
+        let fake = FakeMediaManager()
+        let sut = SnippetEditorViewModel()
+        sut.load(mode: .edit(snippet))
+
+        sut.removeMediaItem(media, using: fake)
+        XCTAssertTrue(sut.save(mode: .edit(snippet), availableCollections: [], modelContext: context, onSave: { _ in }))
+        sut.commitMediaChanges(using: fake)
+
+        XCTAssertEqual(fake.deletedByNameCount, 1)
+        XCTAssertEqual(fake.deleted, [name])
+        XCTAssertEqual(fake.deletedByModelCount, 0)
+    }
+
+    func test_removeSavedAttachment_beforeCommit_deletesNoFile() throws {
+        let container = try makeInMemoryContainer()
+        let (snippet, media) = try makeSnippetWithSavedMedia(in: container.mainContext)
+        let fake = FakeMediaManager()
+        let sut = SnippetEditorViewModel()
+        sut.load(mode: .edit(snippet))
+
+        sut.removeMediaItem(media, using: fake)
+
+        XCTAssertTrue(fake.deleted.isEmpty)
+    }
+
+    func test_attach_thenDiscard_deletesTheNewFile() throws {
+        let container = try makeInMemoryContainer()
+        let (snippet, _) = try makeSnippetWithSavedMedia(in: container.mainContext)
+        let fake = FakeMediaManager()
+        fake.toImport = [MediaItem(fileName: "new.png", kind: .image)]
+        let sut = SnippetEditorViewModel()
+        sut.load(mode: .edit(snippet))
+
+        sut.attachMedia(using: fake)
+        sut.discardMediaChanges(using: fake)
+
+        XCTAssertEqual(fake.deleted, ["new.png"])
+    }
+
+    func test_attach_thenRemove_deletesTheNewFileOnce_andDiscardDeletesNothingMore() throws {
+        let container = try makeInMemoryContainer()
+        let (snippet, _) = try makeSnippetWithSavedMedia(in: container.mainContext)
+        let fake = FakeMediaManager()
+        let added = MediaItem(fileName: "new.png", kind: .image)
+        fake.toImport = [added]
+        let sut = SnippetEditorViewModel()
+        sut.load(mode: .edit(snippet))
+
+        sut.attachMedia(using: fake)
+        sut.removeMediaItem(added, using: fake)
+        XCTAssertEqual(fake.deleted, ["new.png"])
+
+        sut.discardMediaChanges(using: fake)
+        XCTAssertEqual(fake.deleted, ["new.png"])
+    }
+
+    func test_attach_thenSaveAndCommit_keepsTheNewFile() throws {
+        let container = try makeInMemoryContainer()
+        let context = container.mainContext
+        let (snippet, _) = try makeSnippetWithSavedMedia(in: context)
+        let fake = FakeMediaManager()
+        fake.toImport = [MediaItem(fileName: "new.png", kind: .image)]
+        let sut = SnippetEditorViewModel()
+        sut.load(mode: .edit(snippet))
+
+        sut.attachMedia(using: fake)
+        XCTAssertTrue(sut.save(mode: .edit(snippet), availableCollections: [], modelContext: context, onSave: { _ in }))
+        sut.commitMediaChanges(using: fake)
+        sut.discardMediaChanges(using: fake)
+
+        XCTAssertTrue(fake.deleted.isEmpty)
+        XCTAssertEqual(snippet.mediaItems.map(\.fileName).sorted(), ["new.png", "saved.png"])
     }
 }

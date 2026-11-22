@@ -15,7 +15,7 @@ trustworthy as their provenance record. That is what this file is.
 |------|---------|---------|--------|
 | `react.production.min.js` | react (UMD, production) | 18.3.1 | https://unpkg.com/react@18.3.1/umd/react.production.min.js |
 | `react-dom.production.min.js` | react-dom (UMD, production) | 18.3.1 | https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js |
-| `babel.min.js` | @babel/standalone | see note | https://unpkg.com/@babel/standalone/babel.min.js |
+| `babel.min.js` | @babel/standalone | 7.29.4 | https://unpkg.com/@babel/standalone@7.29.4/babel.min.js |
 | `tailwind.browser.min.js` | @tailwindcss/browser | 4.3.3 | https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4 |
 | `bootstrap.bundle.min.js` | bootstrap (bundle, Popper included) | 5.3.8 | https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js |
 | `bootstrap.min.css` | bootstrap | 5.3.8 | https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css |
@@ -23,13 +23,11 @@ trustworthy as their provenance record. That is what this file is.
 Versions for react, react-dom, tailwind and bootstrap are read from banners or
 version constants inside the files themselves.
 
-**Note on `babel.min.js`:** the bundle carries no unambiguous version banner —
-several `7.2x.y` strings appear, belonging to the packages it embeds rather than
-to `@babel/standalone` itself. The URLs above are the conventional sources, not
-a verified record of where this specific byte sequence came from. To pin it
-properly: open any React preview's web inspector, evaluate `Babel.version`,
-record the answer here, and re-download from the exact versioned URL so the
-checksum below corresponds to a URL anyone can re-fetch.
+**Note on `babel.min.js`:** the bundle has no version banner (the `7.2x.y`
+strings inside belong to packages it embeds). Its version was read with
+`node -e "console.log(require('./babel.min.js').version)"`, and the file
+was confirmed byte-identical to the versioned unpkg URL above on
+2026-11-09. When updating Babel, do both checks again.
 
 ## Checksums
 

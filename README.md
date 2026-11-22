@@ -116,9 +116,16 @@ File ▸ Export Library… (⇧⌘E) writes every snippet outside Trash to one
 included. Export collection… (sidebar), Export… (snippet menu) and export in
 select mode write just those. File ▸ Import Snippets… (⇧⌘I), or opening a
 `.snippets` file, brings one in; a snippet already in the library asks Skip,
-Replace or Stop, with Apply to all. Preview permissions are never exported,
+Replace or Stop, with Apply to all. A `.snippets` file opened from Finder, AirDrop or a download asks before it is
+imported; File ▸ Import does not ask again. Preview permissions are never exported,
 and a replaced snippet loses its own. This is also how to move a library into
 the sandboxed App Store build, whose container starts empty.
+
+The library lives at `~/Library/Application Support/Snippets.store`. Snippets
+copies it to `~/Library/Application Support/Snippets/Backups/` the first time
+each new version opens it, keeping the newest five. A library that cannot be
+opened is never deleted: choosing Start with an Empty Library moves the file
+into that folder instead.
 
 ### Agents (MCP)
 
@@ -227,6 +234,11 @@ Release is signed with the hardened runtime, which notarization requires, and
 work. `swiftc` ad-hoc signs the dylibs it builds, and library validation would
 refuse to `dlopen` anything without this team's signature. Debug doesn't use
 the hardened runtime.
+
+Sparkle's exact version is pinned in the committed `Package.resolved`; release
+and CI builds refuse to re-resolve it. To upgrade, resolve in Xcode (File ▸
+Packages ▸ Update to Latest Package Versions), read Sparkle's release notes, and
+commit the changed `Package.resolved` as its own commit.
 
 `scripts/release.sh` archives Release, exports it with Developer ID, packages
 `build/release/Snippets.dmg`, notarizes and staples it, then checks it with
@@ -345,9 +357,11 @@ domain in `site/CNAME` (snippets.halilbagosi.com). Keep that file: publishing
 mirrors `site/`, so without it the domain would be dropped.
 
 - `site/index.html`, `home.css`, `style.css` and `site.js` are written by
-  hand. The page follows the system's light or dark appearance and
-  has a toggle to override it; screenshots and clips in `site/media/`
-  come in `-light` and `-dark` versions. The app's Help menu links
+  hand. The page always follows the system's light or dark appearance;
+  screenshots and clips in `site/media/` come in `-light` and `-dark`
+  versions. The version under the hero's download button is filled in by
+  the build below from the newest release in `site/appcast.xml`, and
+  `release.sh --final` runs it once a release is published. The app's Help menu links
   (`AppLinks.swift`) and the EULA point at https://snippets.halilbagosi.com.
 - The support, privacy and license pages are generated: edit
   `site/pages/<page>.html` (or `EULA.txt` for the license), then run the

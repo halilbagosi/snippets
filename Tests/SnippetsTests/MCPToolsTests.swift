@@ -448,7 +448,23 @@ final class MCPToolsTests: XCTestCase {
 
     // MARK: Preview trust
 
-    func test_update_codeChange_forgetsTrustForSnippetAndLiveDependents() throws {
+    func test_update_codeChange_forgetsTrustOfIndirectDependents() throws {
+        allowEdits = true
+        let helper = try insert("Helper", code: "old")
+        let mid = try insert("Mid")
+        let top = try insert("Top")
+        mid.dependencies = [helper]
+        top.dependencies = [mid]
+        try context.save()
+
+        _ = try tools.call("update_snippet", arguments: ["id": id(helper), "code": "new"])
+
+        XCTAssertEqual(forgotten.first, helper.uuid)
+        XCTAssertEqual(Set(forgotten), [helper.uuid!, mid.uuid!, top.uuid!])
+        XCTAssertEqual(forgotten.count, 3)
+    }
+
+    func test_update_codeChange_forgetsTrustForSnippetAndAllDependents() throws {
         allowEdits = true
         let helper = try insert("Helper", code: "old")
         let page = try insert("Page")
@@ -460,8 +476,8 @@ final class MCPToolsTests: XCTestCase {
         _ = try tools.call("update_snippet", arguments: ["id": id(helper), "code": "new"])
 
         XCTAssertEqual(forgotten.first, helper.uuid)
-        XCTAssertEqual(Set(forgotten), [helper.uuid!, page.uuid!, other.uuid!])
-        XCTAssertEqual(forgotten.count, 3)
+        XCTAssertEqual(Set(forgotten), [helper.uuid!, page.uuid!, other.uuid!, trashed.uuid!])
+        XCTAssertEqual(forgotten.count, 4)
     }
 
     func test_update_languageChange_forgetsTrust() throws {

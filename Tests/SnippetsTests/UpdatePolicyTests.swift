@@ -42,6 +42,33 @@ final class UpdatePolicyTests: XCTestCase {
         XCTAssertTrue(line.hasPrefix("Version 1.1 (812) · Last checked "), line)
     }
 
+    // MARK: Home screen update button
+
+    func test_availableVersion_appearsWhenACheckFindsAnUpdate() {
+        XCTAssertEqual(UpdatePolicy.availableVersion(nil, after: .found(version: "1.2")), "1.2")
+        XCTAssertEqual(UpdatePolicy.availableVersion("1.2", after: .found(version: "1.3")), "1.3")
+    }
+
+    /// "Remind Me Later" closes Sparkle's window; the button is how the user
+    /// gets back to it.
+    func test_availableVersion_survivesRemindMeLater() {
+        XCTAssertEqual(UpdatePolicy.availableVersion("1.2", after: .dismissed), "1.2")
+        XCTAssertNil(UpdatePolicy.availableVersion(nil, after: .dismissed))
+    }
+
+    func test_availableVersion_goesOnceSkippedInstalledOrGone() {
+        XCTAssertNil(UpdatePolicy.availableVersion("1.2", after: .skipped))
+        XCTAssertNil(UpdatePolicy.availableVersion("1.2", after: .installing))
+        XCTAssertNil(UpdatePolicy.availableVersion("1.2", after: .noneFound))
+    }
+
+    /// Sparkle's window still opens for a scheduled update it would show in
+    /// focus; otherwise the button is the only reminder.
+    func test_scheduledUpdate_sparkleShowsItOnlyInFocus() {
+        XCTAssertTrue(UpdatePolicy.sparkleShowsScheduledUpdate(immediateFocus: true))
+        XCTAssertFalse(UpdatePolicy.sparkleShowsScheduledUpdate(immediateFocus: false))
+    }
+
     /// The test host is the app, so its Info.plist is the shipped one.
     func test_infoPlist_carriesTheFeedAndARealKey() {
         let info = Bundle.main.infoDictionary ?? [:]

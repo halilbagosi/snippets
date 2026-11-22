@@ -27,7 +27,7 @@ final class SnippetTransferController {
     /// Files waiting for their turn (a multi-file Finder open delivers them
     /// together); drained one at a time so each gets its own conflict dialogs
     /// and result.
-    @ObservationIgnored private var pendingURLs: [URL] = []
+    @ObservationIgnored private var pendingURLs: [(url: URL, needsConfirmation: Bool)] = []
     @ObservationIgnored private var isImporting = false
 
     private var context: ModelContext { SnippetsData.sharedModelContainer.mainContext }
@@ -156,8 +156,10 @@ final class SnippetTransferController {
 
     /// Shared by the open panel and by files opened from Finder or AirDrop.
     /// A file that arrives while another import is running waits its turn.
-    func importFile(at url: URL) {
-        pendingURLs.append(url)
+    /// `confirmFirst` asks before importing; it is for files that came from
+    /// outside the app, not for ones the user just picked in an Open panel.
+    func importFile(at url: URL, confirmFirst: Bool = false) {
+        pendingURLs.append((url, confirmFirst))
         guard !isImporting else { return }
         isImporting = true
         Task {
@@ -168,12 +170,19 @@ final class SnippetTransferController {
         }
     }
 
-    private func importOne(_ url: URL) async {
+    private func importOne(_ item: (url: URL, needsConfirmation: Bool)) async {
+        let url = item.url
         // The toast and the conflict sheet both need the main window.
         MainWindowOpener.activate()
         let media = media
         do {
             let archive = try await Self.loadArchive(from: url)
+            if item.needsConfirmation, !archive.snippets.isEmpty || !archive.collections.isEmpty {
+                guard await confirmImport(archive, fileName: url.lastPathComponent) else {
+                    notice = Notice(message: "Import cancelled")
+                    return
+                }
+            }
             let importer = SnippetImporter(
                 writeMedia: { data, ext in try media.storeImported(data, fileExtension: ext) },
                 removeMedia: { name in media.deleteFile(named: name) },
@@ -186,6 +195,42 @@ final class SnippetTransferController {
         } catch {
             report(error, doing: "import")
         }
+    }
+
+    /// "Import 12 snippets from “Team Utils.snippets”?" The file name is
+    /// attacker-chosen text shown in a dialog, so control characters are
+    /// removed and it is cut to 60 characters.
+    static func importConfirmationTitle(snippetCount: Int, collectionCount: Int, fileName: String) -> String {
+        var name = String(String.UnicodeScalarView(
+            fileName.unicodeScalars.filter { !CharacterSet.controlCharacters.contains($0) }
+        ))
+        if name.count > 60 { name = String(name.prefix(60)) + "…" }
+        let what = snippetCount == 0 && collectionCount > 0
+            ? "\(collectionCount) \(collectionCount == 1 ? "collection" : "collections")"
+            : "\(snippetCount) \(snippetCount == 1 ? "snippet" : "snippets")"
+        return "Import \(what) from “\(name)”?"
+    }
+
+    static let importConfirmationDetail =
+        "These snippets come from a file, not from you. Importing only adds them to your library — "
+        + "nothing runs until you open a snippet and its preview runs. Read code you didn’t write before running it."
+
+    private func confirmImport(_ archive: SnippetArchive, fileName: String) async -> Bool {
+        let alert = NSAlert()
+        alert.messageText = Self.importConfirmationTitle(snippetCount: archive.snippets.count,
+                                                         collectionCount: archive.collections.count,
+                                                         fileName: fileName)
+        alert.informativeText = Self.importConfirmationDetail
+        alert.addButton(withTitle: "Import")
+        let cancel = alert.addButton(withTitle: "Cancel")
+        cancel.keyEquivalent = "\u{1b}"
+        let response: NSApplication.ModalResponse
+        if let window = Self.sheetHost() {
+            response = await alert.beginSheetModal(for: window)
+        } else {
+            response = alert.runModal()
+        }
+        return response == .alertFirstButtonReturn
     }
 
     /// Reads and validates the file off the main actor: an archive can be

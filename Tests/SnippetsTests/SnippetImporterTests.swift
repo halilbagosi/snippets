@@ -385,6 +385,24 @@ final class SnippetImporterTests: XCTestCase {
         XCTAssertEqual(forgotten.values.count, 3, "each uuid is forgotten once")
     }
 
+    func test_replace_forgetsTrustOfIndirectDependents() async throws {
+        let container = try makeContainer(); let context = container.mainContext
+        let media = MediaStore(); let libID = UUID(); let forgotten = Recorder<UUID>()
+        let lib = seed(context, media, id: libID)
+        let mid = Snippet(uuid: UUID(), title: "mid"), top = Snippet(uuid: UUID(), title: "top")
+        [mid, top].forEach(context.insert)
+        mid.dependencies = [lib]; top.dependencies = [mid]
+        try context.save()
+
+        _ = try await importer(media, forgotten: forgotten).apply(archive([record(libID)]), to: context) { _ in
+            ConflictResolution(choice: .replace, applyToAll: false)
+        }
+
+        XCTAssertEqual(forgotten.values.first, libID)
+        XCTAssertEqual(Set(forgotten.values), [libID, mid.uuid!, top.uuid!])
+        XCTAssertEqual(forgotten.values.count, 3)
+    }
+
     // MARK: Summary
 
     func test_summaryMessage() {
@@ -401,6 +419,28 @@ final class SnippetImporterTests: XCTestCase {
         XCTAssertEqual(message(1, 0), "Exported 1 snippet")
         XCTAssertEqual(message(5, 2), "Exported 5 snippets · 2 attachments missing")
         XCTAssertEqual(message(1, 1), "Exported 1 snippet · 1 attachment missing")
+    }
+
+    func test_importConfirmationTitle_singularAndPlural() {
+        let title = SnippetTransferController.importConfirmationTitle
+        XCTAssertEqual(title(1, 0, "A.snippets"), "Import 1 snippet from “A.snippets”?")
+        XCTAssertEqual(title(12, 3, "Team Utils.snippets"), "Import 12 snippets from “Team Utils.snippets”?")
+    }
+
+    func test_importConfirmationTitle_collectionsOnly() {
+        let title = SnippetTransferController.importConfirmationTitle
+        XCTAssertEqual(title(0, 2, "A.snippets"), "Import 2 collections from “A.snippets”?")
+        XCTAssertEqual(title(0, 1, "A.snippets"), "Import 1 collection from “A.snippets”?")
+    }
+
+    func test_importConfirmationTitle_sanitisesFileName() {
+        let title = SnippetTransferController.importConfirmationTitle(
+            snippetCount: 1, collectionCount: 0,
+            fileName: "evil\nname" + String(repeating: "x", count: 100) + ".snippets")
+        XCTAssertFalse(title.contains("\n"))
+        let quoted = title.split(separator: "“", maxSplits: 1)[1].split(separator: "”")[0]
+        XCTAssertLessThanOrEqual(quoted.count, 61)
+        XCTAssertTrue(quoted.hasSuffix("…"))
     }
 
     func test_fileName_isSafeAsADefaultSaveName() {
