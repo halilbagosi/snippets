@@ -138,6 +138,11 @@ struct ContentView: View {
     private enum UndoKind { case deletion, move }
     @State private var lastUndoKind: UndoKind? = nil
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    /// Whether the open snippet's preview is expanded to fill the window.
+    /// While it is, the sidebar is tucked away (its prior visibility saved
+    /// below) and the gallery behind is dimmed and blurred harder.
+    @State private var isPreviewExpanded = false
+    @State private var columnVisibilityBeforePreviewExpand: NavigationSplitViewVisibility? = nil
 
     @State private var snippetToDelete: Snippet?
     @State private var pendingSnippetDeleteConfirm: (() -> Void)?
@@ -173,6 +178,26 @@ struct ContentView: View {
             insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)),
             removal: .opacity.combined(with: .scale(scale: 0.97, anchor: .center))
         )
+    }
+
+    /// Margin between the window and an expanded preview's card: enough of
+    /// the faded, blurred gallery to show the card floats over it.
+    private static let expandedCardMargin: CGFloat = 20
+    /// Gallery blur behind an expanded preview: soft enough to keep the
+    /// layout recognisable, strong enough that nothing in it competes.
+    private static let expandedGalleryBlur: CGFloat = 14
+    private static let expandedBackdropBlur: CGFloat = 8
+
+    private var galleryBlurRadius: CGFloat {
+        guard selectedSnippet != nil else { return 0 }
+        return isPreviewExpanded ? Self.expandedGalleryBlur : 2
+    }
+
+    /// The shade behind the detail card, deepened for an expanded preview so
+    /// the preview is the only bright thing in the window.
+    private var detailDimOpacity: Double {
+        if isPreviewExpanded { return colorScheme == .dark ? 0.55 : 0.40 }
+        return colorScheme == .dark ? 0.34 : 0.22
     }
 
     /// Reduce Motion strips the upward slide; the fade alone still reads.
@@ -567,6 +592,9 @@ struct ContentView: View {
                         DotGridBackground(gradientPalette: backgroundPalette, lightModeStrength: 0.78, focusedMode: appearanceSettings.focusedMode)
                             .ignoresSafeArea()
                     }
+                    // Only the expanded preview softens the backdrop too; the
+                    // ordinary detail card leaves the dot grid crisp.
+                    .blur(radius: isPreviewExpanded ? Self.expandedBackdropBlur : 0)
 
                     VStack(spacing: 0) {
                         SnippetGalleryView(
@@ -635,28 +663,44 @@ struct ContentView: View {
                             },
                             onCopySnippetToCollection: { snippet, collection in copySnippet(snippet, to: collection) }
                         )
-                        .blur(radius: selectedSnippet == nil ? 0 : 2)
+                        .blur(radius: galleryBlurRadius)
                         .saturation(selectedSnippet == nil ? 1.0 : 0.95)
                         .allowsHitTesting(selectedSnippet == nil)
                     }
 
                     if let snippet = selectedSnippet {
                         Color.black
-                            .opacity(colorScheme == .dark ? 0.34 : 0.22)
+                            .opacity(detailDimOpacity)
                             .ignoresSafeArea()
                             .onTapGesture {
                                 withAnimation(DSToken.Motion.overlay) {
-                                    selectedSnippetID = nil
+                                    // Outside an expanded preview, a click
+                                    // steps back to the card, not past it.
+                                    if isPreviewExpanded {
+                                        isPreviewExpanded = false
+                                    } else {
+                                        selectedSnippetID = nil
+                                    }
                                 }
                             }
                             .transition(.opacity)
                             .zIndex(1)
 
                         GeometryReader { proxy in
-                            let cardWidth = min(max(proxy.size.width * 0.86, 700), 1080)
-                            let cardHeight = min(max(proxy.size.height * 0.84, 500), 860)
+                            // Expanded, the card is the window less a margin
+                            // wide enough to show the fade around it.
+                            let cardWidth = isPreviewExpanded
+                                ? max(proxy.size.width - Self.expandedCardMargin * 2, 0)
+                                : min(max(proxy.size.width * 0.86, 700), 1080)
+                            let cardHeight = isPreviewExpanded
+                                ? max(proxy.size.height - Self.expandedCardMargin * 2, 0)
+                                : min(max(proxy.size.height * 0.84, 500), 860)
 
-                            SnippetDetailView(snippet: snippet, canGoBack: !snippetHistory.isEmpty) {
+                            SnippetDetailView(
+                                snippet: snippet,
+                                canGoBack: !snippetHistory.isEmpty,
+                                isPreviewExpanded: $isPreviewExpanded
+                            ) {
                                 editingSnippet = snippet
                             } onDelete: {
                                 delete(snippet)
@@ -792,6 +836,22 @@ struct ContentView: View {
                 .onChange(of: selectedSnippetID) { _, newValue in
                     if newValue == nil {
                         snippetHistory.removeAll()
+                    }
+                    // Expansion belongs to one snippet's preview: opening
+                    // another, or closing the card, starts from the card.
+                    isPreviewExpanded = false
+                }
+                .onChange(of: isPreviewExpanded) { _, expanded in
+                    // Tuck the sidebar away so the preview gets the whole
+                    // window, and put back exactly what the user had.
+                    withAnimation(DSToken.Motion.overlay) {
+                        if expanded {
+                            columnVisibilityBeforePreviewExpand = columnVisibility
+                            columnVisibility = .detailOnly
+                        } else if let saved = columnVisibilityBeforePreviewExpand {
+                            columnVisibility = saved
+                            columnVisibilityBeforePreviewExpand = nil
+                        }
                     }
                 }
                 .animation(DSToken.Motion.overlay, value: isPresentingNew)

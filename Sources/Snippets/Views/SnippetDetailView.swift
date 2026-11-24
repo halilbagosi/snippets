@@ -13,6 +13,11 @@ struct SnippetDetailView: View {
     /// Whether a previously-viewed snippet exists to navigate back to; drives
     /// the back button's visibility.
     var canGoBack: Bool = false
+    /// Whether the preview fills the window. Owned by the presenter, which
+    /// grows this card to almost the full window and fades and blurs what is
+    /// behind it; this view hides everything but the preview and its
+    /// parameter controls.
+    var isPreviewExpanded: Binding<Bool> = .constant(false)
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onClose: () -> Void
@@ -25,6 +30,12 @@ struct SnippetDetailView: View {
     /// Rendered height of the code area, so the preview can track it.
     @State private var codeAreaHeight: CGFloat = 0
     @State private var paramOverrides: [String: PreviewParamValue] = [:]
+    /// Whether the parameter panel is unfolded. Held here, not in the panel,
+    /// so expanding the preview can open it.
+    @State private var paramsExpanded: Bool = false
+    /// Measured height of the parameter panel, which the expanded preview
+    /// leaves room for below itself.
+    @State private var paramsPanelHeight: CGFloat = 0
 
     private var theme: Theme { Theme.current(colorScheme) }
 
@@ -53,51 +64,85 @@ struct SnippetDetailView: View {
 
     var body: some View {
         let mediaItems = orderedMediaItems
+        let expanded = isPreviewExpanded.wrappedValue
         ZStack(alignment: .topTrailing) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    titleBlock
-                    if !snippet.snippetDescription.isEmpty {
-                        descriptionBlock
+            ScrollViewReader { scrollProxy in
+                ScrollView {
+                    // Expanding morphs this column in place rather than showing
+                    // the preview in a separate overlay: the preview engine must
+                    // keep its identity, or the web view reloads and a Swift
+                    // preview drops back to its Run prompt. Everything but the
+                    // code block steps aside, and the block grows to fill.
+                    //
+                    // Plain SwiftUI sections fade, so they don't land on top of
+                    // the still-shrinking preview on the way back. Media and
+                    // connected code leave and return with `.identity`: they
+                    // host NSViewRepresentables (video players, code views),
+                    // and fading one of those composites a fully white frame.
+                    VStack(alignment: .leading, spacing: 22) {
+                        if !expanded {
+                            titleBlock
+                                .transition(.opacity)
+                            if !snippet.snippetDescription.isEmpty {
+                                descriptionBlock
+                                    .transition(.opacity)
+                            }
+                            if !mediaItems.isEmpty {
+                                mediaSection(mediaItems)
+                                    .transition(.identity)
+                            }
+                        }
+                        codeBlock
+                            .id(Self.codeBlockScrollID)
+                        if !expanded {
+                            metadata
+                                .transition(.opacity)
+                            if !snippet.dependencies.isEmpty {
+                                connectedCode
+                                    .transition(.identity)
+                            }
+                            Spacer(minLength: 24)
+                        }
                     }
-                    if !mediaItems.isEmpty {
-                        mediaSection(mediaItems)
-                    }
-                    codeBlock
-                    metadata
-                    if !snippet.dependencies.isEmpty {
-                        connectedCode
-                    }
-                    Spacer(minLength: 24)
+                    .padding(.horizontal, expanded ? Self.expandedInset : 32)
+                    // The back button is overlaid at the top leading corner, right
+                    // where the title block starts, so the content has to start
+                    // below it when it is there: 14 top inset + 30 button + 12 gap.
+                    // The close button never needs this — it sits opposite the
+                    // title, not on top of it.
+                    .padding(.top, expanded ? Self.expandedInset : (canGoBack ? 56 : 24))
+                    .padding(.bottom, expanded ? Self.expandedInset : 32)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(.horizontal, 32)
-                // The back button is overlaid at the top leading corner, right
-                // where the title block starts, so the content has to start
-                // below it when it is there: 14 top inset + 30 button + 12 gap.
-                // The close button never needs this — it sits opposite the
-                // title, not on top of it.
-                .padding(.top, canGoBack ? 56 : 24)
-                .padding(.bottom, 32)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .scrollDisabled(expanded)
+                // Coming back from the expanded view, land on the preview the
+                // user left rather than wherever the clamped offset ended up.
+                .onChange(of: expanded) { _, isExpanded in
+                    guard !isExpanded else { return }
+                    scrollProxy.scrollTo(Self.codeBlockScrollID, anchor: .center)
+                }
             }
-            Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(theme.text)
-                    .frame(width: 30, height: 30)
-                    .contentShape(Circle())
-                    .liquidGlassSurface(
-                        in: Circle(),
-                        shadowRadius: 12,
-                        shadowY: 6
-                    )
+            if !expanded {
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(theme.text)
+                        .frame(width: 30, height: 30)
+                        .contentShape(Circle())
+                        .liquidGlassSurface(
+                            in: Circle(),
+                            shadowRadius: 12,
+                            shadowY: 6
+                        )
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 14)
+                .padding(.trailing, 14)
+                .accessibilityLabel("Close snippet")
+                .transition(.opacity)
             }
-            .buttonStyle(.plain)
-            .padding(.top, 14)
-            .padding(.trailing, 14)
-            .accessibilityLabel("Close snippet")
 
-            if canGoBack {
+            if canGoBack, !expanded {
                 BackButton(
                     action: onBack,
                     accessibilityLabel: "Back to previous snippet",
@@ -272,6 +317,46 @@ struct SnippetDetailView: View {
     private static let codeMinHeight: CGFloat = 240
     private static let codeMaxHeight: CGFloat = 520
 
+    /// Margin around the preview inside the expanded card.
+    private static let expandedInset: CGFloat = 16
+    /// Floor for the expanded preview when a long parameter panel competes
+    /// with a short window.
+    private static let expandedPreviewMinHeight: CGFloat = 200
+    private static let codeBlockScrollID = "codeBlock"
+    private static let expandButtonSize: CGFloat = 26
+    private static let expandButtonPadding: CGFloat = 10
+    /// Room preview chrome keeps clear for the button: the button, its
+    /// padding, and a small gap before the chrome's own padding begins.
+    private static let expandButtonClearance: CGFloat = expandButtonSize + expandButtonPadding + 4
+
+    /// The video-player style toggle in the preview's top-trailing corner.
+    /// Expanding also unfolds the parameter panel, since docked parameters
+    /// are half the point of the expanded view. While expanded, Escape
+    /// collapses it.
+    private func expandButton(isExpanded: Bool) -> some View {
+        Button {
+            withAnimation(DSToken.Motion.overlay) {
+                isPreviewExpanded.wrappedValue = !isExpanded
+                if !isExpanded { paramsExpanded = true }
+            }
+        } label: {
+            Image(systemName: isExpanded
+                  ? "arrow.down.right.and.arrow.up.left"
+                  : "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(theme.text)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: Self.expandButtonSize, height: Self.expandButtonSize)
+                .contentShape(Circle())
+                .liquidGlassSurface(in: Circle(), shadowRadius: 8, shadowY: 4)
+        }
+        .buttonStyle(.plain)
+        .keyboardShortcut(isExpanded ? .cancelAction : nil)
+        .padding(Self.expandButtonPadding)
+        .help(isExpanded ? "Exit expanded preview" : "Expand preview")
+        .accessibilityLabel(isExpanded ? "Exit expanded preview" : "Expand preview")
+    }
+
     /// Base colour the preview panel paints before its content is on screen.
     ///
     /// The source panel is deliberately transparent — `HighlightedCodeView`
@@ -304,40 +389,49 @@ struct SnippetDetailView: View {
             // config control, the parameter panel and the preview each ask
             // again.
             let detected = configResolution.map(detectedParams) ?? []
-            HStack(spacing: 8) {
-                SectionHeader(showPreview ? "preview" : "source")
-                if let resolution, !resolution.excluded.isEmpty {
-                    Text("\(resolution.excluded.count) connected not previewable")
-                        .font(Mono.font(size: 10))
-                        .foregroundStyle(theme.textMuted)
-                }
-                Spacer(minLength: 16)
-                if let configResolution,
-                   !snippet.paramConfigs.isEmpty || !detected.isEmpty {
-                    PreviewConfigControl(
-                        configs: snippet.paramConfigs,
-                        activeID: snippet.activeParamConfigID,
-                        isDirty: !paramOverrides.isEmpty,
-                        accent: Color(hex: language.accentHex) ?? theme.accent,
-                        theme: theme,
-                        onSave: { saveConfig(named: $0, resolution: configResolution) },
-                        onUpdate: { updateConfig(id: $0, resolution: configResolution) },
-                        onSelect: { selectConfig(id: $0, resolution: configResolution) },
-                        onDelete: { deleteConfig(id: $0) }
-                    )
-                }
-                if language.previewKind != nil {
-                    FilterTag(
-                        label: showPreview ? "code" : "preview",
-                        icon: showPreview ? "chevron.left.forwardslash.chevron.right" : "play.rectangle",
-                        accent: theme.accent,
-                        isSelected: showPreview
-                    ) {
-                        withAnimation(DSToken.Motion.reveal) {
-                            showPreview.toggle()
+            let expanded = isPreviewExpanded.wrappedValue
+            let showsParamPanel = resolution != nil && showPreview
+                && language.previewKind != nil && !detected.isEmpty
+            // What the expanded preview leaves below itself: the docked
+            // parameter panel and the stack spacing above it.
+            let paramReserve = showsParamPanel ? paramsPanelHeight + 8 : 0
+            if !expanded {
+                HStack(spacing: 8) {
+                    SectionHeader(showPreview ? "preview" : "source")
+                    if let resolution, !resolution.excluded.isEmpty {
+                        Text("\(resolution.excluded.count) connected not previewable")
+                            .font(Mono.font(size: 10))
+                            .foregroundStyle(theme.textMuted)
+                    }
+                    Spacer(minLength: 16)
+                    if let configResolution,
+                       !snippet.paramConfigs.isEmpty || !detected.isEmpty {
+                        PreviewConfigControl(
+                            configs: snippet.paramConfigs,
+                            activeID: snippet.activeParamConfigID,
+                            isDirty: !paramOverrides.isEmpty,
+                            accent: Color(hex: language.accentHex) ?? theme.accent,
+                            theme: theme,
+                            onSave: { saveConfig(named: $0, resolution: configResolution) },
+                            onUpdate: { updateConfig(id: $0, resolution: configResolution) },
+                            onSelect: { selectConfig(id: $0, resolution: configResolution) },
+                            onDelete: { deleteConfig(id: $0) }
+                        )
+                    }
+                    if language.previewKind != nil {
+                        FilterTag(
+                            label: showPreview ? "code" : "preview",
+                            icon: showPreview ? "chevron.left.forwardslash.chevron.right" : "play.rectangle",
+                            accent: theme.accent,
+                            isSelected: showPreview
+                        ) {
+                            withAnimation(DSToken.Motion.reveal) {
+                                showPreview.toggle()
+                            }
                         }
                     }
                 }
+                .transition(.opacity)
             }
             Group {
                 if let resolution, language.previewKind != nil {
@@ -347,7 +441,20 @@ struct SnippetDetailView: View {
                         snippetID: snippet.uuid,
                         paramOverrides: $paramOverrides
                     )
-                    .frame(height: previewHeight)
+                    // Leaves the top-trailing corner to the expand button.
+                    .environment(\.previewChromeTrailingInset, Self.expandButtonClearance)
+                    // One modifier for both sizes, so expanding resizes the
+                    // engine instead of swapping it for another view. The
+                    // scroll view's viewport is the container: in the expanded
+                    // card that is the card itself, less its inset and the
+                    // docked parameter panel.
+                    .containerRelativeFrame(.vertical) { length, _ in
+                        guard expanded else { return previewHeight }
+                        return max(
+                            Self.expandedPreviewMinHeight,
+                            length - Self.expandedInset * 2 - paramReserve
+                        )
+                    }
                     // Instant swap, never a cross-fade. Every preview engine is
                     // an NSViewRepresentable, and fading one in forces SwiftUI
                     // to rasterise the AppKit-hosted subtree to apply group
@@ -400,32 +507,46 @@ struct SnippetDetailView: View {
                 shadowRadius: 10,
                 shadowY: 5
             )
+            .overlay(alignment: .topTrailing) {
+                if showPreview, language.previewKind != nil {
+                    expandButton(isExpanded: expanded)
+                }
+            }
 
             // Parameter controls are their own collapsible panel below the
             // preview, not stacked inside its fixed-height frame — so expanding
             // them grows this column downward instead of shrinking the preview.
-            if resolution != nil, showPreview, language.previewKind != nil {
-                let params = detected.map(\.param)
-                if !params.isEmpty {
-                    PreviewParamControls(
-                        params: params, overrides: $paramOverrides, theme: theme,
-                        rangeBasis: snippet.paramConfigs.first(where: \.isDefault)?.values ?? [:]
+            // Expanded, the same panel is what docks along the bottom.
+            if showsParamPanel {
+                PreviewParamControls(
+                    params: detected.map(\.param), overrides: $paramOverrides, theme: theme,
+                    rangeBasis: snippet.paramConfigs.first(where: \.isDefault)?.values ?? [:],
+                    isExpanded: $paramsExpanded
+                )
+                    .onGeometryChange(for: CGFloat.self) { proxy in
+                        proxy.size.height
+                    } action: { height in
+                        // Animated so the expanded preview gives way to the
+                        // panel unfolding instead of jumping a frame later.
+                        withAnimation(DSToken.Motion.reveal) {
+                            paramsPanelHeight = height
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .liquidGlassSurface(
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                        tint: (Color(hex: language.accentHex) ?? theme.accent).opacity(0.08),
+                        shadowRadius: 6,
+                        shadowY: 3
                     )
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .liquidGlassSurface(
-                            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
-                            tint: (Color(hex: language.accentHex) ?? theme.accent).opacity(0.08),
-                            shadowRadius: 6,
-                            shadowY: 3
-                        )
-                        .transition(.opacity)
-                }
+                    .transition(.opacity)
             }
         }
         .onChange(of: snippet.persistentModelID) {
             showPreview = false
             codeAreaHeight = 0
             paramOverrides = [:]
+            paramsExpanded = false
         }
         // Editing the source (or applying a config, which rewrites it) drops
         // stale overrides; dragging a slider changes overrides only, not the
