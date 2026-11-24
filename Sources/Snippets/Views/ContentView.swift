@@ -289,16 +289,22 @@ struct ContentView: View {
         func anchor(at point: CGPoint) -> UnitPoint {
             UnitPoint(x: point.x / layerSize.width, y: point.y / layerSize.height)
         }
-        guard let origin else {
-            // No click to grow from: the usual centred zoom, about the
-            // card's own centre rather than the window's.
-            let center = anchor(at: CGPoint(x: cardFrame.midX, y: cardFrame.midY))
-            return .asymmetric(
-                insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: center)),
-                removal: .opacity.combined(with: .scale(scale: 0.97, anchor: center))
-            )
-        }
-        return .opacity.combined(with: .scale(scale: Self.detailMorphStartScale, anchor: anchor(at: origin)))
+        // No click to grow from: a small zoom about the card's own centre
+        // rather than the window's.
+        let zoomAnchor = origin.map(anchor(at:))
+            ?? anchor(at: CGPoint(x: cardFrame.midX, y: cardFrame.midY))
+        let startScale = origin == nil ? 0.94 : Self.detailMorphStartScale
+        // Fade and zoom run on separate curves: the card is opaque within the
+        // first third of its growth, and stays opaque until it has nearly
+        // shrunk away. One shared curve kept it half-transparent for most of
+        // the trip, which read as a ghost drifting rather than a card moving.
+        let zoom = AnyTransition.scale(scale: startScale, anchor: zoomAnchor)
+        return .asymmetric(
+            insertion: AnyTransition.opacity.animation(DSToken.Motion.detailFadeIn)
+                .combined(with: zoom.animation(DSToken.Motion.detailZoomIn)),
+            removal: AnyTransition.opacity.animation(DSToken.Motion.detailFadeOut)
+                .combined(with: zoom.animation(DSToken.Motion.detailZoomOut))
+        )
     }
 
     /// Roughly a gallery card's width over the detail card's.
@@ -386,7 +392,16 @@ struct ContentView: View {
                 }
         }
         .clipShape(RoundedRectangle(cornerRadius: detailCardCornerRadius, style: .continuous))
-        .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
+        // The shadow is cast by a plain shape behind the clipped card, not by
+        // the card: a shadow on the card is derived from all of its content's
+        // pixels, and redone on every frame of the open, close and expand
+        // animations. A shape's shadow is the same picture at a fraction of
+        // the cost.
+        .background {
+            RoundedRectangle(cornerRadius: detailCardCornerRadius, style: .continuous)
+                .fill(theme.surface)
+                .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
+        }
     }
 
     /// Margin between the window and an expanded preview's card: enough of
