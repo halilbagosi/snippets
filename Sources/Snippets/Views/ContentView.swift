@@ -193,6 +193,12 @@ struct ContentView: View {
         return isPreviewExpanded ? Self.expandedGalleryBlur : 2
     }
 
+    /// Expanded, the card's corners are concentric with the preview inside
+    /// it; the detail view owns that arithmetic.
+    private var detailCardCornerRadius: CGFloat {
+        isPreviewExpanded ? SnippetDetailView.expandedCardCornerRadius : 16
+    }
+
     /// The shade behind the detail card, deepened for an expanded preview so
     /// the preview is the only bright thing in the window.
     private var detailDimOpacity: Double {
@@ -724,14 +730,14 @@ struct ContentView: View {
                             }
                             .frame(width: cardWidth, height: cardHeight)
                             .background {
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                RoundedRectangle(cornerRadius: detailCardCornerRadius, style: .continuous)
                                     .fill(theme.surface)
                                     .overlay {
-                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        RoundedRectangle(cornerRadius: detailCardCornerRadius, style: .continuous)
                                             .strokeBorder(theme.borderStrong, lineWidth: 1)
                                     }
                             }
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: detailCardCornerRadius, style: .continuous))
                             .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .transition(modalTransition)

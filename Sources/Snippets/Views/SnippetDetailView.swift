@@ -318,13 +318,35 @@ struct SnippetDetailView: View {
     private static let codeMaxHeight: CGFloat = 520
 
     /// Margin around the preview inside the expanded card.
-    private static let expandedInset: CGFloat = 16
+    private static let expandedInset: CGFloat = 12
     /// Floor for the expanded preview when a long parameter panel competes
     /// with a short window.
     private static let expandedPreviewMinHeight: CGFloat = 200
     private static let codeBlockScrollID = "codeBlock"
     private static let expandButtonSize: CGFloat = 26
     private static let expandButtonPadding: CGFloat = 10
+    /// Tighter while expanded, so the corners can nest without the preview's
+    /// radius growing past what still reads as a panel.
+    private static let expandedButtonPadding: CGFloat = 8
+
+    /// The preview panel's corner radius in the ordinary card.
+    private static let previewCornerRadius: CGFloat = 14
+    /// Expanded, the corners nest: the button's circle is concentric with the
+    /// preview's corner (radius = padding + button radius), the preview with
+    /// the card's (card radius = preview radius + inset). The docked parameter
+    /// panel takes the preview's radius, which is also concentric with the
+    /// card at its bottom corners, since it sits the same inset in.
+    private static let expandedPreviewCornerRadius: CGFloat = expandedButtonPadding + expandButtonSize / 2
+    /// The card radius `ContentView` gives the expanded card.
+    static let expandedCardCornerRadius: CGFloat = expandedPreviewCornerRadius + expandedInset
+
+    /// One shape type for both sizes, so the radius animates with the card.
+    private func panelShape(expanded: Bool) -> RoundedRectangle {
+        RoundedRectangle(
+            cornerRadius: expanded ? Self.expandedPreviewCornerRadius : Self.previewCornerRadius,
+            style: .continuous
+        )
+    }
     /// Room preview chrome keeps clear for the button: the button, its
     /// padding, and a small gap before the chrome's own padding begins.
     private static let expandButtonClearance: CGFloat = expandButtonSize + expandButtonPadding + 4
@@ -352,7 +374,7 @@ struct SnippetDetailView: View {
         }
         .buttonStyle(.plain)
         .keyboardShortcut(isExpanded ? .cancelAction : nil)
-        .padding(Self.expandButtonPadding)
+        .padding(isExpanded ? Self.expandedButtonPadding : Self.expandButtonPadding)
         .help(isExpanded ? "Exit expanded preview" : "Expand preview")
         .accessibilityLabel(isExpanded ? "Exit expanded preview" : "Expand preview")
     }
@@ -502,7 +524,7 @@ struct SnippetDetailView: View {
             // preview starts. A well puts the same material strictly behind,
             // leaving only the hairline rim on top.
             .liquidGlassWell(
-                in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                in: panelShape(expanded: expanded),
                 tint: (Color(hex: language.accentHex) ?? theme.accent).opacity(0.08),
                 shadowRadius: 10,
                 shadowY: 5
@@ -532,9 +554,9 @@ struct SnippetDetailView: View {
                             paramsPanelHeight = height
                         }
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(panelShape(expanded: expanded))
                     .liquidGlassSurface(
-                        in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                        in: panelShape(expanded: expanded),
                         tint: (Color(hex: language.accentHex) ?? theme.accent).opacity(0.08),
                         shadowRadius: 6,
                         shadowY: 3
