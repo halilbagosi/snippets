@@ -11,6 +11,8 @@ struct SwiftPreviewHostView: View {
     let helpers: [String]
     let theme: Theme
 
+    @Environment(\.previewChromeTrailingInset) private var chromeTrailingInset
+
     @State private var phase: Phase = .idle
     @State private var builtCode: String? = nil
     /// Bumped by every run, so a slow build that finishes after a newer one
@@ -77,6 +79,7 @@ struct SwiftPreviewHostView: View {
                     run()
                 }
                 .padding(10)
+                .padding(.trailing, chromeTrailingInset)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -118,7 +121,7 @@ struct SwiftPreviewHostView: View {
             }
             .padding(DSToken.Spacing.md)
             // Clear of the "run again" button.
-            .padding(.trailing, 90)
+            .padding(.trailing, 90 + chromeTrailingInset)
         }
     }
 
@@ -143,6 +146,7 @@ struct SwiftPreviewHostView: View {
             run()
         }
         .padding(10)
+        .padding(.trailing, chromeTrailingInset)
     }
 
     private func run() {
