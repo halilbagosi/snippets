@@ -36,8 +36,8 @@ final class Onboarding {
         isPresented = true
     }
 
-    /// Called once the sheet has gone, so anything waiting on the tour (the
-    /// preview-trust prompt) presents into a window that has no sheet.
+    /// Called when the tour ends, so anything waiting on it (the
+    /// preview-trust prompt) presents once the tour card is going.
     func complete() {
         isPresented = false
         guard !hasCompleted else { return }
