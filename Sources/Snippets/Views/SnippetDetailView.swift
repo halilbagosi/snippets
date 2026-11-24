@@ -115,6 +115,11 @@ struct SnippetDetailView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .scrollDisabled(expanded)
+                // Keep the scroller on the straight part of the card's edge:
+                // run full height, it was clipped by the rounded corners at
+                // both ends. A couple of points off the rim, too.
+                .contentMargins(.vertical, Self.cardCornerRadius, for: .scrollIndicators)
+                .contentMargins(.trailing, 3, for: .scrollIndicators)
                 // Coming back from the expanded view, land on the preview the
                 // user left rather than wherever the clamped offset ended up.
                 .onChange(of: expanded) { _, isExpanded in
