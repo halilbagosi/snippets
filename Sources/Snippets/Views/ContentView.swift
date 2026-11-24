@@ -213,6 +213,7 @@ struct ContentView: View {
                         .position(x: cardFrame.midX, y: cardFrame.midY)
                         .transition(detailCardTransition(
                             cardFrame: cardFrame,
+                            layerSize: proxy.size,
                             origin: detailOrigin.map { CGPoint(x: $0.x - window.minX, y: $0.y - window.minY) }
                         ))
                         .zIndex(2)
@@ -276,15 +277,28 @@ struct ContentView: View {
     /// gallery card's size, plus the usual fade. A transform and an opacity
     /// only — composited on the GPU, with no layout per frame, which a true
     /// shared-geometry morph of the card's contents would need.
-    private func detailCardTransition(cardFrame: CGRect, origin: CGPoint?) -> AnyTransition {
-        guard !reduceMotion, let origin, cardFrame.width > 0, cardFrame.height > 0 else {
-            return modalTransition
+    ///
+    /// The transition applies to the view `.position` returns, which spans
+    /// the whole layer, so the anchor is a point in the *layer*, not in the
+    /// card. Measured against the card instead, the zoom grew from a point
+    /// offset from the click — further the nearer the click was to the
+    /// window's edge — and the card drifted sideways as it faded in.
+    private func detailCardTransition(cardFrame: CGRect, layerSize: CGSize, origin: CGPoint?) -> AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        guard layerSize.width > 0, layerSize.height > 0 else { return modalTransition }
+        func anchor(at point: CGPoint) -> UnitPoint {
+            UnitPoint(x: point.x / layerSize.width, y: point.y / layerSize.height)
         }
-        let anchor = UnitPoint(
-            x: (origin.x - cardFrame.minX) / cardFrame.width,
-            y: (origin.y - cardFrame.minY) / cardFrame.height
-        )
-        return .opacity.combined(with: .scale(scale: Self.detailMorphStartScale, anchor: anchor))
+        guard let origin else {
+            // No click to grow from: the usual centred zoom, about the
+            // card's own centre rather than the window's.
+            let center = anchor(at: CGPoint(x: cardFrame.midX, y: cardFrame.midY))
+            return .asymmetric(
+                insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: center)),
+                removal: .opacity.combined(with: .scale(scale: 0.97, anchor: center))
+            )
+        }
+        return .opacity.combined(with: .scale(scale: Self.detailMorphStartScale, anchor: anchor(at: origin)))
     }
 
     /// Roughly a gallery card's width over the detail card's.
