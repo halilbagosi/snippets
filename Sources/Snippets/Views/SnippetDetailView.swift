@@ -127,7 +127,7 @@ struct SnippetDetailView: View {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(theme.text)
-                        .frame(width: 30, height: 30)
+                        .frame(width: Self.cornerButtonSize, height: Self.cornerButtonSize)
                         .contentShape(Circle())
                         .liquidGlassSurface(
                             in: Circle(),
@@ -136,8 +136,8 @@ struct SnippetDetailView: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .padding(.top, 14)
-                .padding(.trailing, 14)
+                .padding(.top, Self.cornerButtonInset)
+                .padding(.trailing, Self.cornerButtonInset)
                 .accessibilityLabel("Close snippet")
                 .transition(.opacity)
             }
@@ -148,8 +148,8 @@ struct SnippetDetailView: View {
                     accessibilityLabel: "Back to previous snippet",
                     style: .circle
                 )
-                    .padding(.top, 14)
-                    .padding(.leading, 14)
+                    .padding(.top, Self.cornerButtonInset)
+                    .padding(.leading, Self.cornerButtonInset)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     // 0.94 matches the scale the modals and move sheet enter
                     // at; 0.8 read as a pop next to the rest of the chrome.
@@ -316,6 +316,14 @@ struct SnippetDetailView: View {
 
     private static let codeMinHeight: CGFloat = 240
     private static let codeMaxHeight: CGFloat = 520
+
+    /// The close and back buttons: 30pt circles (`BackButton.circle` matches)
+    /// inset this far from the card's corners.
+    private static let cornerButtonSize: CGFloat = 30
+    private static let cornerButtonInset: CGFloat = 14
+    /// The card's radius, concentric with those corner buttons: the circle's
+    /// centre is the corner arc's centre (radius = inset + button radius).
+    static let cardCornerRadius: CGFloat = cornerButtonInset + cornerButtonSize / 2
 
     /// Margin around the preview inside the expanded card.
     private static let expandedInset: CGFloat = 12
