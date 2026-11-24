@@ -1,4 +1,5 @@
 import XCTest
+import AppKit
 @testable import Snippets
 
 /// The capture decision, tested without ever touching a real pasteboard.
@@ -66,5 +67,70 @@ final class ClipboardCaptureTests: XCTestCase {
         XCTAssertNotNil(ClipboardCapture.candidate(
             text: code, types: ["public.utf8-plain-text"], isOwnWrite: false
         ))
+    }
+
+    // MARK: Copies made by Snippets itself
+
+    /// `Clipboard.copy` tags its write so another running Snippets build —
+    /// which can't see this process's change count — also leaves it alone.
+    func test_internalCopyMarker_isRejected() {
+        XCTAssertNil(ClipboardCapture.candidate(
+            text: code,
+            types: ["public.utf8-plain-text", ClipboardCapture.internalCopyType],
+            isOwnWrite: false
+        ))
+    }
+
+    func test_copyMadeWhileSnippetsFrontmost_isSelfOriginated() {
+        XCTAssertTrue(ClipboardCapture.isSelfOriginated(isOwnWrite: false, snippetsWasFrontmost: true))
+    }
+
+    func test_ownChangeCount_isSelfOriginatedEvenWithAnotherAppFrontmost() {
+        // The quick-copy panel copies without activating the app.
+        XCTAssertTrue(ClipboardCapture.isSelfOriginated(isOwnWrite: true, snippetsWasFrontmost: false))
+    }
+
+    func test_copyInAnotherApp_isNotSelfOriginated() {
+        XCTAssertFalse(ClipboardCapture.isSelfOriginated(isOwnWrite: false, snippetsWasFrontmost: false))
+    }
+
+    /// ⌘C out of a code view goes through NSTextView, not `Clipboard.copy`:
+    /// no marker, no recorded change count — only "Snippets was frontmost".
+    func test_textViewCopyInsideSnippets_isRejected() {
+        let ownWrite = ClipboardCapture.isSelfOriginated(isOwnWrite: false, snippetsWasFrontmost: true)
+        XCTAssertNil(ClipboardCapture.candidate(
+            text: code, types: ["public.utf8-plain-text", "public.rtf"], isOwnWrite: ownWrite
+        ))
+    }
+
+    func test_codeCopiedInAnotherApp_isStillCaptured() {
+        let ownWrite = ClipboardCapture.isSelfOriginated(isOwnWrite: false, snippetsWasFrontmost: false)
+        XCTAssertNotNil(ClipboardCapture.candidate(
+            text: code, types: ["public.utf8-plain-text"], isOwnWrite: ownWrite
+        ))
+    }
+
+    func test_isSnippets_matchesOwnBundleIdentifierOnly() {
+        let own = "com.halilbagosi.Snippets"
+        XCTAssertTrue(ClipboardCapture.isSnippets(bundleIdentifier: own, ownBundleIdentifier: own))
+        XCTAssertFalse(ClipboardCapture.isSnippets(bundleIdentifier: "com.apple.Safari", ownBundleIdentifier: own))
+        XCTAssertFalse(ClipboardCapture.isSnippets(bundleIdentifier: nil, ownBundleIdentifier: own))
+        XCTAssertFalse(ClipboardCapture.isSnippets(bundleIdentifier: own, ownBundleIdentifier: nil))
+    }
+
+    /// Through the real write path: whatever `Clipboard` writes must be
+    /// recognisable as ours from the pasteboard types alone. Uses a private
+    /// pasteboard so the test never touches the user's clipboard.
+    @MainActor
+    func test_clipboardWrite_carriesInternalMarker() {
+        let pasteboard = NSPasteboard(name: .init("SnippetsTests.\(UUID().uuidString)"))
+        defer { pasteboard.releaseGlobally() }
+
+        Clipboard.write(code, to: pasteboard)
+
+        let types = Set((pasteboard.types ?? []).map(\.rawValue))
+        XCTAssertTrue(types.contains(ClipboardCapture.internalCopyType))
+        XCTAssertEqual(pasteboard.string(forType: .string), code)
+        XCTAssertNil(ClipboardCapture.candidate(text: code, types: types, isOwnWrite: false))
     }
 }
