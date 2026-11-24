@@ -5,7 +5,9 @@ import VideoToolbox
 /// The welcome tour: a Mac on a card that zooms toward each feature in turn,
 /// with the copy and screenshot blurring across on every page.
 struct OnboardingView: View {
-    @Environment(\.dismiss) private var dismiss
+    /// Ends the tour. The presenter animates the card away and records the
+    /// tour as seen.
+    var onFinish: () -> Void = {}
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var pager = OnboardingPager(pageCount: OnboardingPage.all.count)
@@ -23,7 +25,17 @@ struct OnboardingView: View {
         /// above the page dots.
         static let controlsTop: CGFloat = 290
         static let controlsHeight: CGFloat = 136
+        /// The top bar's buttons: `.glass` circles, 28pt across around their
+        /// 20pt symbols, inset by the bar's padding.
+        static let cornerButtonDiameter: CGFloat = 28
+        static let cornerButtonInset: CGFloat = DSToken.Spacing.md
     }
+
+    /// Concentric with the top bar's buttons: each circle's centre is its
+    /// corner arc's centre (radius = inset + button radius). A system sheet's
+    /// corners are far tighter and not adjustable, which is why the tour is an
+    /// in-window card rather than a sheet.
+    static let cornerRadius: CGFloat = Layout.cornerButtonInset + Layout.cornerButtonDiameter / 2
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -37,6 +49,11 @@ struct OnboardingView: View {
         }
         .frame(width: Layout.cardSize.width, height: Layout.cardSize.height)
         .background(Color(nsColor: .windowBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+        }
     }
 
     // MARK: Stage
@@ -164,7 +181,7 @@ struct OnboardingView: View {
         }
         .buttonStyle(.glass)
         .buttonBorderShape(.circle)
-        .padding(DSToken.Spacing.md)
+        .padding(Layout.cornerButtonInset)
     }
 
     private var leadingLabel: Text {
@@ -197,7 +214,7 @@ struct OnboardingView: View {
     }
 
     private func finish() {
-        dismiss()
+        onFinish()
     }
 }
 
@@ -786,19 +803,47 @@ private struct AgentControls: View {
 
 // MARK: - Presentation
 
+/// The tour is a card laid over the window, not a sheet: a sheet's corners
+/// are the system's (about 10pt) and cannot be made concentric with the
+/// card's corner buttons. It stays modal the way the sheet was — the shade
+/// takes every click, and the card's own buttons carry Return and Escape.
 private struct OnboardingTour: ViewModifier {
     @Environment(Onboarding.self) private var onboarding
     @Environment(LicenseAgreement.self) private var agreement
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
-        @Bindable var onboarding = onboarding
         content
             // Until the license is agreed to, its gate starts the tour once
             // its own sheet has gone.
             .task { if agreement.isAccepted { onboarding.presentIfNeeded() } }
-            .sheet(isPresented: $onboarding.isPresented, onDismiss: onboarding.complete) {
-                OnboardingView()
+            .overlay {
+                if onboarding.isPresented {
+                    ZStack {
+                        Color.black
+                            .opacity(colorScheme == .dark ? 0.34 : 0.22)
+                            .ignoresSafeArea()
+                            .contentShape(Rectangle())
+                            .onTapGesture {}
+                            .transition(.opacity)
+                        OnboardingView(onFinish: finish)
+                            .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
+                            .transition(cardTransition)
+                    }
+                }
             }
+            .animation(DSToken.Motion.overlay, value: onboarding.isPresented)
+    }
+
+    private var cardTransition: AnyTransition {
+        reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.94))
+    }
+
+    private func finish() {
+        withAnimation(DSToken.Motion.overlay) {
+            onboarding.complete()
+        }
     }
 }
 

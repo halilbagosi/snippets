@@ -138,6 +138,17 @@ struct ContentView: View {
     private enum UndoKind { case deletion, move }
     @State private var lastUndoKind: UndoKind? = nil
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    /// Whether the open snippet's preview is expanded to fill the window.
+    /// The card then grows over the sidebar too, and everything behind it
+    /// is shaded and blurred.
+    @State private var isPreviewExpanded = false
+    /// The detail column's content area in window coordinates, which places
+    /// the detail card while it is not expanded.
+    @State private var detailFrame: CGRect = .zero
+    /// Where the click that opened the card landed, in window coordinates.
+    /// The card grows out of that point and shrinks back into it on close;
+    /// nil (keyboard, Shortcuts, links) grows it from its own centre.
+    @State private var detailOrigin: CGPoint? = nil
 
     @State private var snippetToDelete: Snippet?
     @State private var pendingSnippetDeleteConfirm: (() -> Void)?
@@ -173,6 +184,251 @@ struct ContentView: View {
             insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)),
             removal: .opacity.combined(with: .scale(scale: 0.97, anchor: .center))
         )
+    }
+
+    // MARK: - Detail card layer
+
+    /// The open snippet's card, laid over the entire split view rather than
+    /// inside the detail column. Collapsed it sits exactly where the column
+    /// would centre it; expanded, its frame grows over the sidebar to almost
+    /// the whole window — one view the whole way, so the preview inside keeps
+    /// its identity and the motion is a single continuous resize. The toast
+    /// lives here too, so it still shows above an open card.
+    @ViewBuilder
+    private var detailCardLayer: some View {
+        GeometryReader { proxy in
+            let window = proxy.frame(in: .global)
+            let column = detailFrame.offsetBy(dx: -window.minX, dy: -window.minY)
+            let cardFrame = detailCardFrame(column: column, windowSize: proxy.size)
+            ZStack(alignment: .topLeading) {
+                if isPreviewExpanded {
+                    expandedBackdrop
+                        .zIndex(1)
+                }
+                if let snippet = selectedSnippet,
+                   sidebarSelectionContext != .trash,
+                   detailFrame != .zero {
+                    detailCard(for: snippet)
+                        .frame(width: cardFrame.width, height: cardFrame.height)
+                        .position(x: cardFrame.midX, y: cardFrame.midY)
+                        .transition(detailCardTransition(
+                            cardFrame: cardFrame,
+                            layerSize: proxy.size,
+                            origin: detailOrigin.map { CGPoint(x: $0.x - window.minX, y: $0.y - window.minY) }
+                        ))
+                        .zIndex(2)
+                }
+                if sidebarSelectionContext != .trash, detailFrame != .zero {
+                    Group {
+                        if let toast = activeToast {
+                            VStack {
+                                Spacer()
+                                HStack(spacing: 12) {
+                                    Text(toast.message)
+                                        .foregroundStyle(theme.text)
+                                    if toast.showsUndo {
+                                        Button("Undo") {
+                                            withAnimation(DSToken.Motion.toastOut) {
+                                                _ = undoLast()
+                                                activeToast = nil
+                                            }
+                                        }
+                                        .bold()
+                                        .foregroundStyle(theme.accent)
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                // Keyed on the toast's identity so a message that
+                                // replaces a live toast cross-fades in place rather
+                                // than swapping text inside a motionless pill.
+                                // Order matters: `.transition` has to sit inside the
+                                // `.id` so it travels with the view being swapped,
+                                // and `.animation` outside it to drive that swap.
+                                .transition(.opacity)
+                                .id(toast.id)
+                                .animation(DSToken.Motion.toastIn, value: toast.id)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .liquidGlassSurface(in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .padding(.bottom, 60)
+                            }
+                            .zIndex(100)
+                            // Asymmetric on purpose: the toast rises into view, but
+                            // dismissal is the system getting out of the way, so it
+                            // fades rather than sliding back down.
+                            .transition(toastTransition)
+                        }
+                    }
+                    .frame(width: column.width, height: column.height)
+                    .position(x: column.midX, y: column.midY)
+                    .zIndex(100)
+                }
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+        }
+        // Covers the title bar strip too, so the expanded shade reaches the
+        // window's top edge, as the sidebar does.
+        .ignoresSafeArea()
+        .animation(DSToken.Motion.overlay, value: selectedSnippetID)
+    }
+
+    /// The card grows out of the gallery card that was clicked and shrinks
+    /// back into it: a scale anchored on the click point, starting at about a
+    /// gallery card's size, plus the usual fade. A transform and an opacity
+    /// only — composited on the GPU, with no layout per frame, which a true
+    /// shared-geometry morph of the card's contents would need.
+    ///
+    /// The transition applies to the view `.position` returns, which spans
+    /// the whole layer, so the anchor is a point in the *layer*, not in the
+    /// card. Measured against the card instead, the zoom grew from a point
+    /// offset from the click — further the nearer the click was to the
+    /// window's edge — and the card drifted sideways as it faded in.
+    private func detailCardTransition(cardFrame: CGRect, layerSize: CGSize, origin: CGPoint?) -> AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        guard layerSize.width > 0, layerSize.height > 0 else { return modalTransition }
+        func anchor(at point: CGPoint) -> UnitPoint {
+            UnitPoint(x: point.x / layerSize.width, y: point.y / layerSize.height)
+        }
+        // No click to grow from: a small zoom about the card's own centre
+        // rather than the window's.
+        let zoomAnchor = origin.map(anchor(at:))
+            ?? anchor(at: CGPoint(x: cardFrame.midX, y: cardFrame.midY))
+        let startScale = origin == nil ? 0.94 : Self.detailMorphStartScale
+        // Fade and zoom run on separate curves: the card is opaque within the
+        // first third of its growth, and stays opaque until it has nearly
+        // shrunk away. One shared curve kept it half-transparent for most of
+        // the trip, which read as a ghost drifting rather than a card moving.
+        let zoom = AnyTransition.scale(scale: startScale, anchor: zoomAnchor)
+        return .asymmetric(
+            insertion: AnyTransition.opacity.animation(DSToken.Motion.detailFadeIn)
+                .combined(with: zoom.animation(DSToken.Motion.detailZoomIn)),
+            removal: AnyTransition.opacity.animation(DSToken.Motion.detailFadeOut)
+                .combined(with: zoom.animation(DSToken.Motion.detailZoomOut))
+        )
+    }
+
+    /// Roughly a gallery card's width over the detail card's.
+    private static let detailMorphStartScale: CGFloat = 0.32
+
+    /// The current mouse event's location in the key window, top-left origin
+    /// like SwiftUI's global space. Nil when the selection did not come from
+    /// a click.
+    private static func clickLocationInWindow() -> CGPoint? {
+        guard let event = NSApp.currentEvent,
+              [.leftMouseDown, .leftMouseUp].contains(event.type),
+              let window = event.window,
+              let content = window.contentView else { return nil }
+        let point = content.convert(event.locationInWindow, from: nil)
+        return CGPoint(x: point.x, y: content.isFlipped ? point.y : content.bounds.height - point.y)
+    }
+
+    /// Collapsed: the size the card always had, centred in the detail column.
+    /// Expanded: the window less a margin, starting below the toolbar.
+    private func detailCardFrame(column: CGRect, windowSize: CGSize) -> CGRect {
+        if isPreviewExpanded {
+            let margin = Self.expandedCardMargin
+            let top = column.minY + margin
+            return CGRect(
+                x: margin,
+                y: top,
+                width: max(windowSize.width - margin * 2, 0),
+                height: max(windowSize.height - top - margin, 0)
+            )
+        }
+        let width = min(max(column.width * 0.86, 700), 1080)
+        let height = min(max(column.height * 0.84, 500), 860)
+        return CGRect(x: column.midX - width / 2, y: column.midY - height / 2, width: width, height: height)
+    }
+
+    /// Shade and blur behind an expanded preview, over the sidebar and the
+    /// gallery alike. A click on it collapses the preview back to the card.
+    private var expandedBackdrop: some View {
+        ZStack {
+            Rectangle().fill(.ultraThinMaterial)
+            Color.black.opacity(detailDimOpacity)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(DSToken.Motion.overlay) {
+                isPreviewExpanded = false
+            }
+        }
+        .transition(.opacity)
+    }
+
+    private func detailCard(for snippet: Snippet) -> some View {
+        SnippetDetailView(
+            snippet: snippet,
+            canGoBack: !snippetHistory.isEmpty,
+            isPreviewExpanded: $isPreviewExpanded
+        ) {
+            editingSnippet = snippet
+        } onDelete: {
+            delete(snippet)
+        } onClose: {
+            withAnimation(DSToken.Motion.overlay) {
+                selectedSnippetID = nil
+            }
+        } onOpenSnippet: { dependency in
+            withAnimation(DSToken.Motion.overlay) {
+                if let current = selectedSnippetID {
+                    snippetHistory.append(current)
+                }
+                selectedSnippetID = dependency.persistentModelID
+            }
+        } onBack: {
+            withAnimation(DSToken.Motion.overlay) {
+                if let previous = snippetHistory.popLast() {
+                    selectedSnippetID = previous
+                }
+            }
+        }
+        .background {
+            RoundedRectangle(cornerRadius: detailCardCornerRadius, style: .continuous)
+                .fill(theme.surface)
+                .overlay {
+                    RoundedRectangle(cornerRadius: detailCardCornerRadius, style: .continuous)
+                        .strokeBorder(theme.borderStrong, lineWidth: 1)
+                }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: detailCardCornerRadius, style: .continuous))
+        // The shadow is cast by a plain shape behind the clipped card, not by
+        // the card: a shadow on the card is derived from all of its content's
+        // pixels, and redone on every frame of the open, close and expand
+        // animations. A shape's shadow is the same picture at a fraction of
+        // the cost.
+        .background {
+            RoundedRectangle(cornerRadius: detailCardCornerRadius, style: .continuous)
+                .fill(theme.surface)
+                .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
+        }
+    }
+
+    /// Margin between the window and an expanded preview's card: enough of
+    /// the faded, blurred gallery to show the card floats over it.
+    private static let expandedCardMargin: CGFloat = 20
+    /// Gallery blur behind an expanded preview: soft enough to keep the
+    /// layout recognisable, strong enough that nothing in it competes.
+    private static let expandedGalleryBlur: CGFloat = 14
+    private static let expandedBackdropBlur: CGFloat = 8
+
+    private var galleryBlurRadius: CGFloat {
+        guard selectedSnippet != nil else { return 0 }
+        return isPreviewExpanded ? Self.expandedGalleryBlur : 2
+    }
+
+    /// Concentric with what sits in the card's corners — the close and back
+    /// buttons, or once expanded the preview; the detail view owns that
+    /// arithmetic.
+    private var detailCardCornerRadius: CGFloat {
+        isPreviewExpanded ? SnippetDetailView.expandedCardCornerRadius : SnippetDetailView.cardCornerRadius
+    }
+
+    /// The shade behind the detail card, deepened for an expanded preview so
+    /// the preview is the only bright thing in the window.
+    private var detailDimOpacity: Double {
+        if isPreviewExpanded { return colorScheme == .dark ? 0.55 : 0.40 }
+        return colorScheme == .dark ? 0.34 : 0.22
     }
 
     /// Reduce Motion strips the upward slide; the fade alone still reads.
@@ -545,7 +801,9 @@ struct ContentView: View {
         }
     }
 
-    var body: some View {
+    /// The split view with the detail card layer over it. Its own property
+    /// so `body`'s long modifier chain stays within the type checker's budget.
+    private var splitView: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 360)
@@ -567,6 +825,9 @@ struct ContentView: View {
                         DotGridBackground(gradientPalette: backgroundPalette, lightModeStrength: 0.78, focusedMode: appearanceSettings.focusedMode)
                             .ignoresSafeArea()
                     }
+                    // Only the expanded preview softens the backdrop too; the
+                    // ordinary detail card leaves the dot grid crisp.
+                    .blur(radius: isPreviewExpanded ? Self.expandedBackdropBlur : 0)
 
                     VStack(spacing: 0) {
                         SnippetGalleryView(
@@ -583,6 +844,7 @@ struct ContentView: View {
                             availableCollections: collections,
                             subcollections: gallerySubcollections,
                             onSelect: { snippet in
+                                detailOrigin = Self.clickLocationInWindow()
                                 withAnimation(DSToken.Motion.overlay) {
                                     selectedSnippetID = snippet.persistentModelID
                                     if let colID = selectedCollectionID {
@@ -635,14 +897,17 @@ struct ContentView: View {
                             },
                             onCopySnippetToCollection: { snippet, collection in copySnippet(snippet, to: collection) }
                         )
-                        .blur(radius: selectedSnippet == nil ? 0 : 2)
+                        .blur(radius: galleryBlurRadius)
                         .saturation(selectedSnippet == nil ? 1.0 : 0.95)
                         .allowsHitTesting(selectedSnippet == nil)
                     }
 
-                    if let snippet = selectedSnippet {
+                    if selectedSnippet != nil {
+                        // Fades out as the preview expands: the window-level
+                        // shade in `detailCardLayer` takes over then, so the
+                        // sidebar and the gallery darken by the same amount.
                         Color.black
-                            .opacity(colorScheme == .dark ? 0.34 : 0.22)
+                            .opacity(isPreviewExpanded ? 0 : detailDimOpacity)
                             .ignoresSafeArea()
                             .onTapGesture {
                                 withAnimation(DSToken.Motion.overlay) {
@@ -651,49 +916,18 @@ struct ContentView: View {
                             }
                             .transition(.opacity)
                             .zIndex(1)
-
-                        GeometryReader { proxy in
-                            let cardWidth = min(max(proxy.size.width * 0.86, 700), 1080)
-                            let cardHeight = min(max(proxy.size.height * 0.84, 500), 860)
-
-                            SnippetDetailView(snippet: snippet, canGoBack: !snippetHistory.isEmpty) {
-                                editingSnippet = snippet
-                            } onDelete: {
-                                delete(snippet)
-                            } onClose: {
-                                withAnimation(DSToken.Motion.overlay) {
-                                    selectedSnippetID = nil
-                                }
-                            } onOpenSnippet: { dependency in
-                                withAnimation(DSToken.Motion.overlay) {
-                                    if let current = selectedSnippetID {
-                                        snippetHistory.append(current)
-                                    }
-                                    selectedSnippetID = dependency.persistentModelID
-                                }
-                            } onBack: {
-                                withAnimation(DSToken.Motion.overlay) {
-                                    if let previous = snippetHistory.popLast() {
-                                        selectedSnippetID = previous
-                                    }
-                                }
-                            }
-                            .frame(width: cardWidth, height: cardHeight)
-                            .background {
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(theme.surface)
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                            .strokeBorder(theme.borderStrong, lineWidth: 1)
-                                    }
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .transition(modalTransition)
-                        }
-                        .zIndex(2)
                     }
+
+                    // Where the detail card sits when not expanded. The card
+                    // itself lives in `detailCardLayer`, above the whole split
+                    // view, so that expanding can grow it over the sidebar.
+                    Color.clear
+                        .allowsHitTesting(false)
+                        .onGeometryChange(for: CGRect.self) { proxy in
+                            proxy.frame(in: .global)
+                        } action: { frame in
+                            detailFrame = frame
+                        }
 
                     if isPresentingNew {
                         Color.black
@@ -747,44 +981,6 @@ struct ContentView: View {
                         .zIndex(4)
                     }
 
-                    if let toast = activeToast {
-                        VStack {
-                            Spacer()
-                            HStack(spacing: 12) {
-                                Text(toast.message)
-                                    .foregroundStyle(theme.text)
-                                if toast.showsUndo {
-                                    Button("Undo") {
-                                        withAnimation(DSToken.Motion.toastOut) {
-                                            _ = undoLast()
-                                            activeToast = nil
-                                        }
-                                    }
-                                    .bold()
-                                    .foregroundStyle(theme.accent)
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                            // Keyed on the toast's identity so a message that
-                            // replaces a live toast cross-fades in place rather
-                            // than swapping text inside a motionless pill.
-                            // Order matters: `.transition` has to sit inside the
-                            // `.id` so it travels with the view being swapped,
-                            // and `.animation` outside it to drive that swap.
-                            .transition(.opacity)
-                            .id(toast.id)
-                            .animation(DSToken.Motion.toastIn, value: toast.id)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .liquidGlassSurface(in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                            .padding(.bottom, 60)
-                        }
-                        .zIndex(100)
-                        // Asymmetric on purpose: the toast rises into view, but
-                        // dismissal is the system getting out of the way, so it
-                        // fades rather than sliding back down.
-                        .transition(toastTransition)
-                    }
                 }
                 .animation(DSToken.Motion.overlay, value: selectedSnippetID)
                 // Closing the detail overlay (X, tap-outside, delete) ends the
@@ -793,6 +989,9 @@ struct ContentView: View {
                     if newValue == nil {
                         snippetHistory.removeAll()
                     }
+                    // Expansion belongs to one snippet's preview: opening
+                    // another, or closing the card, starts from the card.
+                    isPreviewExpanded = false
                 }
                 .animation(DSToken.Motion.overlay, value: isPresentingNew)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -803,6 +1002,13 @@ struct ContentView: View {
                 }
             }
         }
+        .overlay {
+            detailCardLayer
+        }
+    }
+
+    var body: some View {
+        splitView
         .background(WindowChromeConfigurator())
         .task {
             performTrashCleanup()

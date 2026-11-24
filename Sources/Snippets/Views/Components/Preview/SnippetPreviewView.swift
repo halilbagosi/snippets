@@ -19,6 +19,7 @@ struct SnippetPreviewView: View {
     @Binding var paramOverrides: [String: PreviewParamValue]
 
     @Environment(PreviewTrust.self) private var trust
+    @Environment(\.previewChromeTrailingInset) private var chromeTrailingInset
 
     private var entryCode: String { resolution.sources.last?.code ?? "" }
     private var helperCodes: [String] { resolution.sources.dropLast().map(\.code) }
@@ -110,6 +111,7 @@ struct SnippetPreviewView: View {
         }
         .foregroundStyle(theme.textMuted)
         .padding(.horizontal, 12)
+        .padding(.trailing, chromeTrailingInset)
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity)
         .background(theme.surface.opacity(0.6))
@@ -142,6 +144,14 @@ struct SnippetPreviewView: View {
     }
 }
 
+extension EnvironmentValues {
+    /// Width the preview engines keep clear at their top-trailing corner, for
+    /// a control the host overlays there — the detail view's expand button.
+    /// Engine chrome that sits in that corner (the CDN banner's "allow", the
+    /// Swift preview's "run again") adds it to its trailing padding.
+    @Entry var previewChromeTrailingInset: CGFloat = 0
+}
+
 /// Native controls for a preview's tweakable parameters.
 struct PreviewParamControls: View {
     let params: [PreviewParam]
@@ -151,8 +161,9 @@ struct PreviewParamControls: View {
     /// source, so `params` defaults move with it; anchoring ranges to the
     /// `Default` config keeps min/max constant across config switches.
     var rangeBasis: [String: PreviewParamValue] = [:]
-
-    @State private var isExpanded = false
+    /// Owned by the host so it can open the panel when the preview expands —
+    /// the panel docked under a full-window preview should not start folded.
+    @Binding var isExpanded: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
