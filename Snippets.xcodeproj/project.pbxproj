@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EF0B2004B000000000000000 /* ClaudeCodeRaterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B2004F000000000000000 /* ClaudeCodeRaterTests.swift */; };
+		EF0B1006B000000000000000 /* ClaudeCodeRater.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1006F000000000000000 /* ClaudeCodeRater.swift */; };
+		EF0B1005B000000000000000 /* AgentProcessRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1005F000000000000000 /* AgentProcessRunner.swift */; };
 		EF0B2003B000000000000000 /* ClaudeCodeEnvelopeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B2003F000000000000000 /* ClaudeCodeEnvelopeTests.swift */; };
 		EF0B2002B000000000000000 /* AgentCLILocatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B2002F000000000000000 /* AgentCLILocatorTests.swift */; };
 		EF0B2001B000000000000000 /* EfficiencyPromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B2001F000000000000000 /* EfficiencyPromptTests.swift */; };
@@ -220,6 +223,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		EF0B2004F000000000000000 /* ClaudeCodeRaterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeRaterTests.swift; sourceTree = "<group>"; };
+		EF0B1006F000000000000000 /* ClaudeCodeRater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeRater.swift; sourceTree = "<group>"; };
+		EF0B1005F000000000000000 /* AgentProcessRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentProcessRunner.swift; sourceTree = "<group>"; };
 		EF0B2003F000000000000000 /* ClaudeCodeEnvelopeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeEnvelopeTests.swift; sourceTree = "<group>"; };
 		EF0B2002F000000000000000 /* AgentCLILocatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentCLILocatorTests.swift; sourceTree = "<group>"; };
 		EF0B2001F000000000000000 /* EfficiencyPromptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyPromptTests.swift; sourceTree = "<group>"; };
@@ -443,6 +449,8 @@
 			children = (
 				EF0A0000000000000000A001 /* EfficiencyReview.swift */,
 				EF0B1004F000000000000000 /* AgentCLILocator.swift */,
+				EF0B1006F000000000000000 /* ClaudeCodeRater.swift */,
+				EF0B1005F000000000000000 /* AgentProcessRunner.swift */,
 				EF0B1003F000000000000000 /* ClaudeCodeEnvelope.swift */,
 				EF0B1002F000000000000000 /* EfficiencyResponseParser.swift */,
 				EF0B1001F000000000000000 /* EfficiencyPrompt.swift */,
@@ -695,6 +703,7 @@
 				EF0A0000000000000000B003 /* EfficiencyReviewStoreTests.swift */,
 				EF0B2002F000000000000000 /* AgentCLILocatorTests.swift */,
 				EF0B2003F000000000000000 /* ClaudeCodeEnvelopeTests.swift */,
+				EF0B2004F000000000000000 /* ClaudeCodeRaterTests.swift */,
 				EF0B2001F000000000000000 /* EfficiencyPromptTests.swift */,
 				EF0B2000F000000000000000 /* EfficiencyResponseParserTests.swift */,
 				5E57E5700000000000000108 /* PreviewParamWriterTests.swift */,
@@ -1175,6 +1184,8 @@
 				289248BE94D0A03E55D70606 /* PreviewParamConfig.swift in Sources */,
 				EF0A0000000000000000A002 /* EfficiencyReview.swift in Sources */,
 				EF0B1004B000000000000000 /* AgentCLILocator.swift in Sources */,
+				EF0B1006B000000000000000 /* ClaudeCodeRater.swift in Sources */,
+				EF0B1005B000000000000000 /* AgentProcessRunner.swift in Sources */,
 				EF0B1003B000000000000000 /* ClaudeCodeEnvelope.swift in Sources */,
 				EF0B1002B000000000000000 /* EfficiencyResponseParser.swift in Sources */,
 				EF0B1001B000000000000000 /* EfficiencyPrompt.swift in Sources */,
@@ -1207,6 +1218,7 @@
 				EF0A0000000000000000B004 /* EfficiencyReviewStoreTests.swift in Sources */,
 				EF0B2002B000000000000000 /* AgentCLILocatorTests.swift in Sources */,
 				EF0B2003B000000000000000 /* ClaudeCodeEnvelopeTests.swift in Sources */,
+				EF0B2004B000000000000000 /* ClaudeCodeRaterTests.swift in Sources */,
 				EF0B2001B000000000000000 /* EfficiencyPromptTests.swift in Sources */,
 				EF0B2000B000000000000000 /* EfficiencyResponseParserTests.swift in Sources */,
 				5E57E5700000000000000208 /* PreviewParamWriterTests.swift in Sources */,
