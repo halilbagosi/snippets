@@ -27,6 +27,9 @@ struct SnippetCard: View {
     /// Collections named beside the title. The gallery fills this only while a
     /// language filter has pulled snippets out of their collections.
     var collectionTags: [SnippetCollection] = []
+    /// Drops the 16:9 code / attachment preview, leaving title, description
+    /// and footer. Driven by the gallery strip's compact toggle.
+    var isCompact: Bool = false
 
     @State private var didCopy: Bool = false
     @State private var copyResetTask: Task<Void, Never>? = nil
@@ -175,8 +178,19 @@ struct SnippetCard: View {
         .accessibilityLabel("Connected snippet")
     }
 
-    private var formattedDate: String {
-        Self.dateFormatter.string(from: snippet.createdAt)
+    /// The footer's trailing date (or trash countdown), always on one line.
+    ///
+    /// A narrow card with a linked chip and the copy button left too little
+    /// room, and the date wrapped onto a second line. It now falls back to a
+    /// shorter form ("12 Oct" instead of "12 Oct 2026") when the full one does
+    /// not fit the room the footer leaves it, and never wraps.
+    private func footerLabel(_ full: String, short: String, weight: Font.Weight) -> some View {
+        ViewThatFits(in: .horizontal) {
+            Text(full).fixedSize()
+            Text(short).fixedSize()
+        }
+        .font(Mono.font(size: 10, weight: weight))
+        .lineLimit(1)
     }
 
     /// The leading lines of `code` that the card's 10-line preview can show.
@@ -213,6 +227,14 @@ struct SnippetCard: View {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
+        return formatter
+    }()
+
+    /// Day and abbreviated month in the user's locale ("12 Oct", "Oct 12").
+    @MainActor
+    private static let shortDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("dMMM")
         return formatter
     }()
 
@@ -254,57 +276,71 @@ struct SnippetCard: View {
             .padding(.top, 12)
             .padding(.bottom, 4)
 
-            Group {
-                if !mediaItems.isEmpty {
-                    let mediaCount = mediaItems.count
-                    if mediaCount == 1, let media = mediaItems.first {
-                        GeometryReader { geo in
-                            GalleryAttachmentPreview(
-                                item: media,
-                                contentSize: CGSize(width: geo.size.width, height: geo.size.height),
-                                innerPadding: GalleryCardAttachmentLayout.innerPadding,
-                                cornerRadius: GalleryCardAttachmentLayout.singleCornerRadius
-                            )
+            if !isCompact {
+                Group {
+                    if !mediaItems.isEmpty {
+                        let mediaCount = mediaItems.count
+                        if mediaCount == 1, let media = mediaItems.first {
+                            GeometryReader { geo in
+                                GalleryAttachmentPreview(
+                                    item: media,
+                                    contentSize: CGSize(width: geo.size.width, height: geo.size.height),
+                                    innerPadding: GalleryCardAttachmentLayout.innerPadding,
+                                    cornerRadius: GalleryCardAttachmentLayout.singleCornerRadius
+                                )
+                            }
+                        } else {
+                            CardMediaGrid(items: mediaItems)
                         }
                     } else {
-                        CardMediaGrid(items: mediaItems)
+                        VStack(alignment: .leading, spacing: 0) {
+                            // Coloured like the detail view's source panel. The
+                            // attributed runs carry their own colours, so the
+                            // old 72% text opacity moves onto the whole view.
+                            Text(SyntaxHighlighter.highlightedText(
+                                for: Self.previewText(of: snippet.code),
+                                language: language,
+                                theme: theme
+                            ))
+                                .font(Mono.font(size: 10))
+                                .opacity(0.86)
+                                .lineLimit(10)
+                                .padding(DSToken.Spacing.sm)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .background(theme.canvasDeep)
                     }
-                } else {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(Self.previewText(of: snippet.code))
-                            .font(Mono.font(size: 10))
-                            .foregroundStyle(theme.text.opacity(0.72))
-                            .lineLimit(10)
-                            .padding(DSToken.Spacing.sm)
+                }
+                // Preview area is locked to 16:9 so image/video attachments keep a
+                // familiar aspect; the card grows slightly taller with its width.
+                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(theme.border, lineWidth: 1)
+                }
+                .overlay {
+                    if effectiveIsHovered {
+                        CardPreviewShaderOverlay(
+                            accent: languageAccent,
+                            isActive: true,
+                            hoverPoint: hoverUnitPoint,
+                            colorScheme: colorScheme
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .transition(.opacity)
+                        .allowsHitTesting(false)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .background(theme.canvasDeep)
                 }
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                // Attachment previews are AppKit-backed (video players), and
+                // fading one rasterises it into a white frame — so those leave
+                // instantly while the card's height animates. Code is plain
+                // SwiftUI text and can fade.
+                .transition(mediaItems.isEmpty ? .opacity : .identity)
             }
-            // Preview area is locked to 16:9 so image/video attachments keep a
-            // familiar aspect; the card grows slightly taller with its width.
-            .aspectRatio(16.0 / 9.0, contentMode: .fit)
-            .frame(maxWidth: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(theme.border, lineWidth: 1)
-            }
-            .overlay {
-                if effectiveIsHovered {
-                    CardPreviewShaderOverlay(
-                        accent: languageAccent,
-                        isActive: true,
-                        hoverPoint: hoverUnitPoint,
-                        colorScheme: colorScheme
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .transition(.opacity)
-                    .allowsHitTesting(false)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 8)
 
             HStack(spacing: 8) {
                 LanguageBadge(language: language, compact: true)
@@ -337,24 +373,39 @@ struct SnippetCard: View {
                 if linkedCount > 0 {
                     linkedChip(theme: theme, languageAccent: languageAccent)
                 }
-                Spacer(minLength: 8)
-                if inTrashView {
-                    let days = snippet.daysUntilPermanentDeletion
-                    let deletionBadgeColor = days <= 3
-                        ? (colorScheme == .dark ? Color.red : Color(red: 0.68, green: 0.05, blue: 0.06))
-                        : (colorScheme == .dark ? Color.orange.opacity(0.82) : Color(red: 0.72, green: 0.29, blue: 0.0))
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock")
-                            .font(Mono.font(size: 10, weight: .semibold))
-                        Text("\(days) day\(days == 1 ? "" : "s") remaining")
-                            .font(Mono.font(size: 10, weight: .semibold))
-                    }
-                    .foregroundStyle(deletionBadgeColor)
-                } else {
-                    Text("\(formattedDate)")
-                        .font(Mono.font(size: 10, weight: .medium))
+                // The trailing label takes what is left *after* the badge,
+                // buttons and chips have their natural widths (priority -1),
+                // and fills it trailing-aligned in place of a Spacer — a
+                // Spacer would claim that leftover itself and leave the label
+                // nothing to choose its full or short form against.
+                Group {
+                    if inTrashView {
+                        let days = snippet.daysUntilPermanentDeletion
+                        let deletionBadgeColor = days <= 3
+                            ? (colorScheme == .dark ? Color.red : Color(red: 0.68, green: 0.05, blue: 0.06))
+                            : (colorScheme == .dark ? Color.orange.opacity(0.82) : Color(red: 0.72, green: 0.29, blue: 0.0))
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                                .font(Mono.font(size: 10, weight: .semibold))
+                            footerLabel(
+                                "\(days) day\(days == 1 ? "" : "s") remaining",
+                                short: "\(days)d left",
+                                weight: .semibold
+                            )
+                        }
+                        .foregroundStyle(deletionBadgeColor)
+                    } else {
+                        footerLabel(
+                            Self.dateFormatter.string(from: snippet.createdAt),
+                            short: Self.shortDateFormatter.string(from: snippet.createdAt),
+                            weight: .medium
+                        )
                         .foregroundStyle(theme.textFaint)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.leading, 8)
+                .layoutPriority(-1)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)

@@ -43,6 +43,17 @@ struct SnippetGalleryView: View {
     var onDeleteSelection: (([Snippet], [SnippetCollection], @escaping () -> Void) -> Void)? = nil
     /// Restores the last deletion batch; returns whether anything came back.
     var onUndoDelete: (() -> Bool)? = nil
+    /// Whether the snippet detail card is open over the gallery. Escape then
+    /// belongs to the card (it closes it), so the gallery's key monitor lets
+    /// it through instead of clearing or unfocusing the search field. A
+    /// closure, not a flag: the monitor is installed once and would only
+    /// ever see the value captured then.
+    var isDetailCardOpen: (() -> Bool)? = nil
+    /// Where each card sits in the window, for the detail card's morph.
+    var cardGeometry: GalleryCardGeometry? = nil
+    /// A card to hide while the detail card morphs out of (or back into)
+    /// it, so the morph reads as that card lifting out of the grid.
+    var hiddenSnippetID: PersistentIdentifier? = nil
     var onMoveSnippetToLibrary: ((Snippet) -> Void)? = nil
     var onMoveSnippetToCollection: ((Snippet, SnippetCollection) -> Void)? = nil
     /// Bulk move of the current selection to a target (nil = Library), handled
@@ -62,6 +73,9 @@ struct SnippetGalleryView: View {
     @State private var hasAnimatedCards = false
     @State private var isCollectionsSectionExpanded = true
     @State private var isSnippetsSectionExpanded = true
+    /// Cards without their code / attachment preview: just title, description
+    /// and footer. One setting for every snippet strip, kept across launches.
+    @AppStorage("gallery.compactCards") private var compactCards = false
     @State private var expandedLanguageSections: Set<String> = []
     /// Selected languages are displayed newest-first in the gallery, so the
     /// last filter the user touched stays closest to the top of the sections.
@@ -221,6 +235,7 @@ struct SnippetGalleryView: View {
                                         tint: theme.accent,
                                         actionIcon: "plus",
                                         action: onCreateCollection,
+                                        actionHelp: "New collection",
                                         isExpanded: $isCollectionsSectionExpanded,
                                         animation: DSToken.Motion.collapse
                                     ) {
@@ -248,6 +263,7 @@ struct SnippetGalleryView: View {
                                         tint: theme.accent,
                                         actionIcon: "plus",
                                         action: onCreateCollection,
+                                        actionHelp: "New collection",
                                         isExpanded: $isCollectionsSectionExpanded,
                                         animation: DSToken.Motion.collapse
                                     ) {
@@ -307,6 +323,9 @@ struct SnippetGalleryView: View {
                 if event.keyCode == 53, showMoveSheet {
                     showMoveSheet = false
                     return nil
+                }
+                if event.keyCode == 53, isDetailCardOpen?() == true {
+                    return event
                 }
             if event.modifierFlags.contains(.command), chars.lowercased() == "z" {
                 if onUndoDelete?() == true {
@@ -632,6 +651,7 @@ struct SnippetGalleryView: View {
             }
         }
         .animation(DSToken.Motion.filterReflow, value: snippetIdentityKey(for: source))
+        .animation(DSToken.Motion.gridReflow, value: compactCards)
         .padding(.horizontal, 18)
         .padding(.top, 18)
         .padding(.bottom, 18)
@@ -657,7 +677,8 @@ struct SnippetGalleryView: View {
                         isStackExpanded: isStackExpanded,
                         onToggleStack: onToggleStack,
                         isConnected: isConnected,
-                        collectionTags: collectionTags
+                        collectionTags: collectionTags,
+                        isCompact: compactCards
                     )
 
                     if viewModel.isSelectMode {
@@ -676,6 +697,22 @@ struct SnippetGalleryView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
+                    // Window position for the detail card's morph. Written to
+                    // an unobserved store, so it never re-renders anything.
+                    .onGeometryChange(for: CGRect.self) { proxy in
+                        proxy.frame(in: .global)
+                    } action: { frame in
+                        cardGeometry?.entries[snippet.persistentModelID] = .init(
+                            frame: frame,
+                            linkedCount: linkedCount,
+                            isConnected: isConnected,
+                            collectionTags: collectionTags
+                        )
+                    }
+                    .opacity(hiddenSnippetID == snippet.persistentModelID ? 0 : 1)
+                    // Hidden and shown in one frame: the morph's copy of the
+                    // card takes over exactly where this one stops drawing.
+                    .animation(nil, value: hiddenSnippetID == snippet.persistentModelID)
                     .scaleEffect(pressedSnippetID == snippet.persistentModelID ? 0.97 : 1.0)
                     .opacity(pressedSnippetID == snippet.persistentModelID ? 0.92 : 1.0)
                     .zIndex(pressedSnippetID == snippet.persistentModelID ? 2 : 0)
@@ -729,19 +766,11 @@ struct SnippetGalleryView: View {
                             return
                         }
                         
+                        // No press animation on open: the detail card opens
+                        // over this card at once (and the morph hides it), and
+                        // a SwiftUI animation running under the open makes
+                        // every glass element in the window refresh per frame.
                         onSelect(snippet)
-                        
-                        withAnimation(DSToken.Motion.press) {
-                            pressedSnippetID = snippet.persistentModelID
-                        }
-                        pressedResetTask?.cancel()
-                        pressedResetTask = Task { @MainActor in
-                            try? await Task.sleep(nanoseconds: 150_000_000)
-                            guard !Task.isCancelled else { return }
-                            withAnimation(DSToken.Motion.release) {
-                                pressedSnippetID = nil
-                            }
-                        }
                     }
     }
 
@@ -989,6 +1018,13 @@ struct SnippetGalleryView: View {
                 count: spec.snippets.count,
                 icon: spec.icon,
                 tint: spec.tint,
+                actionIcon: compactCards ? "rectangle.expand.vertical" : "rectangle.compress.vertical",
+                // Bare, no `withAnimation`: the grid owns this change with its
+                // own scoped `gridReflow` (see `snippetGrid`), and an ambient
+                // transaction would put the strip chrome on a different curve
+                // from the cards it holds.
+                action: { compactCards.toggle() },
+                actionHelp: compactCards ? "Show code previews" : "Compact cards",
                 isExpanded: spec.isExpanded,
                 animation: DSToken.Motion.collapse,
                 glassID: spec.glassID,
@@ -1929,4 +1965,21 @@ private struct CollectionFilterRowButtonStyle: ButtonStyle {
             )
             .animation(DSToken.Motion.hover, value: isHovering)
     }
+}
+
+/// Where each gallery card sits in the window, and what its footer shows,
+/// so the detail card can morph out of the card that was clicked and back
+/// into it. A plain class, deliberately not observed: every card writes to it
+/// on every layout change, and it is read only when a card opens or closes,
+/// so it must never invalidate a view.
+@MainActor
+final class GalleryCardGeometry {
+    struct Entry {
+        var frame: CGRect
+        var linkedCount: Int
+        var isConnected: Bool
+        var collectionTags: [SnippetCollection]
+    }
+
+    var entries: [PersistentIdentifier: Entry] = [:]
 }
