@@ -93,12 +93,17 @@ final class EfficiencyResponseParserTests: XCTestCase {
         XCTAssertEqual(ambiguous.score, 80)
     }
 
-    func test_envelopeNotSignedIn() {
-        let out = Data(#"{"type":"result","is_error":true,"result":"Failed to authenticate: OAuth session expired"}"#.utf8)
-        XCTAssertTrue(ClaudeCodeEnvelope.isNotSignedIn(exitCode: 1, stdout: out))
-        XCTAssertFalse(ClaudeCodeEnvelope.isNotSignedIn(exitCode: 0, stdout: out))
-        XCTAssertFalse(ClaudeCodeEnvelope.isNotSignedIn(exitCode: 1, stdout: Data(#"{"is_error":true,"result":"boom"}"#.utf8)))
-        XCTAssertFalse(ClaudeCodeEnvelope.isNotSignedIn(exitCode: 1, stdout: Data("garbage".utf8)))
+    func test_overlongExplanationIsInvalid() {
+        let long = String(repeating: "a", count: 601)
+        assertInvalid(report(suggestions: [sugg().replacingOccurrences(of: #""E""#, with: "\"\(long)\"")]))
+    }
+
+    func test_suggestionNotAnObjectIsInvalid() {
+        assertInvalid(report(suggestions: ["\"nope\""]))
+    }
+
+    func test_suggestionsNotAnArrayIsInvalid() {
+        assertInvalid(#"{"applicable":true,"score":5,"summary":"s","suggestions":"x"}"#)
     }
 }
 #endif

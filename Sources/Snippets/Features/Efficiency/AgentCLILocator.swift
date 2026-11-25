@@ -4,8 +4,30 @@ import Foundation
 /// Finds an agent CLI by executable name. A Finder-launched app does not
 /// inherit the shell's PATH, so well-known install directories are checked
 /// first and a login shell is the last resort.
+///
+/// Lookups can spawn a shell for up to ~4 s, so the public API is `async` and
+/// runs them on a background queue; never call the sync `lookup` on the main
+/// thread. Found and not-found results are both cached until `refresh`.
 final class AgentCLILocator: @unchecked Sendable {
     static let shared = AgentCLILocator()
+
+    private enum Entry { case found(URL), notFound }
+
+    private let directories: [String]
+    private let isExecutable: @Sendable (String) -> Bool
+    private let shellProbe: @Sendable (String) -> URL?
+    private let lock = NSLock()
+    private var cache: [String: Entry] = [:]
+
+    init(
+        directories: [String] = AgentCLILocator.candidateDirectories(home: NSHomeDirectory()),
+        isExecutable: @escaping @Sendable (String) -> Bool = AgentCLILocator.isRegularExecutable,
+        shellProbe: @escaping @Sendable (String) -> URL? = AgentCLILocator.loginShellProbe
+    ) {
+        self.directories = directories
+        self.isExecutable = isExecutable
+        self.shellProbe = shellProbe
+    }
 
     /// In priority order.
     static func candidateDirectories(home: String) -> [String] {
@@ -15,9 +37,18 @@ final class AgentCLILocator: @unchecked Sendable {
         ]
     }
 
-    /// Only plain executable names may reach the shell fallback.
+    /// Only plain executable names may reach the shell fallback or a path.
     static func isSafeName(_ name: String) -> Bool {
-        !name.isEmpty && name.allSatisfy { $0.isLetter || $0.isNumber || "._-".contains($0) }
+        guard let first = name.first, first != ".", first != "-" else { return false }
+        return name.allSatisfy { $0.isLetter || $0.isNumber || "._-".contains($0) }
+    }
+
+    /// A regular file (symlinks followed) the user may execute — not a directory.
+    static func isRegularExecutable(_ path: String) -> Bool {
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
+            && !isDirectory.boolValue
+            && FileManager.default.isExecutableFile(atPath: path)
     }
 
     static func firstExecutable(
@@ -31,50 +62,78 @@ final class AgentCLILocator: @unchecked Sendable {
         return nil
     }
 
-    private let lock = NSLock()
-    private var cache: [String: URL] = [:]
-
-    /// Cached; call `refresh(name)` when Settings opens.
-    func locate(_ name: String) -> URL? {
-        lock.lock()
-        if let hit = cache[name] { lock.unlock(); return hit }
-        lock.unlock()
-        return refresh(name)
+    /// Cached result, resolving off the calling thread on a miss.
+    func locate(_ name: String) async -> URL? {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async { continuation.resume(returning: self.lookup(name)) }
+        }
     }
 
-    @discardableResult
-    func refresh(_ name: String) -> URL? {
-        let found = Self.firstExecutable(
-            named: name,
-            in: Self.candidateDirectories(home: NSHomeDirectory()),
-            isExecutable: { FileManager.default.isExecutableFile(atPath: $0) }
-        ) ?? Self.viaLoginShell(name)
+    /// Re-resolves, replacing any cached answer. Call when Settings opens.
+    func refresh(_ name: String) async -> URL? {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                continuation.resume(returning: self.resolve(name))
+            }
+        }
+    }
+
+    /// Blocking. Off the main thread only.
+    func lookup(_ name: String) -> URL? {
+        precondition(!Thread.isMainThread, "AgentCLILocator.lookup must not run on the main thread")
         lock.lock()
-        cache[name] = found
+        let entry = cache[name]
+        lock.unlock()
+        switch entry {
+        case .found(let url): return url
+        case .notFound: return nil
+        case nil: return resolve(name)
+        }
+    }
+
+    private func resolve(_ name: String) -> URL? {
+        let found = Self.firstExecutable(named: name, in: directories, isExecutable: isExecutable)
+            ?? (Self.isSafeName(name) ? shellProbe(name) : nil)
+        lock.lock()
+        cache[name] = found.map(Entry.found) ?? .notFound
         lock.unlock()
         return found
     }
 
-    /// `/bin/zsh -lc 'command -v <name>'`, killed after 3 s.
-    private static func viaLoginShell(_ name: String) -> URL? {
+    /// `/bin/zsh -lc 'command -v <name>'`. Hard bound: output goes to a temp
+    /// file (never a pipe a grandchild could hold open), the wait has a 3 s
+    /// deadline, then SIGTERM, then SIGKILL.
+    static func loginShellProbe(_ name: String) -> URL? {
         guard isSafeName(name) else { return nil }
+        let outURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("snippets-locate-\(UUID().uuidString)")
+        guard FileManager.default.createFile(atPath: outURL.path, contents: nil),
+              let out = try? FileHandle(forWritingTo: outURL) else { return nil }
+        defer { try? out.close(); try? FileManager.default.removeItem(at: outURL) }
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
         process.arguments = ["-lc", "command -v \(name)"]
-        let pipe = Pipe()
-        process.standardOutput = pipe
+        process.standardOutput = out
         process.standardError = FileHandle.nullDevice
         process.standardInput = FileHandle.nullDevice
+        let exited = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in exited.signal() }
         do { try process.run() } catch { return nil }
-        let killer = DispatchWorkItem { if process.isRunning { process.terminate() } }
-        DispatchQueue.global().asyncAfter(deadline: .now() + 3, execute: killer)
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        killer.cancel()
+
+        if exited.wait(timeout: .now() + 3) == .timedOut {
+            process.terminate()
+            if exited.wait(timeout: .now() + 0.5) == .timedOut {
+                kill(process.processIdentifier, SIGKILL)
+                _ = exited.wait(timeout: .now() + 0.5)
+            }
+            return nil
+        }
         guard process.terminationStatus == 0,
+              let data = try? Data(contentsOf: outURL),
               let line = String(data: data, encoding: .utf8)?
                 .split(separator: "\n").last.map(String.init),
-              line.hasPrefix("/"), FileManager.default.isExecutableFile(atPath: line)
+              line.hasPrefix("/"), isRegularExecutable(line)
         else { return nil }
         return URL(fileURLWithPath: line)
     }
