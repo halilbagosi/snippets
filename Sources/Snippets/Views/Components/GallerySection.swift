@@ -9,6 +9,8 @@ struct GallerySection<Content: View>: View {
     let tint: Color
     var actionIcon: String? = nil
     var action: (() -> Void)? = nil
+    /// Tooltip and accessibility label for the trailing action button.
+    var actionHelp: String? = nil
     @Binding var isExpanded: Bool
     var animation: Animation = DSToken.Motion.collapse
     /// Whether to draw the header above the content.
@@ -42,6 +44,7 @@ struct GallerySection<Content: View>: View {
         tint: Color,
         actionIcon: String? = nil,
         action: (() -> Void)? = nil,
+        actionHelp: String? = nil,
         isExpanded: Binding<Bool>,
         animation: Animation = DSToken.Motion.collapse,
         showsHeader: Bool = true,
@@ -55,6 +58,7 @@ struct GallerySection<Content: View>: View {
         self.tint = tint
         self.actionIcon = actionIcon
         self.action = action
+        self.actionHelp = actionHelp
         self._isExpanded = isExpanded
         self.animation = animation
         self.showsHeader = showsHeader
@@ -73,6 +77,7 @@ struct GallerySection<Content: View>: View {
                     tint: tint,
                     actionIcon: actionIcon,
                     action: action,
+                    actionHelp: actionHelp,
                     isExpanded: $isExpanded,
                     glassID: glassID,
                     glassNamespace: glassNamespace
@@ -112,6 +117,7 @@ struct GallerySectionHeader: View {
     let tint: Color
     var actionIcon: String? = nil
     var action: (() -> Void)? = nil
+    var actionHelp: String? = nil
     @Binding var isExpanded: Bool
     /// Identity for this header's glass within the gallery's
     /// `GlassEffectContainer`.
@@ -173,6 +179,8 @@ struct GallerySectionHeader: View {
             }
             .buttonStyle(.plain)
             .frame(width: 180, alignment: .leading)
+            .accessibilityLabel("\(title), \(count)")
+            .accessibilityValue(isExpanded ? "expanded" : "collapsed")
 
             Rectangle()
                 .fill(theme.border)
@@ -185,8 +193,14 @@ struct GallerySectionHeader: View {
                         .foregroundStyle(theme.textMuted)
                         .frame(width: 20, height: 20)
                         .contentShape(Rectangle())
+                        // Icons that swap with state (the compact toggle)
+                        // replace each other in place rather than cross-fading
+                        // two glyphs on top of each other.
+                        .contentTransition(.symbolEffect(.replace))
                 }
                 .buttonStyle(.plain)
+                .help(actionHelp ?? "")
+                .accessibilityLabel(actionHelp ?? "")
             } else {
                 Spacer()
                     .frame(width: 20, height: 20)
@@ -206,9 +220,10 @@ struct GallerySectionHeader: View {
             glassID: glassID,
             glassNamespace: glassNamespace
         )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title), \(count), \(isExpanded ? "expanded" : "collapsed")")
-        .accessibilityAddTraits(.isButton)
+        // `.contain`, not `.combine`: combining folded the trailing action
+        // (new collection, compact cards) into the chevron's element, so
+        // VoiceOver could only ever expand or collapse the strip.
+        .accessibilityElement(children: .contain)
     }
 }
 

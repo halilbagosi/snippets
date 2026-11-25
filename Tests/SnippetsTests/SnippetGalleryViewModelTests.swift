@@ -1,4 +1,5 @@
 import XCTest
+import SwiftUI
 @testable import Snippets
 
 @MainActor
@@ -156,5 +157,22 @@ final class SnippetCardPreviewTextTests: XCTestCase {
         let code = String(repeating: "x", count: 50_000)
 
         XCTAssertEqual(SnippetCard.previewText(of: code).count, 2_400)
+    }
+
+    func test_highlightedText_coloursTokensLikeTheDetailView() {
+        let theme = Theme.current(.dark)
+        let text = SyntaxHighlighter.highlightedText(
+            for: "let name = \"hi\" // greet", language: .swift, theme: theme
+        )
+
+        func colour(of fragment: String) -> Color? {
+            guard let range = text.range(of: fragment) else { return nil }
+            return text[range].foregroundColor
+        }
+        XCTAssertEqual(String(text.characters), "let name = \"hi\" // greet")
+        XCTAssertEqual(colour(of: "let"), theme.keyword)
+        XCTAssertEqual(colour(of: "\"hi\""), theme.string)
+        XCTAssertEqual(colour(of: "// greet"), theme.comment)
+        XCTAssertEqual(colour(of: "name"), theme.text)
     }
 }

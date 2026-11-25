@@ -142,6 +142,11 @@ struct ContentView: View {
     /// The card then grows over the sidebar too, and everything behind it
     /// is shaded and blurred.
     @State private var isPreviewExpanded = false
+    /// The same flag (and the card's frames) for the views inside the detail
+    /// card's stage, which live in their own hosting view; see
+    /// `DetailStageLayout`. Always set together with `isPreviewExpanded`,
+    /// through `setPreviewExpanded(_:)`.
+    @State private var stageLayout = DetailStageLayout()
     /// The detail column's content area in window coordinates, which places
     /// the detail card while it is not expanded.
     @State private var detailFrame: CGRect = .zero
@@ -149,6 +154,30 @@ struct ContentView: View {
     /// The card grows out of that point and shrinks back into it on close;
     /// nil (keyboard, Shortcuts, links) grows it from its own centre.
     @State private var detailOrigin: CGPoint? = nil
+    /// The snippet the detail card shows. It follows `selectedSnippetID`
+    /// on the way in, but outlives it on the way out, so the card can shrink
+    /// and fade after the selection is cleared.
+    @State private var presentedSnippetID: PersistentIdentifier? = nil
+    /// Bumped for every open from closed, so the stage restarts from the
+    /// gallery card rather than continuing a previous animation.
+    @State private var detailOpenToken = 0
+    /// Gallery card positions, written by the gallery, read on open/close.
+    @State private var cardGeometry = GalleryCardGeometry()
+    /// The gallery card the detail card morphs out of and back into, in
+    /// window coordinates. Nil for the zoom style, and for opens that did
+    /// not come from a visible card (keyboard, Shortcuts, links).
+    @State private var morphSource: GalleryCardGeometry.Entry? = nil
+    /// The gallery card the morph came out of. Its spot in the grid stays
+    /// empty for as long as the detail card is open — the card is "in" the
+    /// detail card — and it comes back only when a close lands on it.
+    @State private var morphSourceID: PersistentIdentifier? = nil
+    @AppStorage("gallery.compactCards") private var compactCards = false
+    /// False while the card flies open; see `SnippetDetailView.defersHeavyContent`.
+    @State private var detailSettled = true
+    /// What the card is currently animating towards, so a second request
+    /// for the same state (the click starts the open directly, and the
+    /// selection's `onChange` then asks again) doesn't restart it.
+    @State private var detailTargetID: PersistentIdentifier? = nil
 
     @State private var snippetToDelete: Snippet?
     @State private var pendingSnippetDeleteConfirm: (() -> Void)?
@@ -199,23 +228,16 @@ struct ContentView: View {
         GeometryReader { proxy in
             let window = proxy.frame(in: .global)
             let column = detailFrame.offsetBy(dx: -window.minX, dy: -window.minY)
-            let cardFrame = detailCardFrame(column: column, windowSize: proxy.size)
+            let cardFrame = detailCardFrame(column: column, windowSize: proxy.size, expanded: false)
+            let expandedCardFrame = detailCardFrame(column: column, windowSize: proxy.size, expanded: true)
             ZStack(alignment: .topLeading) {
                 if isPreviewExpanded {
                     expandedBackdrop
                         .zIndex(1)
                 }
-                if let snippet = selectedSnippet,
-                   sidebarSelectionContext != .trash,
-                   detailFrame != .zero {
-                    detailCard(for: snippet)
-                        .frame(width: cardFrame.width, height: cardFrame.height)
-                        .position(x: cardFrame.midX, y: cardFrame.midY)
-                        .transition(detailCardTransition(
-                            cardFrame: cardFrame,
-                            layerSize: proxy.size,
-                            origin: detailOrigin.map { CGPoint(x: $0.x - window.minX, y: $0.y - window.minY) }
-                        ))
+                if sidebarSelectionContext != .trash, detailFrame != .zero {
+                    detailStage(window: window, cardFrame: cardFrame, expandedCardFrame: expandedCardFrame)
+                        .frame(width: proxy.size.width, height: proxy.size.height)
                         .zIndex(2)
                 }
                 if sidebarSelectionContext != .trash, detailFrame != .zero {
@@ -269,46 +291,108 @@ struct ContentView: View {
         // Covers the title bar strip too, so the expanded shade reaches the
         // window's top edge, as the sidebar does.
         .ignoresSafeArea()
-        .animation(DSToken.Motion.overlay, value: selectedSnippetID)
     }
 
-    /// The card grows out of the gallery card that was clicked and shrinks
-    /// back into it: a scale anchored on the click point, starting at about a
-    /// gallery card's size, plus the usual fade. A transform and an opacity
-    /// only — composited on the GPU, with no layout per frame, which a true
-    /// shared-geometry morph of the card's contents would need.
+    private var presentedSnippet: Snippet? {
+        guard let id = presentedSnippetID else { return nil }
+        return snippets.first(where: { $0.persistentModelID == id })
+    }
+
+    /// Opens or closes the detail card to match the selection. The card
+    /// grows out of the gallery card that was clicked and shrinks back into
+    /// it: a zoom anchored on the click point from about a gallery card's
+    /// size, a slight stretch of its bottom edge on the way open, and a fade.
     ///
-    /// The transition applies to the view `.position` returns, which spans
-    /// the whole layer, so the anchor is a point in the *layer*, not in the
-    /// card. Measured against the card instead, the zoom grew from a point
-    /// offset from the click — further the nearer the click was to the
-    /// window's edge — and the card drifted sideways as it faded in.
-    private func detailCardTransition(cardFrame: CGRect, layerSize: CGSize, origin: CGPoint?) -> AnyTransition {
-        guard !reduceMotion else { return .opacity }
-        guard layerSize.width > 0, layerSize.height > 0 else { return modalTransition }
-        func anchor(at point: CGPoint) -> UnitPoint {
-            UnitPoint(x: point.x / layerSize.width, y: point.y / layerSize.height)
+    /// Zoom and fade are separate animations. Opening, the card is opaque
+    /// early, so a solid card grows rather than a ghost drifting. Closing, it
+    /// fades from the first frame and is gone before it is back at a gallery
+    /// card's size — fading late left a washed-out card over the gallery card
+    /// it shrank into. The card leaves the hierarchy only once the fade has
+    /// finished, and only if nothing re-opened it meanwhile. Numbers live in
+    /// `DetailMotionTuning` (Debug ▸ Detail Motion… in debug builds).
+    private func syncDetailPresentation(to id: PersistentIdentifier?) {
+        guard id != detailTargetID else { return }
+        detailTargetID = id
+        let tuning = DetailMotionTuning.shared.values
+        if let id {
+            let wasClosed = presentedSnippetID == nil
+            presentedSnippetID = id
+            if wasClosed {
+                detailSettled = false
+                detailOpenToken += 1
+                morphSourceID = morphSource != nil ? id : nil
+            }
+        } else {
+            // Morph back into wherever the card is now; if it is no longer
+            // in the grid (scrolled away, filtered out, a linked snippet),
+            // fall back to the zoom. Only from fully open (or a morph that
+            // is being reversed): at full size the two paths are the same
+            // picture, but mid-zoom switching would jump.
+            if tuning.morph, detailSettled || morphSource != nil, let presentedSnippetID,
+               let entry = cardGeometry.entries[presentedSnippetID] {
+                morphSource = entry
+                morphSourceID = presentedSnippetID
+            } else if morphSource == nil {
+                morphSourceID = nil
+            }
         }
-        // No click to grow from: a small zoom about the card's own centre
-        // rather than the window's.
-        let zoomAnchor = origin.map(anchor(at:))
-            ?? anchor(at: CGPoint(x: cardFrame.midX, y: cardFrame.midY))
-        let startScale = origin == nil ? 0.94 : Self.detailMorphStartScale
-        // Fade and zoom run on separate curves: the card is opaque within the
-        // first third of its growth, and stays opaque until it has nearly
-        // shrunk away. One shared curve kept it half-transparent for most of
-        // the trip, which read as a ghost drifting rather than a card moving.
-        let zoom = AnyTransition.scale(scale: startScale, anchor: zoomAnchor)
-        return .asymmetric(
-            insertion: AnyTransition.opacity.animation(DSToken.Motion.detailFadeIn)
-                .combined(with: zoom.animation(DSToken.Motion.detailZoomIn)),
-            removal: AnyTransition.opacity.animation(DSToken.Motion.detailFadeOut)
-                .combined(with: zoom.animation(DSToken.Motion.detailZoomOut))
+    }
+
+    /// The window-wide stage that presents the detail card: dim, card, and
+    /// the morph's copy of the gallery card. Its motion runs in Core
+    /// Animation, not SwiftUI; see `DetailCardStage`.
+    private func detailStage(window: CGRect, cardFrame: CGRect, expandedCardFrame: CGRect) -> some View {
+        let tuning = DetailMotionTuning.shared.values
+        let snippet = presentedSnippet
+        let path: DetailCardPath
+        if let source = morphSource {
+            path = .morph(source: source.frame.offsetBy(dx: -window.minX, dy: -window.minY))
+        } else if let origin = detailOrigin {
+            path = .zoom(
+                anchor: CGPoint(x: origin.x - window.minX - cardFrame.minX, y: origin.y - window.minY - cardFrame.minY),
+                startScale: tuning.startScale
+            )
+        } else {
+            path = .zoom(anchor: CGPoint(x: cardFrame.width / 2, y: cardFrame.height / 2), startScale: 0.94)
+        }
+        return DetailCardStage(
+            isOpen: selectedSnippetID != nil && snippet != nil,
+            openToken: detailOpenToken,
+            card: snippet.map { AnyView(detailCard(for: $0)) },
+            galleryCopy: {
+                guard let snippet, let source = morphSource else { return nil }
+                return AnyView(
+                    SnippetCard(
+                        snippet: snippet,
+                        linkedCount: source.linkedCount,
+                        isConnected: source.isConnected,
+                        collectionTags: source.collectionTags,
+                        isCompact: compactCards
+                    )
+                    .allowsHitTesting(false)
+                )
+            }(),
+            layout: stageLayout,
+            collapsedFrame: cardFrame,
+            expandedFrame: expandedCardFrame,
+            path: path,
+            dimOpacity: isPreviewExpanded ? 0 : detailDimOpacity,
+            stretch: (detailOrigin == nil && morphSource == nil) ? 0 : tuning.warp,
+            tuning: tuning,
+            reduceMotion: reduceMotion,
+            onDismissTap: { selectedSnippetID = nil },
+            onOpened: {
+                guard selectedSnippetID != nil else { return }
+                detailSettled = true
+            },
+            onClosed: {
+                guard selectedSnippetID == nil else { return }
+                presentedSnippetID = nil
+                morphSource = nil
+                morphSourceID = nil
+            }
         )
     }
-
-    /// Roughly a gallery card's width over the detail card's.
-    private static let detailMorphStartScale: CGFloat = 0.32
 
     /// The current mouse event's location in the key window, top-left origin
     /// like SwiftUI's global space. Nil when the selection did not come from
@@ -324,8 +408,8 @@ struct ContentView: View {
 
     /// Collapsed: the size the card always had, centred in the detail column.
     /// Expanded: the window less a margin, starting below the toolbar.
-    private func detailCardFrame(column: CGRect, windowSize: CGSize) -> CGRect {
-        if isPreviewExpanded {
+    private func detailCardFrame(column: CGRect, windowSize: CGSize, expanded: Bool) -> CGRect {
+        if expanded {
             let margin = Self.expandedCardMargin
             let top = column.minY + margin
             return CGRect(
@@ -335,9 +419,13 @@ struct ContentView: View {
                 height: max(windowSize.height - top - margin, 0)
             )
         }
-        let width = min(max(column.width * 0.86, 700), 1080)
-        let height = min(max(column.height * 0.84, 500), 860)
-        return CGRect(x: column.midX - width / 2, y: column.midY - height / 2, width: width, height: height)
+        // Centred on the window, not the detail column: with the sidebar
+        // open the card overlaps it (the sidebar is shaded and inert while
+        // the card is up — see `DetailCardStage`). Vertically it keeps to the
+        // column, which starts below the toolbar.
+        let width = min(max(windowSize.width * 0.86, 720), 1180, max(windowSize.width - 40, 0))
+        let height = min(max(column.height * 0.9, 520), 940, max(column.height - 24, 0))
+        return CGRect(x: windowSize.width / 2 - width / 2, y: column.midY - height / 2, width: width, height: height)
     }
 
     /// Shade and blur behind an expanded preview, over the sidebar and the
@@ -350,57 +438,80 @@ struct ContentView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             withAnimation(DSToken.Motion.overlay) {
-                isPreviewExpanded = false
+                setPreviewExpanded(false)
             }
         }
         .transition(.opacity)
     }
 
+    /// Expands or collapses the open snippet's preview. Sets the flag for
+    /// this view and for the stage's own view graph in the same transaction,
+    /// so a caller's `withAnimation` animates both.
+    private func setPreviewExpanded(_ expanded: Bool) {
+        // One transaction for both: the shade behind the card, and the card's
+        // own frame and contents inside the stage's view graph. The preview
+        // grows out of its place in the card while everything else steps
+        // aside, exactly as the released card did.
+        let tuning = DetailMotionTuning.shared.values
+        withAnimation(.smooth(duration: tuning.expandDuration * tuning.slowMotion)) {
+            isPreviewExpanded = expanded
+            stageLayout.setExpanded(expanded)
+        }
+    }
+
     private func detailCard(for snippet: Snippet) -> some View {
-        SnippetDetailView(
-            snippet: snippet,
-            canGoBack: !snippetHistory.isEmpty,
-            isPreviewExpanded: $isPreviewExpanded
-        ) {
-            editingSnippet = snippet
-        } onDelete: {
-            delete(snippet)
-        } onClose: {
-            withAnimation(DSToken.Motion.overlay) {
+        // Read inside the stage's view graph, so expanding animates the
+        // card's chrome and contents along with its frame.
+        StageExpansionReader(layout: stageLayout) { expanded in
+            let radius = expanded ? SnippetDetailView.expandedCardCornerRadius : SnippetDetailView.cardCornerRadius
+            SnippetDetailView(
+                snippet: snippet,
+                canGoBack: !snippetHistory.isEmpty,
+                isPreviewExpanded: Binding(
+                    get: { stageLayout.isExpanded },
+                    set: { setPreviewExpanded($0) }
+                ),
+                defersHeavyContent: !detailSettled
+            ) {
+                editingSnippet = snippet
+            } onDelete: {
+                delete(snippet)
+            } onClose: {
+                // No `withAnimation`: the stage animates the close itself, and a
+                // SwiftUI transaction here would animate the window behind it.
                 selectedSnippetID = nil
-            }
-        } onOpenSnippet: { dependency in
-            withAnimation(DSToken.Motion.overlay) {
-                if let current = selectedSnippetID {
-                    snippetHistory.append(current)
+            } onOpenSnippet: { dependency in
+                withAnimation(DSToken.Motion.overlay) {
+                    if let current = selectedSnippetID {
+                        snippetHistory.append(current)
+                    }
+                    selectedSnippetID = dependency.persistentModelID
                 }
-                selectedSnippetID = dependency.persistentModelID
-            }
-        } onBack: {
-            withAnimation(DSToken.Motion.overlay) {
-                if let previous = snippetHistory.popLast() {
-                    selectedSnippetID = previous
+            } onBack: {
+                withAnimation(DSToken.Motion.overlay) {
+                    if let previous = snippetHistory.popLast() {
+                        selectedSnippetID = previous
+                    }
                 }
             }
-        }
-        .background {
-            RoundedRectangle(cornerRadius: detailCardCornerRadius, style: .continuous)
-                .fill(theme.surface)
-                .overlay {
-                    RoundedRectangle(cornerRadius: detailCardCornerRadius, style: .continuous)
-                        .strokeBorder(theme.borderStrong, lineWidth: 1)
-                }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: detailCardCornerRadius, style: .continuous))
-        // The shadow is cast by a plain shape behind the clipped card, not by
-        // the card: a shadow on the card is derived from all of its content's
-        // pixels, and redone on every frame of the open, close and expand
-        // animations. A shape's shadow is the same picture at a fraction of
-        // the cost.
-        .background {
-            RoundedRectangle(cornerRadius: detailCardCornerRadius, style: .continuous)
-                .fill(theme.surface)
-                .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
+            .background {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(theme.surface)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .strokeBorder(theme.borderStrong, lineWidth: 1)
+                    }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+            // The shadow is cast by a plain shape behind the clipped card, not by
+            // the card: a shadow on the card is derived from all of its content's
+            // pixels, and redone on every frame of the expand animation. A
+            // shape's shadow is the same picture at a fraction of the cost.
+            .background {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(theme.surface)
+                    .shadow(color: .black.opacity(colorScheme == .dark ? 0.52 : 0.24), radius: 30, x: 0, y: 18)
+            }
         }
     }
 
@@ -415,13 +526,6 @@ struct ContentView: View {
     private var galleryBlurRadius: CGFloat {
         guard selectedSnippet != nil else { return 0 }
         return isPreviewExpanded ? Self.expandedGalleryBlur : 2
-    }
-
-    /// Concentric with what sits in the card's corners — the close and back
-    /// buttons, or once expanded the preview; the detail view owns that
-    /// arithmetic.
-    private var detailCardCornerRadius: CGFloat {
-        isPreviewExpanded ? SnippetDetailView.expandedCardCornerRadius : SnippetDetailView.cardCornerRadius
     }
 
     /// The shade behind the detail card, deepened for an expanded preview so
@@ -806,6 +910,11 @@ struct ContentView: View {
     private var splitView: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
+                // Blurred and desaturated like the gallery while the detail
+                // card is open; the stage in `detailCardLayer` dims it
+                // and swallows its clicks.
+                .blur(radius: sidebarSelectionContext == .trash ? 0 : galleryBlurRadius)
+                .saturation(selectedSnippet == nil || sidebarSelectionContext == .trash ? 1.0 : 0.95)
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 360)
                 .toolbar {
                     sidebarToolbar
@@ -844,15 +953,30 @@ struct ContentView: View {
                             availableCollections: collections,
                             subcollections: gallerySubcollections,
                             onSelect: { snippet in
-                                detailOrigin = Self.clickLocationInWindow()
-                                withAnimation(DSToken.Motion.overlay) {
-                                    selectedSnippetID = snippet.persistentModelID
-                                    if let colID = selectedCollectionID {
-                                        sidebarSelectionContext = .collection(colID)
-                                    } else {
-                                        sidebarSelectionContext = .allSnippets
-                                    }
+                                // Only from fully closed: re-opening a card
+                                // that is still shrinking keeps the anchor it
+                                // is shrinking towards, or it would jump to
+                                // the new click point mid-flight.
+                                if presentedSnippetID == nil {
+                                    detailOrigin = Self.clickLocationInWindow()
+                                    morphSource = DetailMotionTuning.shared.values.morph
+                                        ? cardGeometry.entries[snippet.persistentModelID]
+                                        : nil
                                 }
+                                // No `withAnimation`: the stage animates the
+                                // open in Core Animation. A SwiftUI animation
+                                // running alongside makes every glass element
+                                // in the window refresh each frame.
+                                selectedSnippetID = snippet.persistentModelID
+                                if let colID = selectedCollectionID {
+                                    sidebarSelectionContext = .collection(colID)
+                                } else {
+                                    sidebarSelectionContext = .allSnippets
+                                }
+                                // Start the card in this same update, not on
+                                // the next one via the selection's onChange
+                                // (which then finds it already under way).
+                                syncDetailPresentation(to: snippet.persistentModelID)
                             },
                             onSelectCollection: { collection in
                                 withAnimation(DSToken.Motion.overlay) {
@@ -890,6 +1014,9 @@ struct ContentView: View {
                                 deleteSelection(snippets: snippets, collections: collections, onConfirmed: onConfirmed)
                             },
                             onUndoDelete: { undoLast() },
+                            isDetailCardOpen: { selectedSnippetID != nil },
+                            cardGeometry: cardGeometry,
+                            hiddenSnippetID: morphSourceID,
                             onMoveSnippetToLibrary: { snippet in moveSnippetToLibrary(snippet) },
                             onMoveSnippetToCollection: { snippet, collection in moveSnippet(snippet, to: collection) },
                             onMoveSelection: { snippets, collections, target in
@@ -900,22 +1027,6 @@ struct ContentView: View {
                         .blur(radius: galleryBlurRadius)
                         .saturation(selectedSnippet == nil ? 1.0 : 0.95)
                         .allowsHitTesting(selectedSnippet == nil)
-                    }
-
-                    if selectedSnippet != nil {
-                        // Fades out as the preview expands: the window-level
-                        // shade in `detailCardLayer` takes over then, so the
-                        // sidebar and the gallery darken by the same amount.
-                        Color.black
-                            .opacity(isPreviewExpanded ? 0 : detailDimOpacity)
-                            .ignoresSafeArea()
-                            .onTapGesture {
-                                withAnimation(DSToken.Motion.overlay) {
-                                    selectedSnippetID = nil
-                                }
-                            }
-                            .transition(.opacity)
-                            .zIndex(1)
                     }
 
                     // Where the detail card sits when not expanded. The card
@@ -982,16 +1093,16 @@ struct ContentView: View {
                     }
 
                 }
-                .animation(DSToken.Motion.overlay, value: selectedSnippetID)
-                // Closing the detail overlay (X, tap-outside, delete) ends the
+                        // Closing the detail overlay (X, tap-outside, delete) ends the
                 // navigation session, so drop any accumulated back history.
                 .onChange(of: selectedSnippetID) { _, newValue in
+                    syncDetailPresentation(to: newValue)
                     if newValue == nil {
                         snippetHistory.removeAll()
                     }
                     // Expansion belongs to one snippet's preview: opening
                     // another, or closing the card, starts from the card.
-                    isPreviewExpanded = false
+                    setPreviewExpanded(false)
                 }
                 .animation(DSToken.Motion.overlay, value: isPresentingNew)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -2010,3 +2121,5 @@ enum TrashLifecycle {
         try context.save()
     }
 }
+
+
