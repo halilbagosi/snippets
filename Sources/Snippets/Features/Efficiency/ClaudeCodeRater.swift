@@ -17,6 +17,8 @@ struct ClaudeCodeRater: EfficiencyRater {
             "-p", "--output-format", "json", "--json-schema", EfficiencyPrompt.schema,
             "--tools", "", "--strict-mcp-config", "--mcp-config", #"{"mcpServers":{}}"#,
             "--no-session-persistence",
+            // Keep the user's hooks, plugins and skills out of a run that handles untrusted code.
+            "--setting-sources", "", "--disable-slash-commands",
         ]
         if let model = model?.trimmingCharacters(in: .whitespacesAndNewlines), !model.isEmpty {
             args += ["--model", model]

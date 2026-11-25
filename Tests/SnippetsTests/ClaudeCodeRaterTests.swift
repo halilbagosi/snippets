@@ -50,7 +50,10 @@ final class ClaudeCodeRaterTests: XCTestCase {
         XCTAssertTrue(args.contains("--strict-mcp-config"))
         XCTAssertEqual(args[args.firstIndex(of: "--mcp-config")! + 1], #"{"mcpServers":{}}"#)
         XCTAssertTrue(args.contains("--no-session-persistence"))
-        XCTAssertEqual(args.suffix(2), ["--model", "sonnet"])
+        XCTAssertEqual(args[args.firstIndex(of: "--setting-sources")! + 1], "")
+        XCTAssertTrue(args.contains("--disable-slash-commands"))
+        XCTAssertEqual(args[args.firstIndex(of: "--json-schema")! + 1], EfficiencyPrompt.schema)
+        XCTAssertEqual(args.suffix(2), ["--model", "sonnet"])  // model stays last
         XCTAssertFalse(String(decoding: stdin, as: UTF8.self).isEmpty)
         XCTAssertFalse(args.contains { $0.contains("let x = 1") }, "code must not travel in argv")
         XCTAssertEqual(Set(env.keys), ["HOME", "USER", "LOGNAME", "PATH", "LANG"])

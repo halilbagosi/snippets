@@ -78,9 +78,8 @@ final class AgentCLILocator: @unchecked Sendable {
         }
     }
 
-    /// Blocking. Off the main thread only.
-    func lookup(_ name: String) -> URL? {
-        precondition(!Thread.isMainThread, "AgentCLILocator.lookup must not run on the main thread")
+    /// Blocking; only reached from the background queues in `locate`.
+    private func lookup(_ name: String) -> URL? {
         lock.lock()
         let entry = cache[name]
         lock.unlock()

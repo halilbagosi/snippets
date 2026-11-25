@@ -65,10 +65,13 @@ struct FoundationProcessRunner: AgentProcessRunning {
         process.arguments = arguments
         process.environment = environment
         process.currentDirectoryURL = workingDirectory
-        let inHandle = try? FileHandle(forReadingFrom: inURL)
-        let outHandle = try? FileHandle(forWritingTo: outURL)
-        let errHandle = try? FileHandle(forWritingTo: errURL)
-        defer { try? inHandle?.close(); try? outHandle?.close(); try? errHandle?.close() }
+        let inHandle: FileHandle, outHandle: FileHandle, errHandle: FileHandle
+        do {
+            inHandle = try FileHandle(forReadingFrom: inURL)
+            outHandle = try FileHandle(forWritingTo: outURL)
+            errHandle = try FileHandle(forWritingTo: errURL)
+        } catch { throw EfficiencyRatingError.failed("could not open the run's files: \(error.localizedDescription)") }
+        defer { try? inHandle.close(); try? outHandle.close(); try? errHandle.close() }
         process.standardInput = inHandle
         process.standardOutput = outHandle
         process.standardError = errHandle
