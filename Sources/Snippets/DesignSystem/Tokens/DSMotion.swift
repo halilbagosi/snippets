@@ -56,21 +56,8 @@ public extension DSToken {
         /// Modals, editors, sheets and the snippet detail card.
         public static let overlay: Animation = .spring(response: 0.4, dampingFraction: 0.88)
 
-        /// The snippet detail card growing out of the clicked gallery card.
-        /// Bounce-free and a touch longer than ``overlay``: the card travels
-        /// from a third of its size, and any overshoot reads as wobble.
-        public static let detailZoomIn: Animation = .smooth(duration: 0.45)
-
-        /// …and shrinking back into it, faster, like every dismissal here.
-        public static let detailZoomOut: Animation = .smooth(duration: 0.3)
-
-        /// The card turns opaque almost at once, so what travels is a solid
-        /// card growing rather than a ghost of one sliding across.
-        public static let detailFadeIn: Animation = .easeOut(duration: 0.15)
-
-        /// Leaving, it stays solid while it shrinks and fades only as it
-        /// lands — ending with ``detailZoomOut``.
-        public static let detailFadeOut: Animation = .easeIn(duration: 0.2).delay(0.1)
+        // The detail card's open/close curves live in `DetailMotionTuning`,
+        // where debug builds can tune them live.
 
         /// Toasts arrive on a spring…
         public static let toastIn: Animation = .spring(response: 0.34, dampingFraction: 0.88)

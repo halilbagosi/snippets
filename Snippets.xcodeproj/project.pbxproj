@@ -40,6 +40,7 @@
 		1F40E612DA4D429891B73A61 /* SnippetDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3AFA46BF758F60544FD944C /* SnippetDetailView.swift */; };
 		23BC99AF3722159BED37DB79 /* SectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6A7ABD6C5C29369D4E765CB /* SectionHeader.swift */; };
 		2460C134FCE44B1078188ADB /* SnippetCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE6D5D60A49D9012A433BB0B /* SnippetCard.swift */; };
+		676E99592F0E418FEBF19919 /* DetailCardStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 349D293E241CD1A4BD2E312A /* DetailCardStage.swift */; };
 		2667C24E86F4DABA8C7C683B /* DSColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510695A55C05140A55A38353 /* DSColor.swift */; };
 		289248BE94D0A03E55D70606 /* PreviewParamConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFF94F2684CC6A5A953CAF64 /* PreviewParamConfig.swift */; };
 		2A2BBE7653270548A8B5B6EE /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 527137D235CE709BA5106BD6 /* ContentView.swift */; };
@@ -54,6 +55,8 @@
 		397143D34A386C5AB9B9F776 /* EditorTabHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E7553D99F70014816334E2E /* EditorTabHeader.swift */; };
 		3F714A9FADBF061104B2F55F /* NewSnippetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93008995B81756F2952B4E33 /* NewSnippetIntent.swift */; };
 		40D4ED353970535DB11DCF63 /* HelpCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132202CF7B77D71B4D874FF4 /* HelpCommands.swift */; };
+		6333331BA52F47421580DCE1 /* DetailMotionTuning.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1829BFBABACFB53AFE81671 /* DetailMotionTuning.swift */; };
+		FFF479394F15C59C3593A3CB /* DetailMotionTuningView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B700458B0F31D1CF0BC5429 /* DetailMotionTuningView.swift */; };
 		43260EDC3C75C408FE45C49D /* StatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D40E0FD0DBEC4CDF48159F /* StatusBar.swift */; };
 		44904403A3F6403C6D88D8F8 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 941B4888889E0A24B1E11498 /* FlowLayout.swift */; };
 		45090D04E962028F81E10D04 /* GallerySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90285C260B1BC9E05BE3F39 /* GallerySection.swift */; };
@@ -232,6 +235,8 @@
 		0C82E0C23D62D7837A6EAE83 /* DotGridBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DotGridBackground.swift; sourceTree = "<group>"; };
 		0CB355D03E22E70CDFEFBE08 /* CopySnippetIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopySnippetIntent.swift; sourceTree = "<group>"; };
 		132202CF7B77D71B4D874FF4 /* HelpCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpCommands.swift; sourceTree = "<group>"; };
+		E1829BFBABACFB53AFE81671 /* DetailMotionTuning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailMotionTuning.swift; sourceTree = "<group>"; };
+		6B700458B0F31D1CF0BC5429 /* DetailMotionTuningView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailMotionTuningView.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000EULAF1 /* EULA.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = EULA.txt; sourceTree = "<group>"; };
 		18B912223FDE5C2A7CC856B3 /* ThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThirdPartyNotices.txt; sourceTree = "<group>"; };
 		25E755FD360416D4858461B1 /* DSTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSTypography.swift; sourceTree = "<group>"; };
@@ -383,6 +388,7 @@
 		EA8F72B9D99EE79A5560B20B /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
 		EC81238946BF781158E8BD10 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		EE6D5D60A49D9012A433BB0B /* SnippetCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetCard.swift; sourceTree = "<group>"; };
+		349D293E241CD1A4BD2E312A /* DetailCardStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailCardStage.swift; sourceTree = "<group>"; };
 		F03E294B335BB3E3BF02C8FB /* MediaItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaItem.swift; sourceTree = "<group>"; };
 		F22332A83990D91C9C3A122D /* AppLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLinks.swift; sourceTree = "<group>"; };
 		F34D7D26165772B2FBCD32A7 /* SnippetArchiveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetArchiveTests.swift; sourceTree = "<group>"; };
@@ -540,6 +546,7 @@
 				7F2D50C1A83B4E9D62C10FAB /* BackButton.swift */,
 				B6A7ABD6C5C29369D4E765CB /* SectionHeader.swift */,
 				EE6D5D60A49D9012A433BB0B /* SnippetCard.swift */,
+				349D293E241CD1A4BD2E312A /* DetailCardStage.swift */,
 				72351DDB378B8C22EB8FD8EE /* SnippetCollectionCard.swift */,
 				90D40E0FD0DBEC4CDF48159F /* StatusBar.swift */,
 				53F647721774252E892243AA /* ViewSnapshot.swift */,
@@ -618,6 +625,8 @@
 				UPDATECMDS0000000000F001 /* UpdateCommands.swift */,
 				6CE2410E27F5506076DCBF84 /* AppearanceSettings.swift */,
 				132202CF7B77D71B4D874FF4 /* HelpCommands.swift */,
+				E1829BFBABACFB53AFE81671 /* DetailMotionTuning.swift */,
+				6B700458B0F31D1CF0BC5429 /* DetailMotionTuningView.swift */,
 				F22332A83990D91C9C3A122D /* AppLinks.swift */,
 				EC81238946BF781158E8BD10 /* AppEnvironment.swift */,
 			);
@@ -1012,6 +1021,8 @@
 				F46B79656507314308974187 /* ThirdPartyNoticesView.swift in Sources */,
 				1E6A1D0C0000000000000001 /* LegalDocument.swift in Sources */,
 				40D4ED353970535DB11DCF63 /* HelpCommands.swift in Sources */,
+				6333331BA52F47421580DCE1 /* DetailMotionTuning.swift in Sources */,
+				FFF479394F15C59C3593A3CB /* DetailMotionTuningView.swift in Sources */,
 				CF9418FAE91E4369C97CBFF2 /* AppLinks.swift in Sources */,
 				D4A378895A23F8FD4EF5248F /* AppIntentNavigator.swift in Sources */,
 				BDC6F6C5E365C5EC65C80F1C /* AppearanceSettings.swift in Sources */,
@@ -1058,6 +1069,7 @@
 				AB649C3AF7BC8AC17F5FD0BB /* SettingsView.swift in Sources */,
 				594C6D13011DDBBD5D15AC39 /* Snippet.swift in Sources */,
 				2460C134FCE44B1078188ADB /* SnippetCard.swift in Sources */,
+				676E99592F0E418FEBF19919 /* DetailCardStage.swift in Sources */,
 				002912E32D5AD77A965C6669 /* SnippetCollectionCard.swift in Sources */,
 				4E9253E54F5DA0B1B83330E2 /* SnippetCollectionEntity.swift in Sources */,
 				1F40E612DA4D429891B73A61 /* SnippetDetailView.swift in Sources */,

@@ -19,6 +19,12 @@ struct Token {
     let kind: TokenKind
 }
 
+/// `NSCache` holds objects only.
+final class AttributedStringBox {
+    let value: AttributedString
+    init(_ value: AttributedString) { self.value = value }
+}
+
 struct LanguageRules {
     var lineCommentPrefix: String? = "//"
     var blockComment: (open: String, close: String)? = ("/*", "*/")
@@ -171,6 +177,55 @@ enum SyntaxHighlighter {
         let estimatedCost = max(1, source.utf8.count * 4)
         highlightCache.setObject(result, forKey: cacheKey, cost: estimatedCost)
         return result
+    }
+
+    /// Cache for the SwiftUI-side highlighting the gallery cards draw.
+    private static let swiftUICache: NSCache<NSString, AttributedStringBox> = {
+        let cache = NSCache<NSString, AttributedStringBox>()
+        cache.countLimit = 400
+        return cache
+    }()
+
+    /// The same colouring as ``applyAttributes(to:language:theme:fontSize:)``
+    /// as a SwiftUI `AttributedString` carrying only foreground colours, so a
+    /// plain `Text` can draw it with whatever font its caller sets.
+    ///
+    /// Gallery cards use this instead of `HighlightedCodeView`: an
+    /// `NSViewRepresentable` per card would be heavy, and every card fades on
+    /// filter changes, which rasterises AppKit-hosted views into a white frame.
+    /// Callers pass already-truncated text (see `SnippetCard.previewText`), so
+    /// tokenizing stays proportional to what is shown. Cached because a card's
+    /// body is re-evaluated on every frame of its hover tilt.
+    static func highlightedText(
+        for source: String,
+        language: SupportedLanguage,
+        theme: Theme
+    ) -> AttributedString {
+        let cacheKey = "\(source.hashValue)_\(source.utf8.count)_\(language.rawValue)_\(schemeCacheKey(for: theme))" as NSString
+        if let cached = swiftUICache.object(forKey: cacheKey) {
+            return cached.value
+        }
+
+        var result = AttributedString(source)
+        result.foregroundColor = theme.text
+        let tokens = CodeTokenizer(source: source, rules: rules(for: language)).tokenize()
+        for token in tokens {
+            guard let range = Range(token.range, in: result) else { continue }
+            result[range].foregroundColor = swiftUIColor(for: token.kind, theme: theme)
+        }
+
+        swiftUICache.setObject(AttributedStringBox(result), forKey: cacheKey)
+        return result
+    }
+
+    /// Mirrors `_resolveColor`, in SwiftUI colours.
+    private static func swiftUIColor(for kind: TokenKind, theme: Theme) -> Color {
+        switch kind {
+        case .keyword, .attribute: theme.keyword
+        case .type, .property, .tag, .number: theme.symbol
+        case .string: theme.string
+        case .comment: theme.comment
+        }
     }
 
     private static func color(for kind: TokenKind, theme: Theme) -> NSColor {
