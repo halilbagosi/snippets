@@ -18,6 +18,12 @@ struct SnippetDetailView: View {
     /// behind it; this view hides everything but the preview and its
     /// parameter controls.
     var isPreviewExpanded: Binding<Bool> = .constant(false)
+    /// True while the card is still flying open. Linked snippets' code
+    /// windows then draw as plain SwiftUI text rather than building an AppKit
+    /// code view (with syntax highlighting) each before the first frame —
+    /// the delay between a click and the card starting to grow. They sit
+    /// below the fold, so the swap once the card lands goes unseen.
+    var defersHeavyContent: Bool = false
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onClose: () -> Void
@@ -141,6 +147,10 @@ struct SnippetDetailView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                // Escape closes the card. Hidden while the preview is
+                // expanded, when Escape belongs to the expand button and
+                // collapses the preview first.
+                .keyboardShortcut(.cancelAction)
                 .padding(.top, Self.cornerButtonInset)
                 .padding(.trailing, Self.cornerButtonInset)
                 .accessibilityLabel("Close snippet")
@@ -775,12 +785,26 @@ struct SnippetDetailView: View {
             }
             .buttonStyle(.plain)
 
-            HighlightedCodeView(
-                code: dependency.code,
-                language: depLanguage,
-                theme: theme,
-                fontSize: 13
-            )
+            Group {
+                if defersHeavyContent {
+                    Text(SyntaxHighlighter.highlightedText(
+                        for: SnippetCard.previewText(of: dependency.code),
+                        language: depLanguage,
+                        theme: theme
+                    ))
+                    .font(Mono.font(size: 13))
+                    .lineLimit(14)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                } else {
+                    HighlightedCodeView(
+                        code: dependency.code,
+                        language: depLanguage,
+                        theme: theme,
+                        fontSize: 13
+                    )
+                }
+            }
             .frame(height: 240)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .liquidGlassSurface(

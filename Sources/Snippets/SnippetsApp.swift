@@ -233,6 +233,9 @@ struct SnippetsApp: App {
             #if !APP_STORE
             UpdateCommands()
             #endif
+            #if DEBUG
+            DebugCommands()
+            #endif
             CommandGroup(after: .windowArrangement) {
                 Button("Toggle Full Screen") {
                     NSApp.keyWindow?.toggleFullScreen(nil)
@@ -264,6 +267,13 @@ struct SnippetsApp: App {
             LicenseAgreementView()
         }
         .windowResizability(.contentMinSize)
+
+        #if DEBUG
+        Window("Detail Motion", id: DetailMotionTuningView.windowID) {
+            DetailMotionTuningView()
+        }
+        .windowResizability(.contentSize)
+        #endif
         #endif
     }
 
