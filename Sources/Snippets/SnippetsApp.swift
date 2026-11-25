@@ -133,6 +133,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     #endif
 
+    #if !APP_STORE
+    /// Quitting stops every rating run; nothing is saved.
+    func applicationWillTerminate(_ notification: Notification) {
+        EfficiencyRatingCenter.shared.cancelAll()
+    }
+    #endif
+
     /// The app now lives in the menu bar after its last window closes, which is
     /// the whole point of the quick-copy panel — it must be reachable while the
     /// user is working somewhere else. The panel footer carries Quit, because
