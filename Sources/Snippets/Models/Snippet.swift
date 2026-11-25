@@ -20,6 +20,9 @@ final class Snippet {
     var paramConfigs: [PreviewParamConfig] = []
     var activeParamConfigID: UUID?
 
+    /// Efficiency ratings, newest last. Defaulted so existing rows migrate.
+    var efficiencyReviews: [EfficiencyReview] = []
+
     @Relationship(deleteRule: .cascade, inverse: \MediaItem.snippet)
     var mediaItems: [MediaItem]
 

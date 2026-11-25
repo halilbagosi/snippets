@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EF0A0000000000000000A002 /* EfficiencyReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0A0000000000000000A001 /* EfficiencyReview.swift */; };
+		EF0A0000000000000000B002 /* PreviewParamConfigCodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0A0000000000000000B001 /* PreviewParamConfigCodeTests.swift */; };
+		EF0A0000000000000000B004 /* EfficiencyReviewStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0A0000000000000000B003 /* EfficiencyReviewStoreTests.swift */; };
 		SPARKLE0000000000000BLD1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = SPARKLE0000000000000PRD1 /* Sparkle */; };
 		4D435000000000000000B104 /* MCPStdioShimTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A104 /* MCPStdioShimTests.swift */; };
 		4D435000000000000000B103 /* MCPSocketServerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A103 /* MCPSocketServerTests.swift */; };
@@ -208,6 +211,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		EF0A0000000000000000A001 /* EfficiencyReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyReview.swift; sourceTree = "<group>"; };
+		EF0A0000000000000000B001 /* PreviewParamConfigCodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewParamConfigCodeTests.swift; sourceTree = "<group>"; };
+		EF0A0000000000000000B003 /* EfficiencyReviewStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyReviewStoreTests.swift; sourceTree = "<group>"; };
 		4D435000000000000000A104 /* MCPStdioShimTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPStdioShimTests.swift; sourceTree = "<group>"; };
 		4D435000000000000000A103 /* MCPSocketServerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSocketServerTests.swift; sourceTree = "<group>"; };
 		4D435000000000000000A110 /* AgentAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentAccessTests.swift; sourceTree = "<group>"; };
@@ -414,6 +420,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		EF0A0000000000000000A003 /* Efficiency */ = {
+			isa = PBXGroup;
+			children = (
+				EF0A0000000000000000A001 /* EfficiencyReview.swift */,
+			);
+			path = Efficiency;
+			sourceTree = "<group>";
+		};
 		0531673F4C20B2625BFAA76D /* ext */ = {
 			isa = PBXGroup;
 			children = (
@@ -654,6 +668,8 @@
 				5E57E5700000000000000105 /* MetalShaderSourceTests.swift */,
 				5E57E5700000000000000106 /* PreviewParamConfigPersistenceTests.swift */,
 				5E57E5700000000000000107 /* PreviewParamConfigTests.swift */,
+				EF0A0000000000000000B001 /* PreviewParamConfigCodeTests.swift */,
+				EF0A0000000000000000B003 /* EfficiencyReviewStoreTests.swift */,
 				5E57E5700000000000000108 /* PreviewParamWriterTests.swift */,
 				5E57E5700000000000000109 /* PreviewParamsTests.swift */,
 				5E57E570000000000000010A /* ShaderClockTests.swift */,
@@ -890,6 +906,7 @@
 				32F8FA0F9162B95586F72B95 /* Editor */,
 				752E4D5163A0932DB1FC0C7E /* Gallery */,
 				4C734715871117432A0E4E49 /* Preview */,
+				EF0A0000000000000000A003 /* Efficiency */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -1129,6 +1146,7 @@
 				01E24B2BB3789E64F91EB040 /* PreviewParams.swift in Sources */,
 				D48543C395C387CFBB52BDBB /* PreviewParamWriter.swift in Sources */,
 				289248BE94D0A03E55D70606 /* PreviewParamConfig.swift in Sources */,
+				EF0A0000000000000000A002 /* EfficiencyReview.swift in Sources */,
 				6E2A43ECAC9C0E5D05506755 /* PreviewConfigControl.swift in Sources */,
 				F6E64CBF8C0BB58AA4AAC952 /* ColorPanelCenterer.swift in Sources */,
 				B2304606901B609F44EFB13F /* DSMotion.swift in Sources */,
@@ -1153,6 +1171,8 @@
 				5E57E5700000000000000205 /* MetalShaderSourceTests.swift in Sources */,
 				5E57E5700000000000000206 /* PreviewParamConfigPersistenceTests.swift in Sources */,
 				5E57E5700000000000000207 /* PreviewParamConfigTests.swift in Sources */,
+				EF0A0000000000000000B002 /* PreviewParamConfigCodeTests.swift in Sources */,
+				EF0A0000000000000000B004 /* EfficiencyReviewStoreTests.swift in Sources */,
 				5E57E5700000000000000208 /* PreviewParamWriterTests.swift in Sources */,
 				5E57E5700000000000000209 /* PreviewParamsTests.swift in Sources */,
 				5E57E570000000000000020A /* ShaderClockTests.swift in Sources */,
