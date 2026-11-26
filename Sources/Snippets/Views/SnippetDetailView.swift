@@ -101,6 +101,15 @@ struct SnippetDetailView: View {
                         }
                         codeBlock
                             .id(Self.codeBlockScrollID)
+#if !APP_STORE
+                        EfficiencyPanel(
+                            snippet: snippet, isPreviewExpanded: expanded,
+                            defersHeavyContent: defersHeavyContent,
+                            accent: Color(hex: language.accentHex) ?? theme.accent,
+                            onSaveAsNew: { applyFixAsNewConfig($0, from: $1, named: $2) },
+                            onAddToActive: { applyFixToActiveConfig($0, from: $1) }
+                        )
+#endif
                         if !expanded {
                             metadata
                                 .transition(.opacity)
