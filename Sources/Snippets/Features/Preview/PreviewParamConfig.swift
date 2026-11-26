@@ -66,7 +66,9 @@ enum PreviewParamConfigStore {
         return result
     }
 
-    /// Saves a code variant as a new named config. Creates `Default` first when
+    /// Saves a code variant as a new named config. `declared` describes the code
+    /// before the variant (what `Default` records); `codeDeclared`, when the
+    /// variant's code declares different params, describes the variant. Creates `Default` first when
     /// absent, and lets `Default` capture `currentCode` the first time a code
     /// config exists, so the original is always one click away.
     static func savingCodeVariant(
@@ -76,6 +78,7 @@ enum PreviewParamConfigStore {
         sourceReviewID: UUID?,
         currentCode: String,
         declared: [PreviewParam],
+        codeDeclared: [PreviewParam]? = nil,
         into configs: [PreviewParamConfig]
     ) -> (configs: [PreviewParamConfig], newID: UUID) {
         var result = configs
@@ -95,7 +98,7 @@ enum PreviewParamConfigStore {
         result.append(
             PreviewParamConfig(
                 id: newID, name: name,
-                values: overlay(current: values, declared: declared), isDefault: false,
+                values: overlay(current: values, declared: codeDeclared ?? declared), isDefault: false,
                 code: code, sourceReviewID: sourceReviewID
             )
         )

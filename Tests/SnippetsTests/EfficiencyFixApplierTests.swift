@@ -42,8 +42,12 @@ final class EfficiencyFixApplierTests: XCTestCase {
     }
 
     private func select(_ id: UUID, _ snippet: Snippet, applying values: @escaping ([String: PreviewParamValue]) -> Void = { _ in }) {
-        EfficiencyFixApplier.select(id: id, in: snippet, declared: { [] }, applyValues: values)
+        EfficiencyFixApplier.select(
+            id: id, in: snippet, declared: { [] }, applyValues: values,
+            forgetTrust: { selectForgotten.append($0) })
     }
+
+    private var selectForgotten: [UUID?] = []
 
     private func config(_ name: String, in snippet: Snippet) -> PreviewParamConfig {
         snippet.paramConfigs.first { $0.name == name }!
@@ -192,5 +196,114 @@ final class EfficiencyFixApplierTests: XCTestCase {
         snippet.efficiencyReviews = [oldStray, newer]
         saveAsNew(snippet, newer, s)
         XCTAssertEqual(snippet.efficiencyReviews.map(\.id), [newer.id])
+    }
+
+    // MARK: real detector + writer
+
+    private static let glsl = "uniform float speed; // = 1.5\nvoid main() { x = speed; }"
+    private static let header = "// tuned\nconst float K = 2.0;\n"
+
+    private func resolution(_ snippet: Snippet) -> SnippetLinker.Resolution {
+        .init(sources: [LinkedSource(language: .glsl, code: snippet.code)], excluded: [])
+    }
+
+    private func detected(_ snippet: Snippet) -> [DetectedParam] {
+        PreviewParamDetector.detect(for: .glsl, resolution: resolution(snippet))
+    }
+
+    private func speed(_ snippet: Snippet) -> PreviewParam.Kind? {
+        detected(snippet).first { $0.param.name == "speed" }?.param.kind
+    }
+
+    private func realSaveAsNew(
+        _ snippet: Snippet, _ review: EfficiencyReview, _ suggestion: EfficiencyReview.Suggestion,
+        name: String, overrides: [String: PreviewParamValue] = [:]
+    ) {
+        EfficiencyFixApplier.saveAsNew(
+            snippet: snippet, review: review, suggestion: suggestion, name: name, overrides: overrides,
+            declared: { self.detected(snippet).map(\.param) },
+            applyValues: { values in
+                snippet.code = PreviewParamWriter.apply(values, to: snippet.code, params: self.detected(snippet))
+            },
+            forgetTrust: { _ in })
+    }
+
+    private func realSelect(_ id: UUID, _ snippet: Snippet) {
+        EfficiencyFixApplier.select(
+            id: id, in: snippet,
+            declared: { self.detected(snippet).map(\.param) },
+            applyValues: { values in
+                snippet.code = PreviewParamWriter.apply(values, to: snippet.code, params: self.detected(snippet))
+            },
+            forgetTrust: { _ in })
+    }
+
+    private func insertingFix() -> (EfficiencyReview, EfficiencyReview.Suggestion) {
+        review(rated: Self.glsl, before: "uniform float speed;", after: Self.header + "uniform float speed;")
+    }
+
+    func test_saveAsNew_withParams_fixInsertingTextAboveLiteral_keepsCodeIntactAndValuesFromNewCode() {
+        let snippet = makeSnippet(code: Self.glsl)
+        let (r, s) = insertingFix()
+        realSaveAsNew(snippet, r, s, name: "A", overrides: ["speed": .number(3)])
+        XCTAssertTrue(snippet.code.hasPrefix(Self.header + "uniform float speed;"))
+        XCTAssertTrue(snippet.code.hasSuffix("void main() { x = speed; }"))
+        XCTAssertEqual(speed(snippet), .number(default: 3))
+        XCTAssertEqual(config("A", in: snippet).values, ["speed": .number(3)])
+        XCTAssertEqual(config("Default", in: snippet).values, ["speed": .number(1.5)])
+    }
+
+    func test_switchingAToDefaultToA_withParams_restoresEachCode() {
+        let snippet = makeSnippet(code: Self.glsl)
+        let (r, s) = insertingFix()
+        realSaveAsNew(snippet, r, s, name: "A", overrides: ["speed": .number(3)])
+        let a = config("A", in: snippet).id, def = config("Default", in: snippet).id
+        realSelect(def, snippet)
+        XCTAssertEqual(snippet.code, Self.glsl)
+        XCTAssertEqual(speed(snippet), .number(default: 1.5))
+        realSelect(a, snippet)
+        XCTAssertTrue(snippet.code.hasPrefix(Self.header))
+        XCTAssertEqual(speed(snippet), .number(default: 3))
+        XCTAssertTrue(snippet.code.hasSuffix("void main() { x = speed; }"))
+    }
+
+    func test_valuesOnlyConfigAfterCodeConfig_withParams_restoresDefaultCodeThenAppliesValues() {
+        let snippet = makeSnippet(code: Self.glsl)
+        let valuesOnly = PreviewParamConfig(
+            id: UUID(), name: "Fast", values: ["speed": .number(9)], isDefault: false)
+        snippet.paramConfigs = [valuesOnly]
+        let (r, s) = insertingFix()
+        realSaveAsNew(snippet, r, s, name: "A")
+        XCTAssertTrue(snippet.code.hasPrefix(Self.header))
+        realSelect(valuesOnly.id, snippet)
+        XCTAssertFalse(snippet.code.contains("tuned"))
+        XCTAssertEqual(speed(snippet), .number(default: 9))
+    }
+
+    // MARK: trust on select, delete edge
+
+    func test_selectingRatingBornConfigWithDifferentCode_revokesTrust_otherSwitchesDoNot() {
+        let snippet = makeSnippet(code: "a = 1")
+        let (r, s) = review(rated: "a = 1")
+        saveAsNew(snippet, r, s, name: "A")
+        select(config("Default", in: snippet).id, snippet)
+        XCTAssertTrue(selectForgotten.isEmpty, "leaving AI code is not an AI write")
+        select(config("A", in: snippet).id, snippet)
+        XCTAssertEqual(selectForgotten.compactMap { $0 }, [snippet.uuid!])
+        selectForgotten = []
+        select(config("A", in: snippet).id, snippet)
+        XCTAssertTrue(selectForgotten.isEmpty, "same code, nothing to revoke")
+    }
+
+    func test_deletingActiveValuesOnlyConfig_withNoCodeConfigs_leavesCodeAlone() {
+        let snippet = makeSnippet(code: "a = 1")
+        let def = PreviewParamConfig(id: UUID(), name: "Default", values: [:], isDefault: true)
+        let big = PreviewParamConfig(id: UUID(), name: "Big", values: [:], isDefault: false)
+        snippet.paramConfigs = [def, big]
+        snippet.activeParamConfigID = big.id
+        snippet.code = "a = 1 // edited"
+        EfficiencyFixApplier.delete(id: big.id, from: snippet)
+        XCTAssertEqual(snippet.code, "a = 1 // edited")
+        XCTAssertEqual(snippet.activeParamConfigID, def.id)
     }
 }

@@ -15,9 +15,9 @@ enum EfficiencyFixApplier {
     /// and made active. Returns false (changing nothing) when the suggestion's
     /// `before` no longer occurs exactly once in `review.ratedCode`.
     ///
-    /// `declared` reads the params the snippet's code declares *now*; it is
-    /// asked before the swap (for `Default`) and after (for the new config), so
-    /// the saved values never revert a literal the fix changed.
+    /// `declared` and `applyValues` must work from the snippet's code as it is
+    /// when they are called (re-resolve each time, never a snapshot taken
+    /// before the swap), or old ranges get spliced into the new code.
     @discardableResult
     static func saveAsNew(
         snippet: Snippet,
@@ -33,21 +33,19 @@ enum EfficiencyFixApplier {
             return false
         }
         let before = snippet.code
+        // `declared` must re-read `snippet.code` each call: once for what
+        // Default records (old code), once for the variant (new code).
         let declaredBefore = declared()
         let flushed = PreviewParamConfigStore.storingActiveCode(
             before, activeID: snippet.activeParamConfigID, in: snippet.paramConfigs
         )
+        snippet.code = newCode
         let saved = PreviewParamConfigStore.savingCodeVariant(
             code: newCode, values: overrides, named: name, sourceReviewID: review.id,
-            currentCode: before, declared: declaredBefore, into: flushed
+            currentCode: before, declared: declaredBefore, codeDeclared: declared(),
+            into: flushed
         )
-        snippet.code = newCode
-        var configs = saved.configs
-        if let index = configs.firstIndex(where: { $0.id == saved.newID }) {
-            var values = PreviewParamConfigStore.declaredValues(declared())
-            for (key, value) in overrides where values[key] != nil { values[key] = value }
-            configs[index].values = values
-        }
+        let configs = saved.configs
         snippet.paramConfigs = configs
         snippet.activeParamConfigID = saved.newID
         if let config = configs.first(where: { $0.id == saved.newID }) {
@@ -85,12 +83,15 @@ enum EfficiencyFixApplier {
     }
 
     /// Switching configs: store the outgoing config's code, restore the
-    /// incoming one's (or `Default`'s), then apply its values.
+    /// incoming one's (or `Default`'s), then apply its values. Entering a
+    /// rating-born config whose code differs revokes trust, like Apply.
+    /// `declared` / `applyValues` must read the code as it is when called.
     static func select(
         id: UUID,
         in snippet: Snippet,
         declared: () -> [PreviewParam],
-        applyValues: ([String: PreviewParamValue]) -> Void
+        applyValues: ([String: PreviewParamValue]) -> Void,
+        forgetTrust: (UUID?) -> Void
     ) {
         guard let config = snippet.paramConfigs.first(where: { $0.id == id }) else { return }
         snippet.paramConfigs = PreviewParamConfigStore.storingActiveCode(
@@ -98,7 +99,12 @@ enum EfficiencyFixApplier {
         )
         snippet.activeParamConfigID = id
         if let code = PreviewParamConfigStore.codeToActivate(for: id, in: snippet.paramConfigs) {
+            let changed = code != snippet.code
             snippet.code = code
+            // AI-written code must never run under an approval given for other code.
+            if changed, config.sourceReviewID != nil {
+                snippet.uuidsRunningThisCode.forEach(forgetTrust)
+            }
         }
         applyValues(PreviewParamConfigStore.resolvedValues(for: config, declared: declared()))
     }

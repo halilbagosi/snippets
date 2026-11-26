@@ -97,7 +97,8 @@ struct PreviewConfigControl: View {
 }
 
 /// The inline "config name" field with save / cancel, shared by the parameter
-/// control and the efficiency panel's Apply.
+/// control and the efficiency panel's Apply. `initialName` is read only at
+/// init: callers must key the view with `.id(...)` to re-seed it.
 struct ConfigNameField: View {
     let initialName: String
     let accent: Color

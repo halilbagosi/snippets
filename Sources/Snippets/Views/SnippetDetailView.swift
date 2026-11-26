@@ -451,8 +451,9 @@ struct SnippetDetailView: View {
                     }
                     Spacer(minLength: 16)
                     if let configResolution,
-                       !snippet.paramConfigs.isEmpty || !detected.isEmpty
-                        || snippet.paramConfigs.contains(where: { $0.code != nil }) {
+                       !snippet.paramConfigs.isEmpty || !detected.isEmpty {
+                        // A code config implies non-empty paramConfigs, so a
+                        // snippet without parameters shows the dropdown too.
                         PreviewConfigControl(
                             configs: snippet.paramConfigs,
                             activeID: snippet.activeParamConfigID,
@@ -690,11 +691,14 @@ struct SnippetDetailView: View {
         }
     }
 
+    // The closures re-resolve: a `Resolution` snapshots code strings, and the
+    // applier swaps `snippet.code` before declaring and applying values.
     private func selectConfig(id: UUID, resolution: SnippetLinker.Resolution) {
         EfficiencyFixApplier.select(
             id: id, in: snippet,
-            declared: { detectedParams(resolution).map(\.param) },
-            applyValues: { applyValues($0, resolution: resolution) }
+            declared: { detectedParams(SnippetLinker.resolve(entry: snippet)).map(\.param) },
+            applyValues: { applyValues($0, resolution: SnippetLinker.resolve(entry: snippet)) },
+            forgetTrust: { previewTrust.forget($0) }
         )
     }
 
@@ -707,12 +711,11 @@ struct SnippetDetailView: View {
     func applyFixAsNewConfig(
         _ suggestion: EfficiencyReview.Suggestion, from review: EfficiencyReview, named name: String
     ) {
-        let resolution = SnippetLinker.resolve(entry: snippet)
         EfficiencyFixApplier.saveAsNew(
             snippet: snippet, review: review, suggestion: suggestion, name: name,
             overrides: paramOverrides,
-            declared: { detectedParams(resolution).map(\.param) },
-            applyValues: { applyValues($0, resolution: resolution) },
+            declared: { detectedParams(SnippetLinker.resolve(entry: snippet)).map(\.param) },
+            applyValues: { applyValues($0, resolution: SnippetLinker.resolve(entry: snippet)) },
             forgetTrust: { previewTrust.forget($0) }
         )
     }
