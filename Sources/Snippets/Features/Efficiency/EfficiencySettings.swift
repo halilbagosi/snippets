@@ -8,9 +8,6 @@ import Observation
 /// `.standard`.
 @MainActor @Observable
 final class EfficiencySettings {
-    /// Agents that can rate today. Codex is not shipped.
-    static let offeredAgents: [AgentClient] = [.claudeCode]
-
     private enum Key {
         static let enabled = "efficiency.enabled"
         static let agent = "efficiency.agent"

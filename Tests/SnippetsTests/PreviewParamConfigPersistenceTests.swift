@@ -17,7 +17,7 @@ final class PreviewParamConfigPersistenceTests: XCTestCase {
         context.insert(snippet)
         try context.save()
 
-        let fetched = try context.fetch(FetchDescriptor<Snippet>())
+        let fetched = try ModelContext(container).fetch(FetchDescriptor<Snippet>())
         XCTAssertEqual(fetched.count, 1)
         XCTAssertEqual(fetched[0].paramConfigs.count, 1)
         XCTAssertEqual(fetched[0].paramConfigs[0].values["a"], .number(1))
@@ -58,7 +58,7 @@ final class PreviewParamConfigPersistenceTests: XCTestCase {
         context.insert(snippet)
         try context.save()
 
-        let fetched = try XCTUnwrap(context.fetch(FetchDescriptor<Snippet>()).first)
+        let fetched = try XCTUnwrap(ModelContext(container).fetch(FetchDescriptor<Snippet>()).first)
         XCTAssertEqual(fetched.paramConfigs, [config])
         XCTAssertEqual(fetched.efficiencyReviews, [review])
         XCTAssertNil(fetched.efficiencyReviews[0].score)

@@ -29,7 +29,7 @@ final class EfficiencyRatingCenter {
     @ObservationIgnored private var runs: [PersistentIdentifier: Run] = [:]
 
     private struct Run {
-        let token = UUID()
+        var token = UUID()
         var task: Task<Void, Never>?
         let context: ModelContext
     }
@@ -66,6 +66,7 @@ final class EfficiencyRatingCenter {
 
         guard let rater = makeRater(agent) else {
             jobs[id] = Job(snippetTitle: title, agent: agent, state: .failed(.agentNotFound))
+            runs[id] = Run(context: context)
             return
         }
 
@@ -78,7 +79,7 @@ final class EfficiencyRatingCenter {
         let language = SupportedLanguage(stored: snippet.language)
         let request = EfficiencyRequest(
             title: title, language: language, code: code,
-            dependencies: snippet.dependencies.map { ($0.title, $0.language, $0.code) })
+            dependencies: SnippetLinker.orderedDependencies(of: snippet).dependencies.map { ($0.title, $0.language, $0.code) })
         let model = settings.modelOverride(for: agent)
 
         var run = Run(context: context)
@@ -108,12 +109,14 @@ final class EfficiencyRatingCenter {
         start(for: snippet)
     }
 
-    /// Ends the run immediately; nothing is saved and no job is left behind.
+    /// Ends the run immediately and nothing is saved. The job stays as
+    /// `.failed(.cancelled)` (so the panel can offer Retry) until dismissed.
     func cancel(_ id: PersistentIdentifier) {
-        guard isRunning(id) else { return }
-        runs[id]?.task?.cancel()
-        runs[id] = nil
-        jobs[id] = nil
+        guard isRunning(id), let run = runs[id] else { return }
+        run.task?.cancel()
+        // A fresh token makes the cancelled task's late completion a no-op.
+        runs[id] = Run(task: nil, context: run.context)
+        jobs[id]?.state = .failed(.cancelled)
     }
 
     /// App quit: every run is stopped, nothing is saved.
@@ -155,12 +158,14 @@ final class EfficiencyRatingCenter {
                 rubricVersion: EfficiencyRubric.version, score: report.score,
                 notApplicableReason: report.notApplicableReason, summary: report.summary,
                 suggestions: report.suggestions, agent: agent.rawValue, model: model, date: .now)
+            let previous = snippet.efficiencyReviews
             snippet.efficiencyReviews = EfficiencyReviewStore.pruned(
                 snippet.efficiencyReviews + [review],
                 configs: snippet.paramConfigs, currentCode: snippet.code)
             do {
                 try run.context.save()
             } catch {
+                snippet.efficiencyReviews = previous
                 job.state = .failed(.failed("could not save the rating"))
                 jobs[id] = job
                 return

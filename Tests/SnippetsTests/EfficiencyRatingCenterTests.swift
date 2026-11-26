@@ -51,6 +51,8 @@ final class EfficiencyRatingCenterTests: XCTestCase {
         EfficiencyRatingCenter(settings: settings(), succeededLinger: linger, makeRater: { _ in rater })
     }
 
+    private final class RaterBox: @unchecked Sendable { var rater: FakeRater? }
+
     private func snippet(code: String = "let a = 1") throws -> Snippet {
         let s = Snippet(title: "Demo", language: "Swift", code: code)
         context.insert(s)
@@ -99,9 +101,10 @@ final class EfficiencyRatingCenterTests: XCTestCase {
             notApplicableReason: nil, summary: "", suggestions: [], agent: "claudeCode", model: nil,
             date: .now)
         s.efficiencyReviews = [existing]
-        let c = center(FakeRater(.failure(.timedOut)))
+        let c = center(FakeRater(.failure(.timedOut)), linger: .milliseconds(10))
         c.start(for: s)
         await settle(c, s.persistentModelID)
+        try await Task.sleep(for: .milliseconds(100))
         XCTAssertEqual(c.jobs[s.persistentModelID]?.state, .failed(.timedOut))
         XCTAssertEqual(s.efficiencyReviews, [existing])
 
@@ -122,29 +125,54 @@ final class EfficiencyRatingCenterTests: XCTestCase {
         XCTAssertEqual(rater.requests.count, 1)
     }
 
-    func test_cancelEndsJobWithoutSaving() async throws {
+    func test_cancelLeavesCancelledJobWithoutSaving() async throws {
         let s = try snippet()
         let rater = FakeRater(.success(report()))
-        let (stream, _) = AsyncStream<Void>.makeStream()
+        let (stream, continuation) = AsyncStream<Void>.makeStream()
         rater.gate = stream
         let c = center(rater)
         c.start(for: s)
         XCTAssertTrue(c.isRunning(s.persistentModelID))
         c.cancel(s.persistentModelID)
-        XCTAssertNil(c.jobs[s.persistentModelID])
-        try await Task.sleep(for: .milliseconds(50))
+        continuation.yield()
+        XCTAssertEqual(c.jobs[s.persistentModelID]?.state, .failed(.cancelled))
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(c.jobs[s.persistentModelID]?.state, .failed(.cancelled))
         XCTAssertTrue(s.efficiencyReviews.isEmpty)
+        c.dismiss(s.persistentModelID)
+        XCTAssertNil(c.jobs[s.persistentModelID])
     }
 
-    func test_cancelAllClearsEveryJob() async throws {
-        let s = try snippet()
+    func test_cancelAllStopsEveryRunWithoutSaving() async throws {
+        let s1 = try snippet()
+        let s2 = try snippet(code: "let b = 2")
         let rater = FakeRater(.success(report()))
-        let (stream, _) = AsyncStream<Void>.makeStream()
+        let (stream, continuation) = AsyncStream<Void>.makeStream()
         rater.gate = stream
         let c = center(rater)
-        c.start(for: s)
+        c.start(for: s1)
+        c.start(for: s2)
         c.cancelAll()
         XCTAssertTrue(c.jobs.isEmpty)
+        continuation.yield()
+        continuation.yield()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertTrue(c.jobs.isEmpty)
+        XCTAssertTrue(s1.efficiencyReviews.isEmpty)
+        XCTAssertTrue(s2.efficiencyReviews.isEmpty)
+    }
+
+    func test_retryWorksAfterAgentNotFound() async throws {
+        let s = try snippet()
+        let box = RaterBox()
+        let c = EfficiencyRatingCenter(settings: settings(), succeededLinger: .seconds(60), makeRater: { _ in box.rater })
+        c.start(for: s)
+        XCTAssertEqual(c.jobs[s.persistentModelID]?.state, .failed(.agentNotFound))
+        box.rater = FakeRater(.success(report()))
+        c.retry(s.persistentModelID)
+        await settle(c, s.persistentModelID)
+        XCTAssertEqual(c.jobs[s.persistentModelID]?.state, .succeeded(score: 82, band: .good))
+        XCTAssertEqual(s.efficiencyReviews.count, 1)
     }
 
     func test_deletingSnippetMidRunDropsResult() async throws {
@@ -174,8 +202,11 @@ final class EfficiencyRatingCenterTests: XCTestCase {
 
     func test_requestCarriesCurrentCodeAndDependencies() async throws {
         let dep = Snippet(title: "Helper", language: "Swift", code: "func helper() {}")
+        let deep = Snippet(title: "Deep", language: "Swift", code: "func deep() {}")
         context.insert(dep)
+        context.insert(deep)
         let s = try snippet(code: "OPTIMIZED")
+        dep.dependencies = [deep]
         s.dependencies = [dep]
         let defaultConfig = PreviewParamConfig(id: UUID(), name: "Default", values: [:], isDefault: true, code: "ORIGINAL")
         s.paramConfigs = [defaultConfig]
@@ -187,8 +218,8 @@ final class EfficiencyRatingCenterTests: XCTestCase {
 
         let request = try XCTUnwrap(rater.requests.first)
         XCTAssertEqual(request.code, "OPTIMIZED")
-        XCTAssertEqual(request.dependencies.map(\.code), ["func helper() {}"])
-        XCTAssertEqual(request.dependencies.map(\.title), ["Helper"])
+        XCTAssertEqual(request.dependencies.map(\.title), ["Deep", "Helper"])
+        XCTAssertEqual(request.dependencies.map(\.code), ["func deep() {}", "func helper() {}"])
         // The flush rule refreshed the active config's stored code.
         XCTAssertEqual(s.paramConfigs.first?.code, "OPTIMIZED")
     }
