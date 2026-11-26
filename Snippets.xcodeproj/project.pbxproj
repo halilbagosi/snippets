@@ -29,8 +29,10 @@
 		01E24B2BB3789E64F91EB040 /* PreviewParams.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06154F76A632D66D3A6AA3D2 /* PreviewParams.swift */; };
 		05C84AB0AD5549D7F7069E6E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 757E7F34577C563AEFCB24FA /* PrivacyInfo.xcprivacy */; };
 		0B0A2D010000000000000001 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D010000000000000002 /* Onboarding.swift */; };
+		0B0A2D0100000000000000D1 /* OnboardingDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D0100000000000000D2 /* OnboardingDevice.swift */; };
 		0B0A2D010000000000000003 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D010000000000000004 /* OnboardingView.swift */; };
 		0B0A2D010000000000000005 /* OnboardingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D010000000000000006 /* OnboardingTests.swift */; };
+		0B0A2D0100000000000000D3 /* OnboardingDeviceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0A2D0100000000000000D4 /* OnboardingDeviceTests.swift */; };
 		0F363D8ECC875EFB86FD6E5D /* ToggleFavoriteSnippetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50EB15A9268A9AE0FD8E5568 /* ToggleFavoriteSnippetIntent.swift */; };
 		1034317420206F8CAC37E289 /* LanguageBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD742F16AED07C5B6DA1EFE /* LanguageBadge.swift */; };
 		12B5E4FA5AAB903D1705EA07 /* DSGlassModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F77ABB40D51255BFD54DFA60 /* DSGlassModifier.swift */; };
@@ -228,8 +230,10 @@
 		01362798D5520FFC54DBDD42 /* DSGlassContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSGlassContainer.swift; sourceTree = "<group>"; };
 		06154F76A632D66D3A6AA3D2 /* PreviewParams.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewParams.swift; sourceTree = "<group>"; };
 		0B0A2D010000000000000002 /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
+		0B0A2D0100000000000000D2 /* OnboardingDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingDevice.swift; sourceTree = "<group>"; };
 		0B0A2D010000000000000004 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		0B0A2D010000000000000006 /* OnboardingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingTests.swift; sourceTree = "<group>"; };
+		0B0A2D0100000000000000D4 /* OnboardingDeviceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingDeviceTests.swift; sourceTree = "<group>"; };
 		0B2656C1F0CA0F70BF32616B /* MetalDisintegrationRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalDisintegrationRenderer.swift; sourceTree = "<group>"; };
 		0B9284FC624AB4701E78C6EA /* SnippetsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsApp.swift; sourceTree = "<group>"; };
 		0C82E0C23D62D7837A6EAE83 /* DotGridBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DotGridBackground.swift; sourceTree = "<group>"; };
@@ -444,6 +448,7 @@
 			isa = PBXGroup;
 			children = (
 				0B0A2D010000000000000002 /* Onboarding.swift */,
+				0B0A2D0100000000000000D2 /* OnboardingDevice.swift */,
 				0B0A2D0100000000000000A2 /* LicenseAgreement.swift */,
 			);
 			path = Onboarding;
@@ -677,6 +682,7 @@
 				5E57E5700000000000000116 /* UUIDBackfillTests.swift */,
 				5E57E5700000000000000A16 /* PreviewTrustTests.swift */,
 				0B0A2D010000000000000006 /* OnboardingTests.swift */,
+				0B0A2D0100000000000000D4 /* OnboardingDeviceTests.swift */,
 				A1F0EE0B00000000000000F1 /* AppLinksTests.swift */,
 				0B0A2D0100000000000000A6 /* LicenseAgreementTests.swift */,
 				UPDATETEST0000000000F001 /* UpdatePolicyTests.swift */,
@@ -1110,6 +1116,7 @@
 				A1B2C3D40001QUICKROW /* QuickCopyRow.swift in Sources */,
 				A1B2C3D40001CLIPCAPTURE /* ClipboardCapture.swift in Sources */,
 				0B0A2D010000000000000001 /* Onboarding.swift in Sources */,
+				0B0A2D0100000000000000D1 /* OnboardingDevice.swift in Sources */,
 				0B0A2D0100000000000000A1 /* LicenseAgreement.swift in Sources */,
 				0B0A2D010000000000000003 /* OnboardingView.swift in Sources */,
 				0B0A2D0100000000000000A3 /* LicenseAgreementPrompt.swift in Sources */,
@@ -1180,6 +1187,7 @@
 				5E57E5700000000000000216 /* UUIDBackfillTests.swift in Sources */,
 				5E57E5700000000000000B16 /* PreviewTrustTests.swift in Sources */,
 				0B0A2D010000000000000005 /* OnboardingTests.swift in Sources */,
+				0B0A2D0100000000000000D3 /* OnboardingDeviceTests.swift in Sources */,
 				A1F0EE0B00000000000000B1 /* AppLinksTests.swift in Sources */,
 				0B0A2D0100000000000000A5 /* LicenseAgreementTests.swift in Sources */,
 				UPDATETEST0000000000B001 /* UpdatePolicyTests.swift in Sources */,

@@ -106,6 +106,20 @@ struct OnboardingClip: Sendable {
     }
 }
 
+/// What a page's zoom holds still.
+enum OnboardingFocus: Equatable, Sendable {
+    /// A point of the whole device, frame included, for pages that show all
+    /// of it: the zoom scales the device itself.
+    case device(UnitPoint)
+    /// A point in the window, in the captured screen's points (1512×982).
+    /// On a wider screen it moves with the centred window. The zoom
+    /// magnifies the screen, the same on every Mac.
+    case window(CGPoint)
+    /// A point by the status item, in the captured screen's points. It keeps
+    /// to the menu bar's trailing end on a wider screen.
+    case menuBarExtra(CGPoint)
+}
+
 /// One stop on the tour: copy, and a shot of the app on a Mac screen that the
 /// device zooms toward.
 ///
@@ -126,9 +140,9 @@ struct OnboardingPage: Identifiable, Sendable {
     let panelImage: String?
     /// How far the device is magnified…
     let zoom: CGFloat
-    /// …and the point of the device (frame included) that stays put while it
-    /// is. Picking the feature's own position keeps it in view.
-    let focus: UnitPoint
+    /// …and the point that stays put while it is. Picking the feature's own
+    /// position keeps it in view.
+    let focus: OnboardingFocus
     /// Settings the page lets you change on the spot, drawn between the Mac
     /// and the copy. Pages with controls shrink the Mac to make room.
     var controls: Controls? = nil
@@ -158,7 +172,7 @@ struct OnboardingPage: Identifiable, Sendable {
         windowImage: "OnboardingGallery",
         panelImage: nil,
         zoom: 0.7,
-        focus: .top,
+        focus: .device(.top),
         controls: .agents
     )
     #endif
@@ -172,7 +186,7 @@ struct OnboardingPage: Identifiable, Sendable {
         windowImage: "OnboardingAccentBlue",
         panelImage: nil,
         zoom: 0.7,
-        focus: .top,
+        focus: .device(.top),
         controls: .appearance
     )
 
@@ -219,7 +233,7 @@ struct OnboardingPage: Identifiable, Sendable {
             windowImage: "OnboardingGallery",
             panelImage: nil,
             zoom: 1,
-            focus: .center
+            focus: .device(.center)
         ),
         OnboardingPage(
             id: "organize",
@@ -229,7 +243,7 @@ struct OnboardingPage: Identifiable, Sendable {
             windowClip: OnboardingClip(name: "OnboardingOrganize", fileExtension: "mov"),
             panelImage: nil,
             zoom: 1.9,
-            focus: UnitPoint(x: 0.12, y: 0.18)
+            focus: .window(CGPoint(x: 94, y: 169))
         ),
         OnboardingPage(
             id: "previews",
@@ -243,7 +257,7 @@ struct OnboardingPage: Identifiable, Sendable {
             ),
             panelImage: nil,
             zoom: 1.55,
-            focus: UnitPoint(x: 0.59, y: 0.59)
+            focus: .window(CGPoint(x: 913, y: 603))
         ),
         // The same snippet as "previews", scrolled down to its parameters, so
         // the page turn reads as one preview opening up its controls.
@@ -259,7 +273,7 @@ struct OnboardingPage: Identifiable, Sendable {
             ),
             panelImage: nil,
             zoom: 1.5,
-            focus: UnitPoint(x: 0.74, y: 0.57)
+            focus: .window(CGPoint(x: 1174, y: 582))
         ),
         OnboardingPage(
             id: "quick-copy",
@@ -268,7 +282,7 @@ struct OnboardingPage: Identifiable, Sendable {
             windowImage: "OnboardingGallery",
             panelImage: "OnboardingQuickCopy",
             zoom: 2.1,
-            focus: UnitPoint(x: 0.86, y: 0.04)
+            focus: .menuBarExtra(CGPoint(x: 1383, y: 21))
         ),
         OnboardingPage(
             id: "capture",
@@ -277,7 +291,7 @@ struct OnboardingPage: Identifiable, Sendable {
             windowImage: "OnboardingGallery",
             panelImage: "OnboardingCapture",
             zoom: 2.6,
-            focus: UnitPoint(x: 0.86, y: 0.04)
+            focus: .menuBarExtra(CGPoint(x: 1383, y: 21))
         ),
     ]
 }

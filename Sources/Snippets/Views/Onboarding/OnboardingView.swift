@@ -8,6 +8,9 @@ struct OnboardingView: View {
     /// Ends the tour. The presenter animates the card away and records the
     /// tour as seen.
     var onFinish: () -> Void = {}
+    /// The Mac drawn on the card: the one this is running on, unless a
+    /// preview picks another.
+    var device: OnboardingDevice = .current
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var pager = OnboardingPager(pageCount: OnboardingPage.all.count)
@@ -16,8 +19,14 @@ struct OnboardingView: View {
 
     private enum Layout {
         static let cardSize = CGSize(width: 540, height: 620)
-        static let deviceWidth: CGFloat = 476
+        /// The room for the Mac at rest. A laptop fills its width; an iMac
+        /// or a display on a stand fills its height.
+        static let deviceBox = CGSize(width: 530, height: 324)
         static let deviceTop: CGFloat = 54
+        /// The width of the screen the zoom levels were tuned on. Zoomed
+        /// pages magnify every Mac's screen to the size this one reached, so
+        /// a feature comes out the same however much frame surrounds it.
+        static let tunedScreenWidth: CGFloat = 462.7
         /// The stage runs under the copy, so a zoomed screen can fade out
         /// behind the title rather than stop at a hard edge.
         static let stageHeight: CGFloat = 470
@@ -60,7 +69,7 @@ struct OnboardingView: View {
 
     private var stage: some View {
         ZStack(alignment: .top) {
-            device
+            framedDevice
                 .id(reduceMotion ? page.id : "device")
                 .transition(.opacity)
         }
@@ -85,11 +94,19 @@ struct OnboardingView: View {
         .accessibilityHidden(true)
     }
 
-    private var device: some View {
-        MacBookFrame(width: Layout.deviceWidth) {
+    private var framedDevice: some View {
+        let size = device.fittedSize(in: Layout.deviceBox)
+        let framing = OnboardingFraming(
+            zoom: page.zoom,
+            focus: page.focus,
+            frameSize: size,
+            screen: device.screenRect(in: size, bleed: DeviceFrame<OnboardingDesktop>.bleed),
+            tunedScreenWidth: Layout.tunedScreenWidth
+        )
+        return DeviceFrame(device: device, size: size) {
             OnboardingDesktop(page: page)
         }
-        .scaleEffect(page.zoom, anchor: page.focus)
+        .scaleEffect(framing.scale, anchor: framing.anchor)
         .padding(.top, Layout.deviceTop)
     }
 
@@ -263,79 +280,32 @@ private struct PageDots: View {
 
 // MARK: - Device
 
-/// A MacBook drawn at any width: bezel, notch, screen and the base below it.
-private struct MacBookFrame<Screen: View>: View {
-    let width: CGFloat
+/// A picture of the Mac the tour runs on, with the screen showing through it.
+/// The desktop is drawn under the picture, so the bezel's rounded corners
+/// and notch sit over it as they do on the real thing.
+private struct DeviceFrame<Screen: View>: View {
+    let device: OnboardingDevice
+    let size: CGSize
     @ViewBuilder let screen: Screen
 
-    /// The 14" panel, in points.
-    static var screenAspect: CGFloat { 1512 / 982 }
+    /// How far the desktop runs under the bezel, past the screen's edge, so
+    /// the picture's soft inner edge never shows a seam at any zoom.
+    static var bleed: CGFloat { 0.5 }
 
     var body: some View {
-        let bezel = width * 0.014
-        let screenWidth = width - bezel * 2
-        let screenHeight = screenWidth / Self.screenAspect
+        let rect = device.screenRect(in: size, bleed: Self.bleed)
 
-        VStack(spacing: 0) {
-            screen
-                .frame(width: screenWidth, height: screenHeight)
-                .clipShape(UnevenRoundedRectangle(
-                    topLeadingRadius: width * 0.02,
-                    bottomLeadingRadius: width * 0.006,
-                    bottomTrailingRadius: width * 0.006,
-                    topTrailingRadius: width * 0.02,
-                    style: .continuous
-                ))
-                .overlay(alignment: .top) {
-                    UnevenRoundedRectangle(
-                        bottomLeadingRadius: width * 0.008,
-                        bottomTrailingRadius: width * 0.008,
-                        style: .continuous
-                    )
-                    .fill(.black)
-                    .frame(width: width * 0.12, height: screenHeight * 0.034)
-                }
-                .padding(bezel)
-                .background {
-                    UnevenRoundedRectangle(
-                        topLeadingRadius: width * 0.032,
-                        bottomLeadingRadius: width * 0.01,
-                        bottomTrailingRadius: width * 0.01,
-                        topTrailingRadius: width * 0.032,
-                        style: .continuous
-                    )
-                    .fill(Color(white: 0.05))
-                    .stroke(Color(white: 0.42), lineWidth: 1)
-                }
-
-            base
-        }
-        .compositingGroup()
-        .shadow(color: .black.opacity(0.28), radius: 18, y: 10)
-    }
-
-    private var base: some View {
-        UnevenRoundedRectangle(
-            bottomLeadingRadius: width * 0.03,
-            bottomTrailingRadius: width * 0.03,
-            style: .continuous
-        )
-        .fill(LinearGradient(
-            colors: [Color(white: 0.82), Color(white: 0.6), Color(white: 0.42)],
-            startPoint: .top,
-            endPoint: .bottom
-        ))
-        .frame(width: width * 1.12, height: width * 0.022)
-        .overlay(alignment: .top) {
-            // The thumb scoop in the lip of the base.
-            UnevenRoundedRectangle(
-                bottomLeadingRadius: width * 0.008,
-                bottomTrailingRadius: width * 0.008,
-                style: .continuous
-            )
-            .fill(Color(white: 0.48))
-            .frame(width: width * 0.15, height: width * 0.007)
-        }
+        Image(device.imageName)
+            .resizable()
+            .interpolation(.high)
+            .frame(width: size.width, height: size.height)
+            .background(alignment: .topLeading) {
+                screen
+                    .frame(width: rect.width, height: rect.height)
+                    .offset(x: rect.minX, y: rect.minY)
+            }
+            .compositingGroup()
+            .shadow(color: .black.opacity(0.28), radius: 18, y: 10)
     }
 }
 
@@ -343,6 +313,8 @@ private struct MacBookFrame<Screen: View>: View {
 
 /// What is on the Mac's screen: wallpaper, menu bar, the app window and an
 /// optional menu bar panel, laid out in the points they were captured at.
+/// A screen of another shape spreads them as ``OnboardingScreenLayout``
+/// says: window centred, status item and panel at the trailing end.
 private struct OnboardingDesktop: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
@@ -350,8 +322,6 @@ private struct OnboardingDesktop: View {
 
     let page: OnboardingPage
 
-    /// The screen the screenshots were captured on.
-    private static let screen = CGSize(width: 1512, height: 982)
     private static let menuBarHeight: CGFloat = 33
     /// A floating window centred on the screen, with wallpaper around it —
     /// a full-screen window leaves nothing to say "this is a Mac" at the
@@ -373,7 +343,11 @@ private struct OnboardingDesktop: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let scale = proxy.size.width / Self.screen.width
+            let layout = OnboardingScreenLayout(aspectRatio: proxy.size.width / proxy.size.height)
+            let scale = proxy.size.width / layout.size.width
+            let windowFrame = layout.place(Self.windowFrame, .centre)
+            let terminalFrame = layout.place(Self.terminalFrame, .centre)
+            let panelFrame = layout.place(Self.panelFrame, .trailing)
 
             ZStack(alignment: .topLeading) {
                 Wallpaper()
@@ -381,7 +355,7 @@ private struct OnboardingDesktop: View {
                 // Its own stack, so ``Dissolve``'s z-order only sorts one
                 // shot against the one it replaces.
                 ZStack(alignment: .topLeading) {
-                    screenshot(windowImage, clip: page.windowClip, in: Self.windowFrame, scale: scale)
+                    screenshot(windowImage, clip: page.windowClip, in: windowFrame, scale: scale)
                 }
                 // One layer, one shadow. Without the group SwiftUI shadows
                 // each layer on its own, and a clip laid over the shot casts
@@ -397,18 +371,18 @@ private struct OnboardingDesktop: View {
 
                 if page.controls == .agents {
                     AgentSession(scale: scale)
-                        .frame(width: Self.terminalFrame.width * scale, height: Self.terminalFrame.height * scale)
+                        .frame(width: terminalFrame.width * scale, height: terminalFrame.height * scale)
                         .shadow(color: .black.opacity(0.4), radius: 26 * scale, y: 12 * scale)
-                        .offset(x: Self.terminalFrame.minX * scale, y: Self.terminalFrame.minY * scale)
+                        .offset(x: terminalFrame.minX * scale, y: terminalFrame.minY * scale)
                         .transition(.opacity.combined(with: .offset(y: 24 * scale)))
                 }
 
-                MenuBar(scale: scale, statusItemCenter: Self.panelFrame.midX, isStatusItemOpen: page.panelImage != nil)
+                MenuBar(scale: scale, statusItemCenter: panelFrame.midX, isStatusItemOpen: page.panelImage != nil)
                     .frame(width: proxy.size.width, height: Self.menuBarHeight * scale)
 
                 ZStack(alignment: .topLeading) {
                     if let panel = page.panelImage {
-                        screenshot(panel, in: Self.panelFrame, scale: scale, isPanel: true)
+                        screenshot(panel, in: panelFrame, scale: scale, isPanel: true)
                     }
                 }
                 .compositingGroup()
@@ -857,4 +831,16 @@ extension View {
 
 #Preview {
     OnboardingView()
+}
+
+#Preview("MacBook Air") {
+    OnboardingView(device: .macBookAir13)
+}
+
+#Preview("iMac") {
+    OnboardingView(device: .iMac)
+}
+
+#Preview("Studio Display") {
+    OnboardingView(device: .studioDisplay)
 }
