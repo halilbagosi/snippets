@@ -290,6 +290,7 @@ struct ContentView: View {
                 if detailFrame != .zero {
                     RatingToastStack(
                         presentedSnippetID: presentedSnippetID,
+                        trashedIDs: Set(trashedSnippets.map(\.persistentModelID)),
                         onOpen: openSnippetFromRatingToast
                     )
                     .frame(width: column.width, height: column.height, alignment: .top)
@@ -318,7 +319,10 @@ struct ContentView: View {
         }
         if presentedSnippetID == nil {
             detailOrigin = Self.clickLocationInWindow()
-            morphSource = DetailMotionTuning.shared.values.morph ? cardGeometry.entries[id] : nil
+            // The tapped snippet is rarely on screen, and `cardGeometry` is
+            // never pruned: zoom from the toast click instead of morphing from
+            // a stale card (which also leaves no gallery card hidden).
+            morphSource = nil
         }
         // No `withAnimation`: the stage animates the open itself.
         selectedSnippetID = id
@@ -960,6 +964,17 @@ struct ContentView: View {
                             segments: currentStatusSegments,
                             contentLeadingInset: 0
                         )
+                    }
+                    // Keeps `detailFrame` current in Trash too, so the rating
+                    // toasts re-centre when the window or sidebar resizes.
+                    .background {
+                        Color.clear
+                            .allowsHitTesting(false)
+                            .onGeometryChange(for: CGRect.self) { proxy in
+                                proxy.frame(in: .global)
+                            } action: { frame in
+                                detailFrame = frame
+                            }
                     }
             } else {
                 ZStack {

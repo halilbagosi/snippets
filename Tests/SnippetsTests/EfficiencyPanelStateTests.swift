@@ -151,6 +151,15 @@ final class EfficiencyPanelStateTests: XCTestCase {
         XCTAssertEqual(act(s, rated: "slow", active: "fast slow", .inherited, canAdd: true), .offer(addToActive: true))
     }
 
+    func testInheritedDeletionCountsAsAppliedWhenBeforeIsGone() {
+        let s = suggestion(before: "debugPrint(x)\n", after: "")
+        XCTAssertEqual(act(s, rated: "a\ndebugPrint(x)\nb", active: "a\nb", .inherited), .applied)
+        // Still present: not applied.
+        XCTAssertNotEqual(act(s, rated: "a\ndebugPrint(x)\nb", active: "a\ndebugPrint(x)\nb", .inherited), .applied)
+        // `before` was not unique in the rated code: cannot tell.
+        XCTAssertNotEqual(act(s, rated: "debugPrint(x)\ndebugPrint(x)\n", active: "", .inherited), .applied)
+    }
+
     func testSaveBase() {
         XCTAssertEqual(EfficiencyPanelState.saveBase(for: .fresh), .ratedCode)
         XCTAssertEqual(EfficiencyPanelState.saveBase(for: .inherited), .ratedCode)

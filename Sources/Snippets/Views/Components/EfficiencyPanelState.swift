@@ -119,8 +119,14 @@ struct EfficiencyPanelState: Equatable {
         case .stale:
             return applies(activeCode) ? .offer(addToActive: false) : .noLongerApplies
         case .inherited:
-            if !suggestion.after.isEmpty, activeCode.contains(suggestion.after),
-               !activeCode.contains(suggestion.before) { return .applied }
+            if !activeCode.contains(suggestion.before) {
+                if !suggestion.after.isEmpty, activeCode.contains(suggestion.after) { return .applied }
+                // A deletion leaves nothing to find: it is applied once `before`
+                // (which the rating saw exactly once) is gone from the active code.
+                if suggestion.after.isEmpty, review.ratedCode.components(separatedBy: suggestion.before).count == 2 {
+                    return .applied
+                }
+            }
             if applies(activeCode) { return .offer(addToActive: canAddToActive) }
             return applies(review.ratedCode) ? .offer(addToActive: false) : .noLongerApplies
         }

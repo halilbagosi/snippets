@@ -10,12 +10,14 @@ struct RatingToastStack: View {
 
     /// The snippet whose detail card is open; its panel already shows the run.
     let presentedSnippetID: PersistentIdentifier?
+    /// Snippets in Trash: their failed rows offer no Retry.
+    var trashedIDs: Set<PersistentIdentifier> = []
     /// Opens the snippet in the gallery (the same path a card click takes).
     let onOpen: (PersistentIdentifier) -> Void
     var center: EfficiencyRatingCenter = .shared
 
     var body: some View {
-        let model = RatingToastModel(jobs: center.jobs, hiding: presentedSnippetID)
+        let model = RatingToastModel(jobs: center.jobs, hiding: presentedSnippetID, trashed: trashedIDs)
         VStack(spacing: 8) {
             ForEach(model.rows) { row in
                 RatingToastRow(
@@ -52,7 +54,8 @@ struct RatingToastStack: View {
 
     /// Retry needs the same consent as Rate. The sheet lives on the panel, so
     /// when consent is missing (the agent changed since the run) the snippet
-    /// opens instead and its panel asks.
+    /// opens instead; its panel then shows the failure with Retry, and that
+    /// Retry goes through consent.
     private func retry(_ id: PersistentIdentifier) {
         if center.needsConsent(for: center.settings.agent) {
             onOpen(id)
@@ -85,10 +88,12 @@ private struct RatingToastRow: View {
             case .succeeded:
                 EmptyView()
             case .failed:
-                Button("Retry", action: onRetry)
-                    .bold()
-                    .foregroundStyle(theme.accent)
-                    .buttonStyle(.plain)
+                if row.canRetry {
+                    Button("Retry", action: onRetry)
+                        .bold()
+                        .foregroundStyle(theme.accent)
+                        .buttonStyle(.plain)
+                }
                 Button(action: onDismiss) {
                     Image(systemName: "xmark")
                         .font(.system(size: 10, weight: .bold))
@@ -130,7 +135,7 @@ private struct StopMark: View {
                     .scaledToFit()
                     .frame(width: 15, height: 15)
                     .foregroundStyle(agent.color)
-                    .opacity(reduceMotion || pulsing ? 1 : 0.55)
+                    .opacity(reduceMotion || pulsing ? 1 : 0.85)
                     .scaleEffect(reduceMotion || pulsing ? 1 : 0.94)
                     .animation(DSToken.Motion.ratingPulse, value: pulsing)
                     .opacity(hovering ? 0 : 1)

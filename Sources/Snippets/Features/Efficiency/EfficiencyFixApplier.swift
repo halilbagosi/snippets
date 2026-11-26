@@ -11,6 +11,9 @@ import Foundation
 /// Not agent-specific, so it compiles in every build: the select/delete rules
 /// apply to anyone whose configs carry code.
 enum EfficiencyFixApplier {
+    /// Which code the suggestion's change is applied to.
+    enum Base { case ratedCode, currentCode }
+
     /// "Save as new config…": rated code + this one change, saved under `name`
     /// and made active. Returns false (changing nothing) when the suggestion's
     /// `before` no longer occurs exactly once in the base code (`review.ratedCode`
@@ -19,9 +22,6 @@ enum EfficiencyFixApplier {
     /// `declared` and `applyValues` must work from the snippet's code as it is
     /// when they are called (re-resolve each time, never a snapshot taken
     /// before the swap), or old ranges get spliced into the new code.
-    /// Which code the suggestion's change is applied to.
-    enum Base { case ratedCode, currentCode }
-
     @discardableResult
     static func saveAsNew(
         snippet: Snippet,

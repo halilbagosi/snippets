@@ -19,7 +19,7 @@ struct EfficiencyRatingSettings: View {
     /// The muted line under the picker: where the CLI was found, or that it
     /// was not (the panel stays hidden until it is).
     static func statusLine(agent: AgentClient, path: URL?) -> String {
-        guard let path else { return "\(agent.name) was not found. Install it, then reopen Settings." }
+        guard let path else { return "\(agent.name) was not found. Install it and it appears here." }
         return (path.path as NSString).abbreviatingWithTildeInPath
     }
 
@@ -72,8 +72,8 @@ struct EfficiencyRatingSettings: View {
                 .frame(width: 160)
             }
         }
-        // The path line must be current whenever the card is on screen.
-        .task(id: settings.agent) { await settings.refreshCLIPath() }
+        // Settings forces a fresh lookup (the locator caches "not found").
+        .task(id: settings.agent) { await settings.forceRefreshCLIPath() }
     }
 }
 #endif

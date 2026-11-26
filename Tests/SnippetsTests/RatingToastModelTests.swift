@@ -93,10 +93,19 @@ final class RatingToastModelTests: XCTestCase {
         XCTAssertNil(model.overflowText)
     }
 
+    func test_trashedSnippetsOfferNoRetry() throws {
+        let ids = try makeIDs(2)
+        let model = RatingToastModel(jobs: [
+            ids[0]: job("A", .failed(.timedOut), at: 0),
+            ids[1]: job("B", .failed(.timedOut), at: 1),
+        ], hiding: nil, trashed: [ids[0]])
+        XCTAssertEqual(model.rows.map(\.canRetry), [false, true])
+    }
+
     func test_settingsStatusLine() {
         XCTAssertEqual(
             EfficiencyRatingSettings.statusLine(agent: .claudeCode, path: nil),
-            "Claude Code was not found. Install it, then reopen Settings.")
+            "Claude Code was not found. Install it and it appears here.")
         XCTAssertEqual(
             EfficiencyRatingSettings.statusLine(agent: .claudeCode, path: URL(fileURLWithPath: "/opt/bin/claude")),
             "/opt/bin/claude")

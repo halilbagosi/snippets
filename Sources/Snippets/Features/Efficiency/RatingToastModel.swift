@@ -12,6 +12,8 @@ struct RatingToastModel: Equatable {
         let kind: Kind
         let text: String
         let agent: AgentClient
+        /// False for a snippet in Trash: a rerun would rate something the user deleted.
+        var canRetry = true
     }
 
     static let visibleLimit = 3
@@ -22,11 +24,13 @@ struct RatingToastModel: Equatable {
 
     var overflowText: String? { overflow > 0 ? "+\(overflow) more" : nil }
 
+    /// - Parameter trashed: snippets currently in Trash.
     /// - Parameter presented: the snippet whose detail card is open. Its panel
     ///   already shows the run, so it has no toast.
     init(
         jobs: [PersistentIdentifier: EfficiencyRatingCenter.Job],
         hiding presented: PersistentIdentifier?,
+        trashed: Set<PersistentIdentifier> = [],
         limit: Int = RatingToastModel.visibleLimit
     ) {
         let visible = jobs
@@ -41,7 +45,8 @@ struct RatingToastModel: Equatable {
                     : lhs.value.snippetTitle < rhs.value.snippetTitle
             }
         rows = visible.prefix(limit).map { id, job in
-            Row(id: id, kind: Self.kind(of: job.state), text: Self.text(for: job), agent: job.agent)
+            Row(id: id, kind: Self.kind(of: job.state), text: Self.text(for: job), agent: job.agent,
+                canRetry: !trashed.contains(id))
         }
         overflow = max(visible.count - limit, 0)
     }

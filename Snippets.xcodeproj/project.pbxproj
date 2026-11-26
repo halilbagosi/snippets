@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EF0C4004B000000000000000 /* EfficiencySettingsCLITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4004F000000000000000 /* EfficiencySettingsCLITests.swift */; };
 		EF0C4003B000000000000000 /* RatingToastModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4003F000000000000000 /* RatingToastModelTests.swift */; };
 		EF0C4002B000000000000000 /* EfficiencyRatingSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4002F000000000000000 /* EfficiencyRatingSettings.swift */; };
 		EF0C4001B000000000000000 /* RatingToastModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4001F000000000000000 /* RatingToastModel.swift */; };
@@ -236,6 +237,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		EF0C4004F000000000000000 /* EfficiencySettingsCLITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencySettingsCLITests.swift; sourceTree = "<group>"; };
 		EF0C4003F000000000000000 /* RatingToastModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingToastModelTests.swift; sourceTree = "<group>"; };
 		EF0C4002F000000000000000 /* EfficiencyRatingSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyRatingSettings.swift; sourceTree = "<group>"; };
 		EF0C4001F000000000000000 /* RatingToastModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingToastModel.swift; sourceTree = "<group>"; };
@@ -738,6 +740,7 @@
 				EF0A0000000000000000D003 /* EfficiencyFixApplierTests.swift */,
 				EF0C3003F000000000000000 /* EfficiencyPanelStateTests.swift */,
 				EF0C4003F000000000000000 /* RatingToastModelTests.swift */,
+				EF0C4004F000000000000000 /* EfficiencySettingsCLITests.swift */,
 				EF0C2000F000000000000000 /* EfficiencyRatingCenterTests.swift */,
 				EF0B2002F000000000000000 /* AgentCLILocatorTests.swift */,
 				EF0B2003F000000000000000 /* ClaudeCodeEnvelopeTests.swift */,
@@ -1267,6 +1270,7 @@
 				EF0A0000000000000000D004 /* EfficiencyFixApplierTests.swift in Sources */,
 				EF0C3003B000000000000000 /* EfficiencyPanelStateTests.swift in Sources */,
 				EF0C4003B000000000000000 /* RatingToastModelTests.swift in Sources */,
+				EF0C4004B000000000000000 /* EfficiencySettingsCLITests.swift in Sources */,
 				EF0C2000B000000000000000 /* EfficiencyRatingCenterTests.swift in Sources */,
 				EF0B2002B000000000000000 /* AgentCLILocatorTests.swift in Sources */,
 				EF0B2003B000000000000000 /* ClaudeCodeEnvelopeTests.swift in Sources */,

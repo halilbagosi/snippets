@@ -308,8 +308,10 @@ struct EfficiencyPanel: View {
 
     private func inheritedSection(_ inherited: EfficiencyPanelState.Inherited) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("From the rating of \(inherited.configName)")
-                .font(Mono.font(size: 11, weight: .semibold)).foregroundStyle(theme.textMuted)
+            if !inherited.review.suggestions.isEmpty {
+                Text("From the rating of \(inherited.configName)")
+                    .font(Mono.font(size: 11, weight: .semibold)).foregroundStyle(theme.textMuted)
+            }
             suggestionsFold(inherited.review, context: .inherited, open: $inheritedOpen)
         }
     }

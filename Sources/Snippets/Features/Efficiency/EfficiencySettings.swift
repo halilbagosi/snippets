@@ -17,6 +17,7 @@ final class EfficiencySettings {
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let locate: (String) async -> URL?
+    @ObservationIgnored private let relocate: (String) async -> URL?
 
     /// On by default; the panel still needs the CLI to be found.
     var enabled: Bool { didSet { defaults.set(enabled, forKey: Key.enabled) } }
@@ -39,10 +40,12 @@ final class EfficiencySettings {
 
     init(
         defaults: UserDefaults = .standard,
-        locate: @escaping (String) async -> URL? = { await AgentCLILocator.shared.locate($0) }
+        locate: @escaping (String) async -> URL? = { await AgentCLILocator.shared.locate($0) },
+        relocate: @escaping (String) async -> URL? = { await AgentCLILocator.shared.refresh($0) }
     ) {
         self.defaults = defaults
         self.locate = locate
+        self.relocate = relocate
         enabled = defaults.object(forKey: Key.enabled) as? Bool ?? true
         agent = defaults.string(forKey: Key.agent).flatMap(AgentClient.init(rawValue:)) ?? .claudeCode
     }
@@ -80,10 +83,17 @@ final class EfficiencySettings {
     }
 
     /// Resolves the chosen agent's CLI (cached by the locator).
-    func refreshCLIPath() async {
+    func refreshCLIPath() async { await resolveCLIPath(using: locate) }
+
+    /// Like `refreshCLIPath`, but bypasses the locator's cache (including a
+    /// cached "not found"). For Settings, where the user may have just
+    /// installed the CLI.
+    func forceRefreshCLIPath() async { await resolveCLIPath(using: relocate) }
+
+    private func resolveCLIPath(using find: (String) async -> URL?) async {
         let requested = agent
         guard let name = Self.executableName(for: requested) else { cliPath = nil; return }
-        let found = await locate(name)
+        let found = await find(name)
         // The agent may have been switched while the lookup ran.
         if agent == requested { cliPath = found }
     }
