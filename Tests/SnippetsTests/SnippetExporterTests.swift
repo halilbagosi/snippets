@@ -93,6 +93,24 @@ final class SnippetExporterTests: XCTestCase {
         XCTAssertEqual(archive.snippets[0].collectionIDs, [collection.uuid!])
     }
 
+    func test_activeCodeConfig_isFlushedIntoExport_withoutMutatingTheSnippet() throws {
+        let container = try makeContainer(); let context = container.mainContext
+        let snippet = Snippet(title: "s", language: "Swift", code: "live edit")
+        context.insert(snippet)
+        let active = PreviewParamConfig(
+            id: UUID(), name: "Fast", values: [:], isDefault: false, code: "stale stored")
+        let def = PreviewParamConfig(
+            id: UUID(), name: "Default", values: [:], isDefault: true, code: "original")
+        snippet.paramConfigs = [def, active]
+        snippet.activeParamConfigID = active.id
+
+        let record = export([snippet]).snippets[0]
+
+        XCTAssertEqual(record.paramConfigs.first { $0.id == active.id }?.code, "live edit")
+        XCTAssertEqual(record.paramConfigs.first { $0.id == def.id }?.code, "original")
+        XCTAssertEqual(snippet.paramConfigs.first { $0.id == active.id }?.code, "stale stored")
+    }
+
     func test_configsAndReadableMedia_areCarried() throws {
         let container = try makeContainer(); let context = container.mainContext
         let snippet = Snippet(title: "s", language: "React", code: "x")

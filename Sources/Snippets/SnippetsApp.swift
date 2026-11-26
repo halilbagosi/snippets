@@ -105,6 +105,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // license: access is off until the user turns it on in Settings.
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil {
             AgentAccess.shared.start()
+            // Locates the rating agent's CLI so the detail panel can appear.
+            Task { await EfficiencyRatingCenter.shared.settings.refreshCLIPath() }
         }
         #endif
         guard !launchedByAgent else { return }
@@ -130,6 +132,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidBecomeActive(_ notification: Notification) {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
         AgentAccess.shared.start()
+    }
+    #endif
+
+    #if !APP_STORE
+    /// Quitting stops every rating run; nothing is saved.
+    func applicationWillTerminate(_ notification: Notification) {
+        EfficiencyRatingCenter.shared.cancelAll()
     }
     #endif
 

@@ -29,25 +29,38 @@ enum SnippetLinker {
     }
 
     static func resolve<S: LinkableSnippet>(entry: S) -> Resolution {
+        let (deps, excluded) = orderedDependencies(of: entry) {
+            canContribute($0.linkLanguage, toEntry: entry.linkLanguage)
+        }
+        let sources = deps.map { LinkedSource(language: $0.linkLanguage, code: $0.linkCode) }
+            + [LinkedSource(language: entry.linkLanguage, code: entry.linkCode)]
+        return Resolution(sources: sources, excluded: excluded)
+    }
+
+    /// The entry's dependency closure in link order (post-order, each snippet
+    /// once, entry excluded, cycles broken by the visited set). A dependency
+    /// `accepts` rejects is reported by title and not traversed.
+    static func orderedDependencies<S: LinkableSnippet>(
+        of entry: S, accepts: (S) -> Bool = { _ in true }
+    ) -> (dependencies: [S], excluded: [String]) {
         var visited: Set<S.ID> = [entry.linkID]
-        var sources: [LinkedSource] = []
+        var ordered: [S] = []
         var excluded: [String] = []
 
         func visit(_ node: S) {
             for dep in node.linkDependencies {
                 guard !visited.contains(dep.linkID) else { continue }
                 visited.insert(dep.linkID)
-                guard canContribute(dep.linkLanguage, toEntry: entry.linkLanguage) else {
+                guard accepts(dep) else {
                     excluded.append(dep.linkTitle)
                     continue
                 }
                 visit(dep)
-                sources.append(LinkedSource(language: dep.linkLanguage, code: dep.linkCode))
+                ordered.append(dep)
             }
         }
         visit(entry)
-        sources.append(LinkedSource(language: entry.linkLanguage, code: entry.linkCode))
-        return Resolution(sources: sources, excluded: excluded)
+        return (ordered, excluded)
     }
 
     /// Groups a gallery list into card stacks: a snippet that another list

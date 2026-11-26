@@ -85,7 +85,9 @@ enum SnippetExporter {
                     copyCount: snippet.copyCount,
                     collectionIDs: snippet.collections.compactMap(\.uuid).sorted { $0.uuidString < $1.uuidString },
                     dependencyIDs: snippet.dependencies.compactMap(\.uuid),
-                    paramConfigs: snippet.paramConfigs,
+                    paramConfigs: PreviewParamConfigStore.storingActiveCode(
+                        snippet.code, activeID: snippet.activeParamConfigID, in: snippet.paramConfigs
+                    ),
                     activeParamConfigID: snippet.activeParamConfigID,
                     media: snippet.mediaItems.sorted { ($0.addedAt, $0.fileName) < ($1.addedAt, $1.fileName) }.compactMap { item in
                         guard let data = mediaData(item) else { return nil }

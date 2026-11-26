@@ -7,6 +7,28 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EF0C4004B000000000000000 /* EfficiencySettingsCLITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4004F000000000000000 /* EfficiencySettingsCLITests.swift */; };
+		EF0C4003B000000000000000 /* RatingToastModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4003F000000000000000 /* RatingToastModelTests.swift */; };
+		EF0C4002B000000000000000 /* EfficiencyRatingSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4002F000000000000000 /* EfficiencyRatingSettings.swift */; };
+		EF0C4001B000000000000000 /* RatingToastModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4001F000000000000000 /* RatingToastModel.swift */; };
+		EF0C4000B000000000000000 /* RatingToastStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4000F000000000000000 /* RatingToastStack.swift */; };
+		EF0B2004B000000000000000 /* ClaudeCodeRaterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B2004F000000000000000 /* ClaudeCodeRaterTests.swift */; };
+		EF0B1006B000000000000000 /* ClaudeCodeRater.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1006F000000000000000 /* ClaudeCodeRater.swift */; };
+		EF0B1005B000000000000000 /* AgentProcessRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1005F000000000000000 /* AgentProcessRunner.swift */; };
+		EF0B2003B000000000000000 /* ClaudeCodeEnvelopeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B2003F000000000000000 /* ClaudeCodeEnvelopeTests.swift */; };
+		EF0B2002B000000000000000 /* AgentCLILocatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B2002F000000000000000 /* AgentCLILocatorTests.swift */; };
+		EF0B2001B000000000000000 /* EfficiencyPromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B2001F000000000000000 /* EfficiencyPromptTests.swift */; };
+		EF0B2000B000000000000000 /* EfficiencyResponseParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B2000F000000000000000 /* EfficiencyResponseParserTests.swift */; };
+		EF0B1004B000000000000000 /* AgentCLILocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1004F000000000000000 /* AgentCLILocator.swift */; };
+		EF0B1003B000000000000000 /* ClaudeCodeEnvelope.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1003F000000000000000 /* ClaudeCodeEnvelope.swift */; };
+		EF0B1002B000000000000000 /* EfficiencyResponseParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1002F000000000000000 /* EfficiencyResponseParser.swift */; };
+		EF0B1001B000000000000000 /* EfficiencyPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1001F000000000000000 /* EfficiencyPrompt.swift */; };
+		EF0B1000B000000000000000 /* EfficiencyRater.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1000F000000000000000 /* EfficiencyRater.swift */; };
+		EF0A0000000000000000A002 /* EfficiencyReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0A0000000000000000A001 /* EfficiencyReview.swift */; };
+		EF0A0000000000000000D002 /* EfficiencyFixApplier.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0A0000000000000000D001 /* EfficiencyFixApplier.swift */; };
+		EF0A0000000000000000B002 /* PreviewParamConfigCodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0A0000000000000000B001 /* PreviewParamConfigCodeTests.swift */; };
+		EF0A0000000000000000B004 /* EfficiencyReviewStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0A0000000000000000B003 /* EfficiencyReviewStoreTests.swift */; };
+		EF0A0000000000000000D004 /* EfficiencyFixApplierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0A0000000000000000D003 /* EfficiencyFixApplierTests.swift */; };
 		SPARKLE0000000000000BLD1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = SPARKLE0000000000000PRD1 /* Sparkle */; };
 		4D435000000000000000B104 /* MCPStdioShimTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A104 /* MCPStdioShimTests.swift */; };
 		4D435000000000000000B103 /* MCPSocketServerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A103 /* MCPSocketServerTests.swift */; };
@@ -195,6 +217,13 @@
 		F8C62E3A560D9AC54FF7E392 /* SnippetImporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAA39A83BD01A435437E3A34 /* SnippetImporterTests.swift */; };
 		5E0A00000000000000000003 /* StoreBootstrapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0A00000000000000000004 /* StoreBootstrapTests.swift */; };
 		5E0A00000000000000000001 /* StoreMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0A00000000000000000002 /* StoreMigrationTests.swift */; };
+		EF0C1000B000000000000000 /* EfficiencyRatingCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C1000F000000000000000 /* EfficiencyRatingCenter.swift */; };
+		EF0C1001B000000000000000 /* EfficiencySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C1001F000000000000000 /* EfficiencySettings.swift */; };
+		EF0C2000B000000000000000 /* EfficiencyRatingCenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C2000F000000000000000 /* EfficiencyRatingCenterTests.swift */; };
+		EF0C3000B000000000000000 /* EfficiencyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C3000F000000000000000 /* EfficiencyPanel.swift */; };
+		EF0C3001B000000000000000 /* EfficiencyPanelState.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C3001F000000000000000 /* EfficiencyPanelState.swift */; };
+		EF0C3002B000000000000000 /* EfficiencyConsentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C3002F000000000000000 /* EfficiencyConsentSheet.swift */; };
+		EF0C3003B000000000000000 /* EfficiencyPanelStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C3003F000000000000000 /* EfficiencyPanelStateTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -208,6 +237,28 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		EF0C4004F000000000000000 /* EfficiencySettingsCLITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencySettingsCLITests.swift; sourceTree = "<group>"; };
+		EF0C4003F000000000000000 /* RatingToastModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingToastModelTests.swift; sourceTree = "<group>"; };
+		EF0C4002F000000000000000 /* EfficiencyRatingSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyRatingSettings.swift; sourceTree = "<group>"; };
+		EF0C4001F000000000000000 /* RatingToastModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingToastModel.swift; sourceTree = "<group>"; };
+		EF0C4000F000000000000000 /* RatingToastStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingToastStack.swift; sourceTree = "<group>"; };
+		EF0B2004F000000000000000 /* ClaudeCodeRaterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeRaterTests.swift; sourceTree = "<group>"; };
+		EF0B1006F000000000000000 /* ClaudeCodeRater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeRater.swift; sourceTree = "<group>"; };
+		EF0B1005F000000000000000 /* AgentProcessRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentProcessRunner.swift; sourceTree = "<group>"; };
+		EF0B2003F000000000000000 /* ClaudeCodeEnvelopeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeEnvelopeTests.swift; sourceTree = "<group>"; };
+		EF0B2002F000000000000000 /* AgentCLILocatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentCLILocatorTests.swift; sourceTree = "<group>"; };
+		EF0B2001F000000000000000 /* EfficiencyPromptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyPromptTests.swift; sourceTree = "<group>"; };
+		EF0B2000F000000000000000 /* EfficiencyResponseParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyResponseParserTests.swift; sourceTree = "<group>"; };
+		EF0B1004F000000000000000 /* AgentCLILocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentCLILocator.swift; sourceTree = "<group>"; };
+		EF0B1003F000000000000000 /* ClaudeCodeEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeEnvelope.swift; sourceTree = "<group>"; };
+		EF0B1002F000000000000000 /* EfficiencyResponseParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyResponseParser.swift; sourceTree = "<group>"; };
+		EF0B1001F000000000000000 /* EfficiencyPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyPrompt.swift; sourceTree = "<group>"; };
+		EF0B1000F000000000000000 /* EfficiencyRater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyRater.swift; sourceTree = "<group>"; };
+		EF0A0000000000000000A001 /* EfficiencyReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyReview.swift; sourceTree = "<group>"; };
+		EF0A0000000000000000D001 /* EfficiencyFixApplier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyFixApplier.swift; sourceTree = "<group>"; };
+		EF0A0000000000000000B001 /* PreviewParamConfigCodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewParamConfigCodeTests.swift; sourceTree = "<group>"; };
+		EF0A0000000000000000B003 /* EfficiencyReviewStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyReviewStoreTests.swift; sourceTree = "<group>"; };
+		EF0A0000000000000000D003 /* EfficiencyFixApplierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyFixApplierTests.swift; sourceTree = "<group>"; };
 		4D435000000000000000A104 /* MCPStdioShimTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPStdioShimTests.swift; sourceTree = "<group>"; };
 		4D435000000000000000A103 /* MCPSocketServerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSocketServerTests.swift; sourceTree = "<group>"; };
 		4D435000000000000000A110 /* AgentAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentAccessTests.swift; sourceTree = "<group>"; };
@@ -400,6 +451,13 @@
 		5E0A00000000000000000004 /* StoreBootstrapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreBootstrapTests.swift; sourceTree = "<group>"; };
 		5E0A00000000000000000002 /* StoreMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreMigrationTests.swift; sourceTree = "<group>"; };
 		FDCE1D4586F0F153EC14552A /* MediaManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
+		EF0C1000F000000000000000 /* EfficiencyRatingCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyRatingCenter.swift; sourceTree = "<group>"; };
+		EF0C1001F000000000000000 /* EfficiencySettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencySettings.swift; sourceTree = "<group>"; };
+		EF0C2000F000000000000000 /* EfficiencyRatingCenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyRatingCenterTests.swift; sourceTree = "<group>"; };
+		EF0C3000F000000000000000 /* EfficiencyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyPanel.swift; sourceTree = "<group>"; };
+		EF0C3001F000000000000000 /* EfficiencyPanelState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyPanelState.swift; sourceTree = "<group>"; };
+		EF0C3002F000000000000000 /* EfficiencyConsentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyConsentSheet.swift; sourceTree = "<group>"; };
+		EF0C3003F000000000000000 /* EfficiencyPanelStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyPanelStateTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -414,6 +472,25 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		EF0A0000000000000000A003 /* Efficiency */ = {
+			isa = PBXGroup;
+			children = (
+				EF0A0000000000000000A001 /* EfficiencyReview.swift */,
+				EF0A0000000000000000D001 /* EfficiencyFixApplier.swift */,
+				EF0B1004F000000000000000 /* AgentCLILocator.swift */,
+				EF0B1006F000000000000000 /* ClaudeCodeRater.swift */,
+				EF0B1005F000000000000000 /* AgentProcessRunner.swift */,
+				EF0B1003F000000000000000 /* ClaudeCodeEnvelope.swift */,
+				EF0B1002F000000000000000 /* EfficiencyResponseParser.swift */,
+				EF0B1001F000000000000000 /* EfficiencyPrompt.swift */,
+				EF0B1000F000000000000000 /* EfficiencyRater.swift */,
+				EF0C1001F000000000000000 /* EfficiencySettings.swift */,
+				EF0C4001F000000000000000 /* RatingToastModel.swift */,
+				EF0C1000F000000000000000 /* EfficiencyRatingCenter.swift */,
+			);
+			path = Efficiency;
+			sourceTree = "<group>";
+		};
 		0531673F4C20B2625BFAA76D /* ext */ = {
 			isa = PBXGroup;
 			children = (
@@ -545,6 +622,10 @@
 				0B2656C1F0CA0F70BF32616B /* MetalDisintegrationRenderer.swift */,
 				7F2D50C1A83B4E9D62C10FAB /* BackButton.swift */,
 				B6A7ABD6C5C29369D4E765CB /* SectionHeader.swift */,
+				EF0C3002F000000000000000 /* EfficiencyConsentSheet.swift */,
+				EF0C3001F000000000000000 /* EfficiencyPanelState.swift */,
+				EF0C4000F000000000000000 /* RatingToastStack.swift */,
+				EF0C3000F000000000000000 /* EfficiencyPanel.swift */,
 				EE6D5D60A49D9012A433BB0B /* SnippetCard.swift */,
 				349D293E241CD1A4BD2E312A /* DetailCardStage.swift */,
 				72351DDB378B8C22EB8FD8EE /* SnippetCollectionCard.swift */,
@@ -654,6 +735,18 @@
 				5E57E5700000000000000105 /* MetalShaderSourceTests.swift */,
 				5E57E5700000000000000106 /* PreviewParamConfigPersistenceTests.swift */,
 				5E57E5700000000000000107 /* PreviewParamConfigTests.swift */,
+				EF0A0000000000000000B001 /* PreviewParamConfigCodeTests.swift */,
+				EF0A0000000000000000B003 /* EfficiencyReviewStoreTests.swift */,
+				EF0A0000000000000000D003 /* EfficiencyFixApplierTests.swift */,
+				EF0C3003F000000000000000 /* EfficiencyPanelStateTests.swift */,
+				EF0C4003F000000000000000 /* RatingToastModelTests.swift */,
+				EF0C4004F000000000000000 /* EfficiencySettingsCLITests.swift */,
+				EF0C2000F000000000000000 /* EfficiencyRatingCenterTests.swift */,
+				EF0B2002F000000000000000 /* AgentCLILocatorTests.swift */,
+				EF0B2003F000000000000000 /* ClaudeCodeEnvelopeTests.swift */,
+				EF0B2004F000000000000000 /* ClaudeCodeRaterTests.swift */,
+				EF0B2001F000000000000000 /* EfficiencyPromptTests.swift */,
+				EF0B2000F000000000000000 /* EfficiencyResponseParserTests.swift */,
 				5E57E5700000000000000108 /* PreviewParamWriterTests.swift */,
 				5E57E5700000000000000109 /* PreviewParamsTests.swift */,
 				5E57E570000000000000010A /* ShaderClockTests.swift */,
@@ -764,6 +857,7 @@
 				F8540F55E9369EE99D79F3CF /* SettingsView.swift */,
 				271373FECC71F698C4601723 /* ThirdPartyNoticesView.swift */,
 				1E6A1D0C0000000000000002 /* LegalDocument.swift */,
+				EF0C4002F000000000000000 /* EfficiencyRatingSettings.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -890,6 +984,7 @@
 				32F8FA0F9162B95586F72B95 /* Editor */,
 				752E4D5163A0932DB1FC0C7E /* Gallery */,
 				4C734715871117432A0E4E49 /* Preview */,
+				EF0A0000000000000000A003 /* Efficiency */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -1020,6 +1115,7 @@
 				75BA5AA7792F8E5F50152054 /* SnippetArchive.swift in Sources */,
 				F46B79656507314308974187 /* ThirdPartyNoticesView.swift in Sources */,
 				1E6A1D0C0000000000000001 /* LegalDocument.swift in Sources */,
+				EF0C4002B000000000000000 /* EfficiencyRatingSettings.swift in Sources */,
 				40D4ED353970535DB11DCF63 /* HelpCommands.swift in Sources */,
 				6333331BA52F47421580DCE1 /* DetailMotionTuning.swift in Sources */,
 				FFF479394F15C59C3593A3CB /* DetailMotionTuningView.swift in Sources */,
@@ -1066,6 +1162,10 @@
 				F2D69E38FFD282172D3E3E2E /* OpenSnippetIntent.swift in Sources */,
 				4C1A7E0B93D25FA6180C4E21 /* BackButton.swift in Sources */,
 				23BC99AF3722159BED37DB79 /* SectionHeader.swift in Sources */,
+				EF0C3002B000000000000000 /* EfficiencyConsentSheet.swift in Sources */,
+				EF0C3001B000000000000000 /* EfficiencyPanelState.swift in Sources */,
+				EF0C4000B000000000000000 /* RatingToastStack.swift in Sources */,
+				EF0C3000B000000000000000 /* EfficiencyPanel.swift in Sources */,
 				AB649C3AF7BC8AC17F5FD0BB /* SettingsView.swift in Sources */,
 				594C6D13011DDBBD5D15AC39 /* Snippet.swift in Sources */,
 				2460C134FCE44B1078188ADB /* SnippetCard.swift in Sources */,
@@ -1129,6 +1229,18 @@
 				01E24B2BB3789E64F91EB040 /* PreviewParams.swift in Sources */,
 				D48543C395C387CFBB52BDBB /* PreviewParamWriter.swift in Sources */,
 				289248BE94D0A03E55D70606 /* PreviewParamConfig.swift in Sources */,
+				EF0A0000000000000000A002 /* EfficiencyReview.swift in Sources */,
+				EF0A0000000000000000D002 /* EfficiencyFixApplier.swift in Sources */,
+				EF0B1004B000000000000000 /* AgentCLILocator.swift in Sources */,
+				EF0B1006B000000000000000 /* ClaudeCodeRater.swift in Sources */,
+				EF0B1005B000000000000000 /* AgentProcessRunner.swift in Sources */,
+				EF0B1003B000000000000000 /* ClaudeCodeEnvelope.swift in Sources */,
+				EF0B1002B000000000000000 /* EfficiencyResponseParser.swift in Sources */,
+				EF0B1001B000000000000000 /* EfficiencyPrompt.swift in Sources */,
+				EF0B1000B000000000000000 /* EfficiencyRater.swift in Sources */,
+				EF0C1001B000000000000000 /* EfficiencySettings.swift in Sources */,
+				EF0C4001B000000000000000 /* RatingToastModel.swift in Sources */,
+				EF0C1000B000000000000000 /* EfficiencyRatingCenter.swift in Sources */,
 				6E2A43ECAC9C0E5D05506755 /* PreviewConfigControl.swift in Sources */,
 				F6E64CBF8C0BB58AA4AAC952 /* ColorPanelCenterer.swift in Sources */,
 				B2304606901B609F44EFB13F /* DSMotion.swift in Sources */,
@@ -1153,6 +1265,18 @@
 				5E57E5700000000000000205 /* MetalShaderSourceTests.swift in Sources */,
 				5E57E5700000000000000206 /* PreviewParamConfigPersistenceTests.swift in Sources */,
 				5E57E5700000000000000207 /* PreviewParamConfigTests.swift in Sources */,
+				EF0A0000000000000000B002 /* PreviewParamConfigCodeTests.swift in Sources */,
+				EF0A0000000000000000B004 /* EfficiencyReviewStoreTests.swift in Sources */,
+				EF0A0000000000000000D004 /* EfficiencyFixApplierTests.swift in Sources */,
+				EF0C3003B000000000000000 /* EfficiencyPanelStateTests.swift in Sources */,
+				EF0C4003B000000000000000 /* RatingToastModelTests.swift in Sources */,
+				EF0C4004B000000000000000 /* EfficiencySettingsCLITests.swift in Sources */,
+				EF0C2000B000000000000000 /* EfficiencyRatingCenterTests.swift in Sources */,
+				EF0B2002B000000000000000 /* AgentCLILocatorTests.swift in Sources */,
+				EF0B2003B000000000000000 /* ClaudeCodeEnvelopeTests.swift in Sources */,
+				EF0B2004B000000000000000 /* ClaudeCodeRaterTests.swift in Sources */,
+				EF0B2001B000000000000000 /* EfficiencyPromptTests.swift in Sources */,
+				EF0B2000B000000000000000 /* EfficiencyResponseParserTests.swift in Sources */,
 				5E57E5700000000000000208 /* PreviewParamWriterTests.swift in Sources */,
 				5E57E5700000000000000209 /* PreviewParamsTests.swift in Sources */,
 				5E57E570000000000000020A /* ShaderClockTests.swift in Sources */,

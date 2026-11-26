@@ -8,6 +8,13 @@ struct PreviewParamConfig: Codable, Equatable, Identifiable {
     var name: String
     var values: [String: PreviewParamValue]
     var isDefault: Bool
+    /// The config's own code, for configs created from an efficiency fix
+    /// (and `Default`, once one exists). Nil = uses `Default`'s code.
+    /// Never read while the config is active: `snippet.code` is the truth then.
+    var code: String? = nil
+    /// The rating a code config was created from, so its remaining
+    /// suggestions can still be added to it.
+    var sourceReviewID: UUID? = nil
 }
 
 /// Pure lifecycle transforms over a snippet's config list. Kept free of
@@ -38,9 +45,24 @@ enum PreviewParamConfigStore {
         current: [String: PreviewParamValue],
         declared: [PreviewParam],
         named name: String,
+        snippetCode: String? = nil,
+        activeID: UUID? = nil,
         into configs: [PreviewParamConfig]
     ) -> [PreviewParamConfig] {
+        // The outgoing active config is flushed first, so an edit made under
+        // it is never lost. A config saved from a code config owns that code
+        // too: otherwise the next flush would write it into `Default`.
         var result = configs
+        var inheritedCode: String? = nil
+        var inheritedSource: UUID? = nil
+        if let snippetCode {
+            result = storingActiveCode(snippetCode, activeID: activeID, in: result)
+            if let outgoing = result.first(where: { $0.id == activeID }),
+               !outgoing.isDefault, outgoing.code != nil {
+                inheritedCode = snippetCode
+                inheritedSource = outgoing.sourceReviewID
+            }
+        }
         if !result.contains(where: \.isDefault) {
             result.insert(
                 PreviewParamConfig(
@@ -54,9 +76,78 @@ enum PreviewParamConfigStore {
         // determines the preview rather than half-overriding the source.
         let values = overlay(current: current, declared: declared)
         result.append(
-            PreviewParamConfig(id: UUID(), name: name, values: values, isDefault: false)
+            PreviewParamConfig(
+                id: UUID(), name: name, values: values, isDefault: false,
+                code: inheritedCode, sourceReviewID: inheritedSource
+            )
         )
         return result
+    }
+
+    /// Saves a code variant as a new named config. `declared` describes the code
+    /// before the variant (what `Default` records); `codeDeclared`, when the
+    /// variant's code declares different params, describes the variant. Creates `Default` first when
+    /// absent, and lets `Default` capture `currentCode` the first time a code
+    /// config exists, so the original is always one click away.
+    static func savingCodeVariant(
+        code: String,
+        values: [String: PreviewParamValue],
+        named name: String,
+        sourceReviewID: UUID?,
+        currentCode: String,
+        declared: [PreviewParam],
+        codeDeclared: [PreviewParam]? = nil,
+        into configs: [PreviewParamConfig]
+    ) -> (configs: [PreviewParamConfig], newID: UUID) {
+        var result = configs
+        if let index = result.firstIndex(where: \.isDefault) {
+            if result[index].code == nil { result[index].code = currentCode }
+        } else {
+            result.insert(
+                PreviewParamConfig(
+                    id: UUID(), name: defaultName,
+                    values: declaredValues(declared), isDefault: true,
+                    code: currentCode
+                ),
+                at: 0
+            )
+        }
+        let newID = UUID()
+        result.append(
+            PreviewParamConfig(
+                id: newID, name: name,
+                values: overlay(current: values, declared: codeDeclared ?? declared), isDefault: false,
+                code: code, sourceReviewID: sourceReviewID
+            )
+        )
+        return (result, newID)
+    }
+
+    /// The flush rule: writes `code` into the active config if it owns code (a
+    /// code config, or a `Default` that has captured code). A values-only
+    /// config shares `Default`'s code, so once `Default` has captured code the
+    /// edit goes there. Before any code config exists nothing is written.
+    static func storingActiveCode(
+        _ code: String, activeID: UUID?, in configs: [PreviewParamConfig]
+    ) -> [PreviewParamConfig] {
+        guard let activeID,
+              let index = configs.firstIndex(where: { $0.id == activeID }) else { return configs }
+        var target = index
+        if configs[index].code == nil {
+            guard let defaultIndex = configs.firstIndex(where: \.isDefault),
+                  configs[defaultIndex].code != nil else { return configs }
+            target = defaultIndex
+        }
+        var result = configs
+        result[target].code = code
+        return result
+    }
+
+    /// The code `snippet.code` should become when `id` is activated: the
+    /// config's own code, else `Default`'s, else nil (leave the code alone).
+    static func codeToActivate(for id: UUID, in configs: [PreviewParamConfig]) -> String? {
+        guard let config = configs.first(where: { $0.id == id }) else { return nil }
+        return config.code ?? configs.first(where: \.isDefault)?.code
     }
 
     static func updating(

@@ -285,6 +285,19 @@ struct ContentView: View {
                     .position(x: column.midX, y: column.midY)
                     .zIndex(100)
                 }
+                #if !APP_STORE
+                // Rating runs, in every sidebar context (Trash included).
+                if detailFrame != .zero {
+                    RatingToastStack(
+                        presentedSnippetID: presentedSnippetID,
+                        trashedIDs: Set(trashedSnippets.map(\.persistentModelID)),
+                        onOpen: openSnippetFromRatingToast
+                    )
+                    .frame(width: column.width, height: column.height, alignment: .top)
+                    .position(x: column.midX, y: column.midY)
+                    .zIndex(100)
+                }
+                #endif
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
         }
@@ -292,6 +305,30 @@ struct ContentView: View {
         // window's top edge, as the sidebar does.
         .ignoresSafeArea()
     }
+
+    #if !APP_STORE
+    /// A rating toast was clicked: open that snippet the way a gallery card
+    /// click does. From Trash the gallery context comes first, since the
+    /// detail card is not shown there. A snippet that has since been trashed
+    /// has nowhere to open, so the click does nothing.
+    private func openSnippetFromRatingToast(_ id: PersistentIdentifier) {
+        guard snippets.contains(where: { $0.persistentModelID == id }) else { return }
+        if sidebarSelectionContext == .trash {
+            selectedCollectionID = nil
+            sidebarSelectionContext = .allSnippets
+        }
+        if presentedSnippetID == nil {
+            detailOrigin = Self.clickLocationInWindow()
+            // The tapped snippet is rarely on screen, and `cardGeometry` is
+            // never pruned: zoom from the toast click instead of morphing from
+            // a stale card (which also leaves no gallery card hidden).
+            morphSource = nil
+        }
+        // No `withAnimation`: the stage animates the open itself.
+        selectedSnippetID = id
+        syncDetailPresentation(to: id)
+    }
+    #endif
 
     private var presentedSnippet: Snippet? {
         guard let id = presentedSnippetID else { return nil }
@@ -927,6 +964,17 @@ struct ContentView: View {
                             segments: currentStatusSegments,
                             contentLeadingInset: 0
                         )
+                    }
+                    // Keeps `detailFrame` current in Trash too, so the rating
+                    // toasts re-centre when the window or sidebar resizes.
+                    .background {
+                        Color.clear
+                            .allowsHitTesting(false)
+                            .onGeometryChange(for: CGRect.self) { proxy in
+                                proxy.frame(in: .global)
+                            } action: { frame in
+                                detailFrame = frame
+                            }
                     }
             } else {
                 ZStack {

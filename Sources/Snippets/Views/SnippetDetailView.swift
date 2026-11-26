@@ -8,6 +8,7 @@ import AppKit
 struct SnippetDetailView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.modelContext) private var modelContext
+    @Environment(PreviewTrust.self) private var previewTrust
 
     let snippet: Snippet
     /// Whether a previously-viewed snippet exists to navigate back to; drives
@@ -100,6 +101,15 @@ struct SnippetDetailView: View {
                         }
                         codeBlock
                             .id(Self.codeBlockScrollID)
+#if !APP_STORE
+                        EfficiencyPanel(
+                            snippet: snippet, isPreviewExpanded: expanded,
+                            defersHeavyContent: defersHeavyContent,
+                            accent: Color(hex: language.accentHex) ?? theme.accent,
+                            onSaveAsNew: { applyFixAsNewConfig($0, from: $1, named: $2, base: $3) },
+                            onAddToActive: { applyFixToActiveConfig($0, from: $1) }
+                        )
+#endif
                         if !expanded {
                             metadata
                                 .transition(.opacity)
@@ -126,6 +136,7 @@ struct SnippetDetailView: View {
                 // both ends. A couple of points off the rim, too.
                 .contentMargins(.vertical, Self.cardCornerRadius, for: .scrollIndicators)
                 .contentMargins(.trailing, 3, for: .scrollIndicators)
+                .refreshesEfficiencyCLI()
                 // Coming back from the expanded view, land on the preview the
                 // user left rather than wherever the clamped offset ended up.
                 .onChange(of: expanded) { _, isExpanded in
@@ -451,6 +462,8 @@ struct SnippetDetailView: View {
                     Spacer(minLength: 16)
                     if let configResolution,
                        !snippet.paramConfigs.isEmpty || !detected.isEmpty {
+                        // A code config implies non-empty paramConfigs, so a
+                        // snippet without parameters shows the dropdown too.
                         PreviewConfigControl(
                             configs: snippet.paramConfigs,
                             activeID: snippet.activeParamConfigID,
@@ -670,7 +683,9 @@ struct SnippetDetailView: View {
     private func saveConfig(named name: String, resolution: SnippetLinker.Resolution) {
         let declared = detectedParams(resolution).map(\.param)
         snippet.paramConfigs = PreviewParamConfigStore.saving(
-            current: paramOverrides, declared: declared, named: name, into: snippet.paramConfigs
+            current: paramOverrides, declared: declared, named: name,
+            snippetCode: snippet.code, activeID: snippet.activeParamConfigID,
+            into: snippet.paramConfigs
         )
         if let saved = snippet.paramConfigs.last {
             snippet.activeParamConfigID = saved.id
@@ -688,21 +703,47 @@ struct SnippetDetailView: View {
         }
     }
 
+    // The closures re-resolve: a `Resolution` snapshots code strings, and the
+    // applier swaps `snippet.code` before declaring and applying values.
     private func selectConfig(id: UUID, resolution: SnippetLinker.Resolution) {
-        guard let config = snippet.paramConfigs.first(where: { $0.id == id }) else { return }
-        snippet.activeParamConfigID = id
-        let declared = detectedParams(resolution).map(\.param)
-        applyValues(
-            PreviewParamConfigStore.resolvedValues(for: config, declared: declared),
-            resolution: resolution
+        EfficiencyFixApplier.select(
+            id: id, in: snippet,
+            declared: { detectedParams(SnippetLinker.resolve(entry: snippet)).map(\.param) },
+            applyValues: { applyValues($0, resolution: SnippetLinker.resolve(entry: snippet)) },
+            forgetTrust: { previewTrust.forget($0) }
         )
     }
 
     private func deleteConfig(id: UUID) {
-        snippet.paramConfigs = PreviewParamConfigStore.deleting(id: id, from: snippet.paramConfigs)
-        if snippet.activeParamConfigID == id {
-            snippet.activeParamConfigID = snippet.paramConfigs.first(where: \.isDefault)?.id
-        }
+        EfficiencyFixApplier.delete(
+            id: id, from: snippet,
+            declared: { detectedParams(SnippetLinker.resolve(entry: snippet)).map(\.param) },
+            applyValues: { applyValues($0, resolution: SnippetLinker.resolve(entry: snippet)) }
+        )
+    }
+
+    /// Entry points for the efficiency panel. A fix is saved as a new named
+    /// config; it never overwrites code.
+    func applyFixAsNewConfig(
+        _ suggestion: EfficiencyReview.Suggestion, from review: EfficiencyReview, named name: String,
+        base: EfficiencyFixApplier.Base = .ratedCode
+    ) {
+        EfficiencyFixApplier.saveAsNew(
+            snippet: snippet, review: review, suggestion: suggestion, name: name, base: base,
+            overrides: paramOverrides,
+            declared: { detectedParams(SnippetLinker.resolve(entry: snippet)).map(\.param) },
+            applyValues: { applyValues($0, resolution: SnippetLinker.resolve(entry: snippet)) },
+            forgetTrust: { previewTrust.forget($0) }
+        )
+    }
+
+    func applyFixToActiveConfig(
+        _ suggestion: EfficiencyReview.Suggestion, from review: EfficiencyReview
+    ) {
+        EfficiencyFixApplier.addToActive(
+            snippet: snippet, review: review, suggestion: suggestion,
+            forgetTrust: { previewTrust.forget($0) }
+        )
     }
 
     private func mediaSection(_ mediaItems: [MediaItem]) -> some View {
