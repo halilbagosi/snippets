@@ -20,8 +20,10 @@
 		EF0B1001B000000000000000 /* EfficiencyPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1001F000000000000000 /* EfficiencyPrompt.swift */; };
 		EF0B1000B000000000000000 /* EfficiencyRater.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1000F000000000000000 /* EfficiencyRater.swift */; };
 		EF0A0000000000000000A002 /* EfficiencyReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0A0000000000000000A001 /* EfficiencyReview.swift */; };
+		EF0A0000000000000000D002 /* EfficiencyFixApplier.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0A0000000000000000D001 /* EfficiencyFixApplier.swift */; };
 		EF0A0000000000000000B002 /* PreviewParamConfigCodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0A0000000000000000B001 /* PreviewParamConfigCodeTests.swift */; };
 		EF0A0000000000000000B004 /* EfficiencyReviewStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0A0000000000000000B003 /* EfficiencyReviewStoreTests.swift */; };
+		EF0A0000000000000000D004 /* EfficiencyFixApplierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0A0000000000000000D003 /* EfficiencyFixApplierTests.swift */; };
 		SPARKLE0000000000000BLD1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = SPARKLE0000000000000PRD1 /* Sparkle */; };
 		4D435000000000000000B104 /* MCPStdioShimTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A104 /* MCPStdioShimTests.swift */; };
 		4D435000000000000000B103 /* MCPSocketServerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D435000000000000000A103 /* MCPSocketServerTests.swift */; };
@@ -239,8 +241,10 @@
 		EF0B1001F000000000000000 /* EfficiencyPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyPrompt.swift; sourceTree = "<group>"; };
 		EF0B1000F000000000000000 /* EfficiencyRater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyRater.swift; sourceTree = "<group>"; };
 		EF0A0000000000000000A001 /* EfficiencyReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyReview.swift; sourceTree = "<group>"; };
+		EF0A0000000000000000D001 /* EfficiencyFixApplier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyFixApplier.swift; sourceTree = "<group>"; };
 		EF0A0000000000000000B001 /* PreviewParamConfigCodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewParamConfigCodeTests.swift; sourceTree = "<group>"; };
 		EF0A0000000000000000B003 /* EfficiencyReviewStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyReviewStoreTests.swift; sourceTree = "<group>"; };
+		EF0A0000000000000000D003 /* EfficiencyFixApplierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyFixApplierTests.swift; sourceTree = "<group>"; };
 		4D435000000000000000A104 /* MCPStdioShimTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPStdioShimTests.swift; sourceTree = "<group>"; };
 		4D435000000000000000A103 /* MCPSocketServerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSocketServerTests.swift; sourceTree = "<group>"; };
 		4D435000000000000000A110 /* AgentAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentAccessTests.swift; sourceTree = "<group>"; };
@@ -454,6 +458,7 @@
 			isa = PBXGroup;
 			children = (
 				EF0A0000000000000000A001 /* EfficiencyReview.swift */,
+				EF0A0000000000000000D001 /* EfficiencyFixApplier.swift */,
 				EF0B1004F000000000000000 /* AgentCLILocator.swift */,
 				EF0B1006F000000000000000 /* ClaudeCodeRater.swift */,
 				EF0B1005F000000000000000 /* AgentProcessRunner.swift */,
@@ -709,6 +714,7 @@
 				5E57E5700000000000000107 /* PreviewParamConfigTests.swift */,
 				EF0A0000000000000000B001 /* PreviewParamConfigCodeTests.swift */,
 				EF0A0000000000000000B003 /* EfficiencyReviewStoreTests.swift */,
+				EF0A0000000000000000D003 /* EfficiencyFixApplierTests.swift */,
 				EF0C2000F000000000000000 /* EfficiencyRatingCenterTests.swift */,
 				EF0B2002F000000000000000 /* AgentCLILocatorTests.swift */,
 				EF0B2003F000000000000000 /* ClaudeCodeEnvelopeTests.swift */,
@@ -1192,6 +1198,7 @@
 				D48543C395C387CFBB52BDBB /* PreviewParamWriter.swift in Sources */,
 				289248BE94D0A03E55D70606 /* PreviewParamConfig.swift in Sources */,
 				EF0A0000000000000000A002 /* EfficiencyReview.swift in Sources */,
+				EF0A0000000000000000D002 /* EfficiencyFixApplier.swift in Sources */,
 				EF0B1004B000000000000000 /* AgentCLILocator.swift in Sources */,
 				EF0B1006B000000000000000 /* ClaudeCodeRater.swift in Sources */,
 				EF0B1005B000000000000000 /* AgentProcessRunner.swift in Sources */,
@@ -1227,6 +1234,7 @@
 				5E57E5700000000000000207 /* PreviewParamConfigTests.swift in Sources */,
 				EF0A0000000000000000B002 /* PreviewParamConfigCodeTests.swift in Sources */,
 				EF0A0000000000000000B004 /* EfficiencyReviewStoreTests.swift in Sources */,
+				EF0A0000000000000000D004 /* EfficiencyFixApplierTests.swift in Sources */,
 				EF0C2000B000000000000000 /* EfficiencyRatingCenterTests.swift in Sources */,
 				EF0B2002B000000000000000 /* AgentCLILocatorTests.swift in Sources */,
 				EF0B2003B000000000000000 /* ClaudeCodeEnvelopeTests.swift in Sources */,

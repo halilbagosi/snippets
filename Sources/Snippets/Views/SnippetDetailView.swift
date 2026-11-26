@@ -8,6 +8,7 @@ import AppKit
 struct SnippetDetailView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.modelContext) private var modelContext
+    @Environment(PreviewTrust.self) private var previewTrust
 
     let snippet: Snippet
     /// Whether a previously-viewed snippet exists to navigate back to; drives
@@ -450,7 +451,8 @@ struct SnippetDetailView: View {
                     }
                     Spacer(minLength: 16)
                     if let configResolution,
-                       !snippet.paramConfigs.isEmpty || !detected.isEmpty {
+                       !snippet.paramConfigs.isEmpty || !detected.isEmpty
+                        || snippet.paramConfigs.contains(where: { $0.code != nil }) {
                         PreviewConfigControl(
                             configs: snippet.paramConfigs,
                             activeID: snippet.activeParamConfigID,
@@ -689,20 +691,39 @@ struct SnippetDetailView: View {
     }
 
     private func selectConfig(id: UUID, resolution: SnippetLinker.Resolution) {
-        guard let config = snippet.paramConfigs.first(where: { $0.id == id }) else { return }
-        snippet.activeParamConfigID = id
-        let declared = detectedParams(resolution).map(\.param)
-        applyValues(
-            PreviewParamConfigStore.resolvedValues(for: config, declared: declared),
-            resolution: resolution
+        EfficiencyFixApplier.select(
+            id: id, in: snippet,
+            declared: { detectedParams(resolution).map(\.param) },
+            applyValues: { applyValues($0, resolution: resolution) }
         )
     }
 
     private func deleteConfig(id: UUID) {
-        snippet.paramConfigs = PreviewParamConfigStore.deleting(id: id, from: snippet.paramConfigs)
-        if snippet.activeParamConfigID == id {
-            snippet.activeParamConfigID = snippet.paramConfigs.first(where: \.isDefault)?.id
-        }
+        EfficiencyFixApplier.delete(id: id, from: snippet)
+    }
+
+    /// Entry points for the efficiency panel. A fix is saved as a new named
+    /// config; it never overwrites code.
+    func applyFixAsNewConfig(
+        _ suggestion: EfficiencyReview.Suggestion, from review: EfficiencyReview, named name: String
+    ) {
+        let resolution = SnippetLinker.resolve(entry: snippet)
+        EfficiencyFixApplier.saveAsNew(
+            snippet: snippet, review: review, suggestion: suggestion, name: name,
+            overrides: paramOverrides,
+            declared: { detectedParams(resolution).map(\.param) },
+            applyValues: { applyValues($0, resolution: resolution) },
+            forgetTrust: { previewTrust.forget($0) }
+        )
+    }
+
+    func applyFixToActiveConfig(
+        _ suggestion: EfficiencyReview.Suggestion, from review: EfficiencyReview
+    ) {
+        EfficiencyFixApplier.addToActive(
+            snippet: snippet, review: review, suggestion: suggestion,
+            forgetTrust: { previewTrust.forget($0) }
+        )
     }
 
     private func mediaSection(_ mediaItems: [MediaItem]) -> some View {
