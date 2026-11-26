@@ -18,10 +18,12 @@ struct FilterTag: View {
 
     private var resolvedForeground: Color {
         if isSelected {
-            return colorScheme == .dark ? .white : (foregroundAccent ?? theme.safeAccentText(accent))
+            // On the saturated selected glass, accent-coloured text sank into
+            // its own background; white reads in both schemes.
+            return .white
         }
         if let foregroundAccent { return foregroundAccent }
-        if colorScheme == .dark { 
+        if colorScheme == .dark {
             return .primary.opacity(0.85)
         }
         return theme.safeAccentText(accent)
@@ -72,7 +74,7 @@ struct FilterTag: View {
                 shadowRadius: 0,
                 shadowY: 0,
                 glassTint: isSelected
-                    ? resolvedFill.opacity(colorScheme == .dark ? 0.6 : 0.5)
+                    ? resolvedFill.opacity(0.6)
                     : accent.opacity(colorScheme == .dark ? 0.14 : 0.08),
                 drawsFills: false
             )
