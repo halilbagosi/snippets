@@ -23,9 +23,6 @@ enum EfficiencyResponseParser {
             guard let reason = (root["notApplicableReason"] as? String)?
                 .trimmingCharacters(in: .whitespacesAndNewlines), !reason.isEmpty
             else { throw invalid("notApplicableReason missing") }
-            guard root["score"] == nil || root["score"] is NSNull else {
-                throw invalid("score present for not-applicable")
-            }
             return EfficiencyReport(score: nil, notApplicableReason: reason, summary: summary, suggestions: [])
         }
 

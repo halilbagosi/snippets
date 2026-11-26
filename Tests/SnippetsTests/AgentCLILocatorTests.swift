@@ -43,7 +43,7 @@ final class AgentCLILocatorTests: XCTestCase {
         let probes = Counter()
         let present = Counter()  // flips the probe from "missing" to "found" once bumped
         let locator = AgentCLILocator(
-            directories: [], isExecutable: { _ in false },
+            directories: [], fallbackDirectories: [], isExecutable: { _ in false },
             shellProbe: { _ in probes.bump(); return present.value > 0 ? URL(fileURLWithPath: "/x/claude") : nil })
 
         let first = await locator.locate("claude")
@@ -68,11 +68,35 @@ final class AgentCLILocatorTests: XCTestCase {
     func test_directoryHitSkipsShell() async {
         let probes = Counter()
         let locator = AgentCLILocator(
-            directories: ["/d"], isExecutable: { $0 == "/d/claude" },
+            directories: ["/d"], fallbackDirectories: [], isExecutable: { $0 == "/d/claude" },
             shellProbe: { _ in probes.bump(); return nil })
         let url = await locator.locate("claude")
         XCTAssertEqual(url?.path, "/d/claude")
         XCTAssertEqual(probes.value, 0)
+    }
+
+    func test_fallbackDirectoriesCheckedInOrderOnlyAfterProbeMisses() async {
+        XCTAssertEqual(AgentCLILocator.fallbackDirectories(home: "/h"), [
+            "/h/.local/bin", "/h/.claude/local", "/h/.npm-global/bin",
+            "/opt/homebrew/bin", "/usr/local/bin",
+        ])
+        let fake: @Sendable (String) -> Bool = { $0 == "/f2/claude" || $0 == "/f3/claude" || $0 == "/f2/other" }
+        let missed = AgentCLILocator(
+            directories: [], fallbackDirectories: ["/f1", "/f2", "/f3"], isExecutable: fake,
+            shellProbe: { _ in nil })
+        let hit = await missed.locate("claude")
+        XCTAssertEqual(hit?.path, "/f2/claude")
+
+        let probed = AgentCLILocator(
+            directories: [], fallbackDirectories: ["/f2"], isExecutable: fake,
+            shellProbe: { _ in URL(fileURLWithPath: "/shell/claude") })
+        let probedHit = await probed.locate("claude")
+        XCTAssertEqual(probedHit?.path, "/shell/claude")
+
+        let none = AgentCLILocator(
+            directories: [], fallbackDirectories: ["/f2"], isExecutable: fake, shellProbe: { _ in nil })
+        let nothing = await none.locate("claude-nope")
+        XCTAssertNil(nothing)
     }
 
     func test_loginShellProbeFindsRealTool() throws {

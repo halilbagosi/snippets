@@ -29,7 +29,7 @@ struct ClaudeCodeRater: EfficiencyRater {
     /// `USER` is required: the CLI finds its keychain credentials through it
     /// and otherwise reports "Not logged in".
     static func environment(cliDirectory: String, home: String = NSHomeDirectory(), user: String = NSUserName()) -> [String: String] {
-        ["HOME": home, "USER": user, "LOGNAME": user, "PATH": "\(cliDirectory):/usr/bin:/bin", "LANG": "en_US.UTF-8"]
+        ["HOME": home, "USER": user, "LOGNAME": user, "PATH": "\(cliDirectory):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin", "LANG": "en_US.UTF-8"]
     }
 
     func rate(_ request: EfficiencyRequest, model: String?) async throws -> EfficiencyReport {

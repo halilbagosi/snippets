@@ -683,7 +683,9 @@ struct SnippetDetailView: View {
     private func saveConfig(named name: String, resolution: SnippetLinker.Resolution) {
         let declared = detectedParams(resolution).map(\.param)
         snippet.paramConfigs = PreviewParamConfigStore.saving(
-            current: paramOverrides, declared: declared, named: name, into: snippet.paramConfigs
+            current: paramOverrides, declared: declared, named: name,
+            snippetCode: snippet.code, activeID: snippet.activeParamConfigID,
+            into: snippet.paramConfigs
         )
         if let saved = snippet.paramConfigs.last {
             snippet.activeParamConfigID = saved.id
@@ -713,7 +715,11 @@ struct SnippetDetailView: View {
     }
 
     private func deleteConfig(id: UUID) {
-        EfficiencyFixApplier.delete(id: id, from: snippet)
+        EfficiencyFixApplier.delete(
+            id: id, from: snippet,
+            declared: { detectedParams(SnippetLinker.resolve(entry: snippet)).map(\.param) },
+            applyValues: { applyValues($0, resolution: SnippetLinker.resolve(entry: snippet)) }
+        )
     }
 
     /// Entry points for the efficiency panel. A fix is saved as a new named

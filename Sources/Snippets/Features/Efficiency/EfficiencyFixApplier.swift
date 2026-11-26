@@ -115,25 +115,29 @@ enum EfficiencyFixApplier {
         applyValues(PreviewParamConfigStore.resolvedValues(for: config, declared: declared()))
     }
 
-    /// Deleting a config. Deleting the active one falls back to `Default`,
-    /// code included; deleting another first stores the active config's code.
-    static func delete(id: UUID, from snippet: Snippet) {
+    /// Deleting a config. The active config's code is stored first; deleting
+    /// the active one then falls back to `Default`, code and values included.
+    static func delete(
+        id: UUID,
+        from snippet: Snippet,
+        declared: () -> [PreviewParam],
+        applyValues: ([String: PreviewParamValue]) -> Void
+    ) {
         let wasActive = snippet.activeParamConfigID == id
-        let remaining = PreviewParamConfigStore.deleting(id: id, from: snippet.paramConfigs)
-        guard remaining.count != snippet.paramConfigs.count else { return }
-        if wasActive {
-            snippet.paramConfigs = remaining
-            let fallback = remaining.first(where: \.isDefault)
-            snippet.activeParamConfigID = fallback?.id
-            if let fallback,
-               let code = PreviewParamConfigStore.codeToActivate(for: fallback.id, in: remaining) {
-                snippet.code = code
-            }
-        } else {
-            snippet.paramConfigs = PreviewParamConfigStore.storingActiveCode(
-                snippet.code, activeID: snippet.activeParamConfigID, in: remaining
-            )
+        let flushed = PreviewParamConfigStore.storingActiveCode(
+            snippet.code, activeID: snippet.activeParamConfigID, in: snippet.paramConfigs
+        )
+        let remaining = PreviewParamConfigStore.deleting(id: id, from: flushed)
+        guard remaining.count != flushed.count else { return }
+        snippet.paramConfigs = remaining
+        guard wasActive else { return }
+        let fallback = remaining.first(where: \.isDefault)
+        snippet.activeParamConfigID = fallback?.id
+        guard let fallback else { return }
+        if let code = PreviewParamConfigStore.codeToActivate(for: fallback.id, in: remaining) {
+            snippet.code = code
         }
+        applyValues(PreviewParamConfigStore.resolvedValues(for: fallback, declared: declared()))
     }
 
     /// AI-written code is now running: revoke approvals at every depth, stamp

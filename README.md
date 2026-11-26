@@ -163,6 +163,19 @@ isn't running; an agent-launched Snippets starts in the background. Only one
 copy of Snippets can serve agents at a time: a second copy (a debug build,
 say) leaves the running one's socket alone. It isn't in the App Store build.
 
+### Efficiency Rating
+
+In a snippet's detail view, **Rate** asks your Claude Code CLI for an
+on-demand 0-100 efficiency rating and suggested fixes. The CLI runs headless
+with no tools, no MCP servers and no saved session, so it can only answer.
+A fix is saved as a new named config (rated code plus that one change) and
+never overwrites your code; `Default` keeps the original. The snippet's code
+(and its dependencies') is sent to the agent's provider on your account, so
+the first rating asks for consent. Codex is not offered: its CLI could not be
+verified to run with no tools. Direct-download build only. The rating signs in
+through the Claude Code login; API-key environment variables, `apiKeyHelper`,
+Bedrock and Vertex setups are not passed through.
+
 ## Project Structure
 
 - Sources/Snippets/SnippetsApp.swift: app entry point, SwiftData setup, and app environment configuration
@@ -176,6 +189,7 @@ say) leaves the running one's socket alone. It isn't in the App Store build.
 - Sources/Snippets/Views/Sidebar: the collection sidebar and its editor sheet
 - Sources/Snippets/DesignSystem: design tokens, modifiers, and glass-style components
 - Sources/Snippets/Features: view models and pure logic for gallery, editor, preview, and quick copy behavior
+- Sources/Snippets/Features/Efficiency: on-demand efficiency rating through the Claude Code CLI, fix-as-config rules, and the background rating toasts (direct-download build only)
 - Sources/Snippets/Features/Editor: the snippet editor view model
 - Sources/Snippets/Features/Gallery: the gallery view model and collection move tree
 - Sources/Snippets/Features/Preview: preview engines, snippet linking, preview parameters, and the preview trust model

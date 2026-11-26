@@ -100,6 +100,56 @@ final class PreviewParamConfigCodeTests: XCTestCase {
         )
     }
 
+    func test_flushUnderValuesOnlyConfigWritesIntoDefaultOnceDefaultHasCode() {
+        let valuesOnly = PreviewParamConfigStore.saving(
+            current: [:], declared: declared, named: "V", into: []
+        )
+        let withCode = variant("fast", current: "orig", into: valuesOnly)
+        let v = withCode.configs.first { $0.name == "V" }!
+        let flushed = PreviewParamConfigStore.storingActiveCode(
+            "edited", activeID: v.id, in: withCode.configs
+        )
+        XCTAssertEqual(flushed.first(where: \.isDefault)?.code, "edited")
+        XCTAssertNil(flushed.first { $0.id == v.id }?.code)
+        XCTAssertEqual(flushed.first { $0.id == withCode.newID }?.code, "fast")
+    }
+
+    func test_savingFromCodeConfigOwnsThatCode_andNeverWritesIntoDefault() {
+        let reviewID = UUID()
+        let opt = PreviewParamConfigStore.savingCodeVariant(
+            code: "opt", values: [:], named: "Opt", sourceReviewID: reviewID,
+            currentCode: "orig", declared: declared, into: []
+        )
+        // The user edits under Opt, moves a slider, saves "V".
+        let saved = PreviewParamConfigStore.saving(
+            current: [:], declared: declared, named: "V",
+            snippetCode: "opt edited", activeID: opt.newID, into: opt.configs
+        )
+        let v = saved.last!
+        XCTAssertEqual(v.code, "opt edited")
+        XCTAssertEqual(v.sourceReviewID, reviewID)
+        XCTAssertEqual(saved.first { $0.id == opt.newID }?.code, "opt edited")
+        XCTAssertEqual(saved.first(where: \.isDefault)?.code, "orig")
+
+        // Later flushes while V is active stay in V.
+        let later = PreviewParamConfigStore.storingActiveCode("more", activeID: v.id, in: saved)
+        XCTAssertEqual(later.first(where: \.isDefault)?.code, "orig")
+        XCTAssertEqual(later.last?.code, "more")
+    }
+
+    func test_savingFromDefaultOrValuesOnlyDoesNotInventCode() {
+        let base = PreviewParamConfigStore.saving(
+            current: [:], declared: declared, named: "A", into: []
+        )
+        let next = PreviewParamConfigStore.saving(
+            current: [:], declared: declared, named: "B",
+            snippetCode: "x", activeID: base[1].id, into: base
+        )
+        XCTAssertNil(next.last?.code)
+        XCTAssertNil(next.last?.sourceReviewID)
+        XCTAssertEqual(next, base + [next.last!])
+    }
+
     func test_codeToActivateForValuesOnlyConfig() {
         let valuesOnly = PreviewParamConfigStore.saving(
             current: [:], declared: declared, named: "Warm", into: []

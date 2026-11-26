@@ -47,6 +47,12 @@ final class EfficiencyFixApplierTests: XCTestCase {
             forgetTrust: { selectForgotten.append($0) })
     }
 
+    private func delete(
+        _ id: UUID, _ snippet: Snippet, applying values: @escaping ([String: PreviewParamValue]) -> Void = { _ in }
+    ) {
+        EfficiencyFixApplier.delete(id: id, from: snippet, declared: { [] }, applyValues: values)
+    }
+
     private var selectForgotten: [UUID?] = []
 
     private func config(_ name: String, in snippet: Snippet) -> PreviewParamConfig {
@@ -138,10 +144,72 @@ final class EfficiencyFixApplierTests: XCTestCase {
         let snippet = makeSnippet(code: "a = 1")
         let (r, s) = review(rated: "a = 1")
         saveAsNew(snippet, r, s, name: "A")
-        EfficiencyFixApplier.delete(id: config("A", in: snippet).id, from: snippet)
+        delete(config("A", in: snippet).id, snippet)
         XCTAssertEqual(snippet.code, "a = 1")
         XCTAssertEqual(snippet.activeParamConfigID, config("Default", in: snippet).id)
         XCTAssertNil(snippet.paramConfigs.first { $0.name == "A" })
+    }
+
+    func test_editUnderValuesOnlyConfigSurvivesSwitchingToCodeConfigAndBack() {
+        let snippet = makeSnippet(code: "a = 1")
+        let valuesOnly = PreviewParamConfigStore.saving(
+            current: [:], declared: [], named: "V", into: [])
+        snippet.paramConfigs = valuesOnly
+        let v = valuesOnly[1]
+        let (r, s) = review(rated: "a = 1")
+        saveAsNew(snippet, r, s, name: "Opt")
+        select(v.id, snippet)
+        XCTAssertEqual(snippet.code, "a = 1")
+        snippet.code = "a = 1 // edit under V"
+        select(config("Opt", in: snippet).id, snippet)
+        XCTAssertEqual(snippet.code, "a = 2")
+        select(v.id, snippet)
+        XCTAssertEqual(snippet.code, "a = 1 // edit under V")
+    }
+
+    func test_editUnderValuesOnlyConfigSurvivesDeletingIt_andDefaultValuesReapply() {
+        let snippet = makeSnippet(code: "a = 1")
+        let valuesOnly = PreviewParamConfigStore.saving(
+            current: [:], declared: [], named: "V", into: [])
+        snippet.paramConfigs = valuesOnly
+        let (r, s) = review(rated: "a = 1")
+        saveAsNew(snippet, r, s, name: "Opt")
+        select(config("V", in: snippet).id, snippet)
+        snippet.code = "a = 1 // edit under V"
+        var applied: [[String: PreviewParamValue]] = []
+        let defaultID = config("Default", in: snippet).id
+        snippet.paramConfigs = snippet.paramConfigs.map {
+            var c = $0
+            if c.id == defaultID { c.values = ["x": .number(7)] }
+            return c
+        }
+        EfficiencyFixApplier.delete(
+            id: config("V", in: snippet).id, from: snippet,
+            declared: { [PreviewParam(name: "x", kind: .number(default: 0))] },
+            applyValues: { applied.append($0) })
+        XCTAssertEqual(snippet.activeParamConfigID, defaultID)
+        XCTAssertEqual(snippet.code, "a = 1 // edit under V")
+        XCTAssertEqual(applied, [["x": .number(7)]])
+    }
+
+    func test_configSavedWhileCodeConfigActiveNeverWritesIntoDefault_endToEnd() {
+        let snippet = makeSnippet(code: "a = 1")
+        let (r, s) = review(rated: "a = 1")
+        saveAsNew(snippet, r, s, name: "Opt")
+        let opt = config("Opt", in: snippet)
+        snippet.code = "a = 2 // edited"
+        snippet.paramConfigs = PreviewParamConfigStore.saving(
+            current: [:], declared: [], named: "V",
+            snippetCode: snippet.code, activeID: snippet.activeParamConfigID, into: snippet.paramConfigs)
+        let v = config("V", in: snippet)
+        snippet.activeParamConfigID = v.id
+        select(opt.id, snippet)
+        XCTAssertEqual(snippet.code, "a = 2 // edited", "edit must survive")
+        XCTAssertEqual(config("Default", in: snippet).code, "a = 1")
+        select(v.id, snippet)
+        XCTAssertEqual(snippet.code, "a = 2 // edited", "V carries the optimized code")
+        XCTAssertEqual(config("V", in: snippet).sourceReviewID, r.id)
+        XCTAssertEqual(config("Default", in: snippet).code, "a = 1")
     }
 
     func test_deletingAnotherConfig_flushesActiveCode() {
@@ -151,7 +219,7 @@ final class EfficiencyFixApplierTests: XCTestCase {
         let (_, other) = review(rated: "a = 1", before: "a = 1", after: "a = 3")
         saveAsNew(snippet, r, other, name: "B")
         snippet.code = "a = 3 // edit"
-        EfficiencyFixApplier.delete(id: config("A", in: snippet).id, from: snippet)
+        delete(config("A", in: snippet).id, snippet)
         XCTAssertEqual(config("B", in: snippet).code, "a = 3 // edit")
         XCTAssertEqual(snippet.code, "a = 3 // edit")
     }
@@ -317,7 +385,7 @@ final class EfficiencyFixApplierTests: XCTestCase {
         snippet.paramConfigs = [def, big]
         snippet.activeParamConfigID = big.id
         snippet.code = "a = 1 // edited"
-        EfficiencyFixApplier.delete(id: big.id, from: snippet)
+        delete(big.id, snippet)
         XCTAssertEqual(snippet.code, "a = 1 // edited")
         XCTAssertEqual(snippet.activeParamConfigID, def.id)
     }

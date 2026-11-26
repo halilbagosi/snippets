@@ -57,7 +57,7 @@ final class ClaudeCodeRaterTests: XCTestCase {
         XCTAssertFalse(String(decoding: stdin, as: UTF8.self).isEmpty)
         XCTAssertFalse(args.contains { $0.contains("let x = 1") }, "code must not travel in argv")
         XCTAssertEqual(Set(env.keys), ["HOME", "USER", "LOGNAME", "PATH", "LANG"])
-        XCTAssertEqual(env["PATH"], "/opt/tools:/usr/bin:/bin")
+        XCTAssertEqual(env["PATH"], "/opt/tools:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin")
         XCTAssertFalse(FileManager.default.fileExists(atPath: cwd.path), "temp cwd removed afterwards")
         XCTAssertFalse(ClaudeCodeRater.arguments(model: nil).contains("--model"))
     }

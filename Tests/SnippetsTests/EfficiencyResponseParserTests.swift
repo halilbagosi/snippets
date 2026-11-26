@@ -38,10 +38,16 @@ final class EfficiencyResponseParserTests: XCTestCase {
         XCTAssertTrue(r.suggestions.isEmpty)
     }
 
-    func test_notApplicableNeedsReasonAndNoScore() {
+    func test_notApplicableIgnoresScore() throws {
+        let r = try EfficiencyResponseParser.parse(
+            #"{"applicable":false,"notApplicableReason":"r","score":50,"summary":"s"}"#, ratedCode: "x")
+        XCTAssertNil(r.score)
+        XCTAssertEqual(r.notApplicableReason, "r")
+    }
+
+    func test_notApplicableNeedsReason() {
         assertInvalid(#"{"applicable":false,"summary":"s"}"#)
         assertInvalid(#"{"applicable":false,"notApplicableReason":" ","summary":"s"}"#)
-        assertInvalid(#"{"applicable":false,"notApplicableReason":"r","score":50,"summary":"s"}"#)
     }
 
     func test_badScoreIsInvalid() {

@@ -14,6 +14,7 @@ final class AgentCLILocator: @unchecked Sendable {
     private enum Entry { case found(URL), notFound }
 
     private let directories: [String]
+    private let fallbackDirectories: [String]
     private let isExecutable: @Sendable (String) -> Bool
     private let shellProbe: @Sendable (String) -> URL?
     private let lock = NSLock()
@@ -21,10 +22,12 @@ final class AgentCLILocator: @unchecked Sendable {
 
     init(
         directories: [String] = AgentCLILocator.candidateDirectories(home: NSHomeDirectory()),
+        fallbackDirectories: [String] = AgentCLILocator.fallbackDirectories(home: NSHomeDirectory()),
         isExecutable: @escaping @Sendable (String) -> Bool = AgentCLILocator.isRegularExecutable,
         shellProbe: @escaping @Sendable (String) -> URL? = AgentCLILocator.loginShellProbe
     ) {
         self.directories = directories
+        self.fallbackDirectories = fallbackDirectories
         self.isExecutable = isExecutable
         self.shellProbe = shellProbe
     }
@@ -34,6 +37,15 @@ final class AgentCLILocator: @unchecked Sendable {
         [
             "\(home)/.local/bin", "/opt/homebrew/bin", "/usr/local/bin",
             "\(home)/.npm-global/bin", "\(home)/.bun/bin", "\(home)/.volta/bin",
+        ]
+    }
+
+    /// Checked in order when the login shell finds nothing (e.g. a profile
+    /// that exits early or prompts).
+    static func fallbackDirectories(home: String) -> [String] {
+        [
+            "\(home)/.local/bin", "\(home)/.claude/local", "\(home)/.npm-global/bin",
+            "/opt/homebrew/bin", "/usr/local/bin",
         ]
     }
 
@@ -93,6 +105,7 @@ final class AgentCLILocator: @unchecked Sendable {
     private func resolve(_ name: String) -> URL? {
         let found = Self.firstExecutable(named: name, in: directories, isExecutable: isExecutable)
             ?? (Self.isSafeName(name) ? shellProbe(name) : nil)
+            ?? Self.firstExecutable(named: name, in: fallbackDirectories, isExecutable: isExecutable)
         lock.lock()
         cache[name] = found.map(Entry.found) ?? .notFound
         lock.unlock()

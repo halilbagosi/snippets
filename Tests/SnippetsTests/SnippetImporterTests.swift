@@ -71,6 +71,37 @@ final class SnippetImporterTests: XCTestCase {
 
     // MARK: Round trip
 
+    func test_codeConfigSurvivesArchiveRoundTrip_andRatingsAreNotExported() async throws {
+        let sourceContainer = try makeContainer(); let source = sourceContainer.mainContext
+        let entry = Snippet(uuid: UUID(), title: "Fast", code: "optimized")
+        source.insert(entry)
+        let reviewID = UUID()
+        entry.efficiencyReviews = [EfficiencyReview(
+            id: reviewID, codeHash: EfficiencyReviewStore.hash(of: "orig"), ratedCode: "orig",
+            rubricVersion: EfficiencyRubric.version, score: 60, notApplicableReason: nil,
+            summary: "", suggestions: [], agent: "claudeCode", model: nil, date: .now)]
+        let original = PreviewParamConfig(
+            id: UUID(), name: "Default", values: [:], isDefault: true, code: "orig")
+        let variant = PreviewParamConfig(
+            id: UUID(), name: "Opt", values: [:], isDefault: false,
+            code: "optimized", sourceReviewID: reviewID)
+        entry.paramConfigs = [original, variant]
+        entry.activeParamConfigID = variant.id
+        try source.save()
+
+        let exported = SnippetExporter.archive(snippets: [entry], collections: [], appVersion: "1.0",
+                                               mediaData: { _ in nil })
+        let decoded = try SnippetArchive.decode(exported.encoded())
+        let container = try makeContainer(); let context = container.mainContext
+        _ = try await importer(MediaStore()).apply(decoded, to: context, resolve: never)
+
+        let imported = try XCTUnwrap(try context.fetch(FetchDescriptor<Snippet>()).first)
+        XCTAssertEqual(imported.paramConfigs, [original, variant])
+        XCTAssertEqual(imported.paramConfigs.last?.code, "optimized")
+        XCTAssertEqual(imported.paramConfigs.last?.sourceReviewID, reviewID)
+        XCTAssertTrue(imported.efficiencyReviews.isEmpty)
+    }
+
     func test_roundTrip_intoEmptyStore_preservesEverything() async throws {
         let sourceContainer = try makeContainer(); let source = sourceContainer.mainContext
         let sourceMedia = MediaStore()
