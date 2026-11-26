@@ -385,8 +385,10 @@ final class EfficiencyFixApplierTests: XCTestCase {
         snippet.paramConfigs = [def, big]
         snippet.activeParamConfigID = big.id
         snippet.code = "a = 1 // edited"
-        delete(big.id, snippet)
+        var appliedValues = false
+        delete(big.id, snippet, applying: { _ in appliedValues = true })
         XCTAssertEqual(snippet.code, "a = 1 // edited")
         XCTAssertEqual(snippet.activeParamConfigID, def.id)
+        XCTAssertFalse(appliedValues, "no code config: deleting must not rewrite parameter values")
     }
 }

@@ -134,9 +134,9 @@ enum EfficiencyFixApplier {
         let fallback = remaining.first(where: \.isDefault)
         snippet.activeParamConfigID = fallback?.id
         guard let fallback else { return }
-        if let code = PreviewParamConfigStore.codeToActivate(for: fallback.id, in: remaining) {
-            snippet.code = code
-        }
+        // With no code config, deleting never touched code before this feature; keep it that way.
+        guard let code = PreviewParamConfigStore.codeToActivate(for: fallback.id, in: remaining) else { return }
+        snippet.code = code
         applyValues(PreviewParamConfigStore.resolvedValues(for: fallback, declared: declared()))
     }
 
