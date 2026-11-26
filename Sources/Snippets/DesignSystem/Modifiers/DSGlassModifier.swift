@@ -11,9 +11,19 @@ public struct DSGlassModifier<S: Shape>: ViewModifier {
     public let shadowY: CGFloat
     public let glassID: String?
     public let glassNamespace: Namespace.ID?
+    /// Tints the system glass itself. Unlike `tint` (an overlay drawn by
+    /// SwiftUI on the static frame) it is part of the material, so it
+    /// follows the glass as it morphs — and it reads far more saturated.
+    public let glassTint: Color?
+    /// Whether to draw the white and `tint` fills over the glass. Off for
+    /// controls whose glass morphs: those fills are static layers that stay
+    /// put while the material moves, and read as a box under the button.
+    public let drawsFills: Bool
 
-    public init(shape: S, tint: Color? = nil, interactive: Bool = false, borderOpacity: Double? = nil, shadowRadius: CGFloat = DSToken.Shadow.liquidRadius, shadowY: CGFloat = DSToken.Shadow.liquidY, glassID: String? = nil, glassNamespace: Namespace.ID? = nil) {
+    public init(shape: S, tint: Color? = nil, interactive: Bool = false, borderOpacity: Double? = nil, shadowRadius: CGFloat = DSToken.Shadow.liquidRadius, shadowY: CGFloat = DSToken.Shadow.liquidY, glassID: String? = nil, glassNamespace: Namespace.ID? = nil, glassTint: Color? = nil, drawsFills: Bool = true) {
         self.shape = shape
+        self.glassTint = glassTint
+        self.drawsFills = drawsFills
         self.tint = tint
         self.interactive = interactive
         self.borderOpacity = borderOpacity
@@ -28,10 +38,16 @@ public struct DSGlassModifier<S: Shape>: ViewModifier {
         let resolvedBorderOpacity = borderOpacity ?? (isDark ? 0.18 : 0.42)
 
         return decorated(
-            identified(content.glassEffect(interactive ? .regular.interactive() : .regular, in: shape)),
+            identified(content.glassEffect(material, in: shape)),
             borderOpacity: resolvedBorderOpacity,
             isDark: isDark
         )
+    }
+
+    private var material: Glass {
+        var glass = Glass.regular
+        if let glassTint { glass = glass.tint(glassTint) }
+        return interactive ? glass.interactive() : glass
     }
 
     /// Give the glass a stable identity inside its `GlassEffectContainer`.
@@ -54,21 +70,25 @@ public struct DSGlassModifier<S: Shape>: ViewModifier {
     private func decorated<V: View>(_ view: V, borderOpacity: Double, isDark: Bool) -> some View {
         view
             .overlay {
-                shape
-                    .fill(DSToken.Color.LiquidGlass.fill(isDark: isDark))
-                    .allowsHitTesting(false)
+                if drawsFills {
+                    shape
+                        .fill(DSToken.Color.LiquidGlass.fill(isDark: isDark))
+                        .allowsHitTesting(false)
+                }
             }
             .overlay {
-                if let tint {
+                if drawsFills, let tint {
                     shape
                         .fill(DSToken.Color.LiquidGlass.tintFill(tint: tint, isDark: isDark))
                         .allowsHitTesting(false)
                 }
             }
             .overlay {
-                shape
-                    .stroke(.white.opacity(borderOpacity), lineWidth: 1)
-                    .allowsHitTesting(false)
+                if borderOpacity > 0 {
+                    shape
+                        .stroke(.white.opacity(borderOpacity), lineWidth: 1)
+                        .allowsHitTesting(false)
+                }
             }
             .shadow(
                 color: (shadowRadius > 0 || shadowY > 0) ? DSToken.Color.LiquidGlass.shadow(isDark: isDark) : .clear,
@@ -240,7 +260,9 @@ public extension View {
         shadowRadius: CGFloat = DSToken.Shadow.liquidRadius,
         shadowY: CGFloat = DSToken.Shadow.liquidY,
         glassID: String? = nil,
-        glassNamespace: Namespace.ID? = nil
+        glassNamespace: Namespace.ID? = nil,
+        glassTint: Color? = nil,
+        drawsFills: Bool = true
     ) -> some View {
         modifier(
             DSGlassModifier(
@@ -251,7 +273,9 @@ public extension View {
                 shadowRadius: shadowRadius,
                 shadowY: shadowY,
                 glassID: glassID,
-                glassNamespace: glassNamespace
+                glassNamespace: glassNamespace,
+                glassTint: glassTint,
+                drawsFills: drawsFills
             )
         )
     }

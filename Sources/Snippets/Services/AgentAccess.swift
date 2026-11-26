@@ -111,7 +111,7 @@ final class AgentAccess {
 /// agent; only the way each one registers a server differs, so anything
 /// not listed by name takes the `mcpServers` JSON most clients share.
 enum AgentClient: String, CaseIterable, Identifiable {
-    case claudeCode, codex, vsCode, other
+    case claudeCode, codex, gemini, vsCode, other
 
     var id: String { rawValue }
 
@@ -119,6 +119,7 @@ enum AgentClient: String, CaseIterable, Identifiable {
         switch self {
         case .claudeCode: "Claude Code"
         case .codex: "Codex"
+        case .gemini: "Gemini CLI"
         case .vsCode: "VS Code (Copilot)"
         case .other: "Other Agents (JSON)"
         }
@@ -127,7 +128,7 @@ enum AgentClient: String, CaseIterable, Identifiable {
     /// The menu's hint at who "Other" covers and where it goes.
     var detail: String? {
         switch self {
-        case .other: "Cursor, Gemini CLI, Windsurf, Claude Desktop, Zed…"
+        case .other: "Cursor, Windsurf, Claude Desktop, Zed…"
         default: nil
         }
     }
@@ -142,6 +143,9 @@ enum AgentClient: String, CaseIterable, Identifiable {
             return "claude mcp add --scope user snippets -- \(Self.shellQuoted(executablePath)) \(flag)"
         case .codex:
             return "codex mcp add snippets -- \(Self.shellQuoted(executablePath)) \(flag)"
+        case .gemini:
+            // `--` keeps Gemini from parsing the server's own flag as one of its options.
+            return "gemini mcp add --scope user snippets \(Self.shellQuoted(executablePath)) -- \(flag)"
         case .vsCode:
             let server: JSONValue = ["name": "snippets", "command": .string(executablePath), "args": [.string(flag)]]
             return "code --add-mcp \(Self.shellQuoted(server.serialized()))"

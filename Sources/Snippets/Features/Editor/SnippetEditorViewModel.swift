@@ -211,6 +211,7 @@ final class SnippetEditorViewModel {
                 collection.updatedAt = .now
             }
             snippet.dependencies = dependencies
+            Self.placeConnections(of: snippet, in: selectedCollections)
 
             do {
                 try onSave(snippet)
@@ -240,11 +241,16 @@ final class SnippetEditorViewModel {
             snippet.mediaItems = mediaItems
 
             let selectedCollections = selectedCollections(from: availableCollections)
+            let previousCollectionIDs = Set(snippet.collections.map(\.persistentModelID))
             for collection in selectedCollections {
                 collection.updatedAt = .now
             }
             snippet.collections = selectedCollections
             snippet.dependencies = dependencies
+            Self.placeConnections(
+                of: snippet,
+                in: selectedCollections.filter { !previousCollectionIDs.contains($0.persistentModelID) }
+            )
 
             do {
                 try modelContext.save()
@@ -253,6 +259,19 @@ final class SnippetEditorViewModel {
             } catch {
                 saveErrorMessage = error.localizedDescription
                 return false
+            }
+        }
+    }
+
+    /// Putting a snippet in a collection puts its connections there too.
+    /// Only additions propagate; leaving a collection leaves connections be.
+    static func placeConnections(of snippet: Snippet, in added: [SnippetCollection]) {
+        guard !added.isEmpty else { return }
+        for member in snippet.connectedClosure {
+            for collection in added
+            where !member.collections.contains(where: { $0.persistentModelID == collection.persistentModelID }) {
+                member.collections.append(collection)
+                member.updatedAt = .now
             }
         }
     }

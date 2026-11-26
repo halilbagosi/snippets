@@ -596,6 +596,7 @@ extension AgentClient {
         case .claudeCode: Image("AgentLogoClaude")
         case .codex: Image("AgentLogoOpenAI")
         case .vsCode: Image("AgentLogoCopilot")
+        case .gemini: Image(systemName: "sparkle")
         case .other: Image(systemName: "ellipsis.curlybraces")
         }
     }
@@ -606,6 +607,7 @@ extension AgentClient {
         case .claudeCode: Color(red: 0.851, green: 0.467, blue: 0.341)   // Claude's #D97757
         case .codex: .primary                                              // OpenAI's black / white
         case .vsCode: Color(red: 0.0, green: 0.478, blue: 0.8)             // VS Code's #007ACC
+        case .gemini: Color(red: 0.259, green: 0.522, blue: 0.957)         // Google blue #4285F4
         case .other: .secondary
         }
     }

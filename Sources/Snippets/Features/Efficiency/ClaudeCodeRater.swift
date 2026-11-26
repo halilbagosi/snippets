@@ -12,7 +12,7 @@ struct ClaudeCodeRater: EfficiencyRater {
     /// Resolves the CLI; injectable for tests.
     var locate: @Sendable () async -> URL? = { await AgentCLILocator.shared.locate(ClaudeCodeRater.executableName) }
 
-    static func arguments(model: String?) -> [String] {
+    static func arguments(model: String?, effort: String? = nil) -> [String] {
         var args = [
             "-p", "--output-format", "json", "--json-schema", EfficiencyPrompt.schema,
             "--tools", "", "--strict-mcp-config", "--mcp-config", #"{"mcpServers":{}}"#,
@@ -22,6 +22,9 @@ struct ClaudeCodeRater: EfficiencyRater {
         ]
         if let model = model?.trimmingCharacters(in: .whitespacesAndNewlines), !model.isEmpty {
             args += ["--model", model]
+        }
+        if let effort = effort?.trimmingCharacters(in: .whitespacesAndNewlines), !effort.isEmpty {
+            args += ["--effort", effort]
         }
         return args
     }
@@ -33,6 +36,10 @@ struct ClaudeCodeRater: EfficiencyRater {
     }
 
     func rate(_ request: EfficiencyRequest, model: String?) async throws -> EfficiencyReport {
+        try await rate(request, model: model, effort: nil)
+    }
+
+    func rate(_ request: EfficiencyRequest, model: String?, effort: String?) async throws -> EfficiencyReport {
         guard let prompt = EfficiencyPrompt.build(for: request) else {
             throw EfficiencyRatingError.failed("\(request.language.rawValue) snippets are not rated")
         }
@@ -45,7 +52,7 @@ struct ClaudeCodeRater: EfficiencyRater {
         defer { try? FileManager.default.removeItem(at: workDir) }
 
         let result = try await runner.run(
-            executable: cli, arguments: Self.arguments(model: model), stdin: Data(prompt.utf8),
+            executable: cli, arguments: Self.arguments(model: model, effort: effort), stdin: Data(prompt.utf8),
             environment: Self.environment(cliDirectory: cli.deletingLastPathComponent().path),
             workingDirectory: workDir, timeout: Self.timeout)
 

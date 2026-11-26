@@ -80,6 +80,69 @@ enum EfficiencyFixApplier {
         return true
     }
 
+    /// The configs "Add to config" offers for `suggestion`: every config but
+    /// `Default` (the frozen original) whose code still holds the change's
+    /// `before` exactly once — the active one checked against `snippet.code`,
+    /// the rest against their stored code (or `Default`'s, which they share
+    /// until they own some).
+    static func addableConfigs(
+        snippet: Snippet, suggestion: EfficiencyReview.Suggestion
+    ) -> [PreviewParamConfig] {
+        snippet.paramConfigs.filter { config in
+            guard !config.isDefault else { return false }
+            let code = config.id == snippet.activeParamConfigID
+                ? snippet.code
+                : PreviewParamConfigStore.codeToActivate(for: config.id, in: snippet.paramConfigs)
+            guard let code else { return false }
+            return EfficiencyReviewStore.matchState(of: suggestion, in: code) == .applies
+        }
+    }
+
+    /// "Add to config ‹name›": writes the change into that config's code and
+    /// makes it active, so the user sees the result running. A config that
+    /// had no rating of its own now carries this one, which keeps the review
+    /// alive and marks the config as AI-written (switching to it later revokes
+    /// preview approvals, like any rating-born config). Returns false, changing
+    /// nothing, when the config isn't offered by `addableConfigs`.
+    @discardableResult
+    static func addToConfig(
+        id: UUID,
+        snippet: Snippet,
+        review: EfficiencyReview,
+        suggestion: EfficiencyReview.Suggestion,
+        declared: () -> [PreviewParam],
+        applyValues: ([String: PreviewParamValue]) -> Void,
+        forgetTrust: (UUID?) -> Void
+    ) -> Bool {
+        guard addableConfigs(snippet: snippet, suggestion: suggestion).contains(where: { $0.id == id }) else {
+            return false
+        }
+        func adoptReview(_ configs: inout [PreviewParamConfig]) {
+            if let index = configs.firstIndex(where: { $0.id == id }), configs[index].sourceReviewID == nil {
+                configs[index].sourceReviewID = review.id
+            }
+        }
+        if id == snippet.activeParamConfigID {
+            guard let newCode = EfficiencyReviewStore.applying(suggestion, to: snippet.code) else { return false }
+            var configs = snippet.paramConfigs
+            adoptReview(&configs)
+            snippet.paramConfigs = configs
+            snippet.code = newCode
+            finishCodeWrite(snippet, forgetTrust: forgetTrust)
+            return true
+        }
+        guard let code = PreviewParamConfigStore.codeToActivate(for: id, in: snippet.paramConfigs),
+              let newCode = EfficiencyReviewStore.applying(suggestion, to: code),
+              let index = snippet.paramConfigs.firstIndex(where: { $0.id == id }) else { return false }
+        var configs = snippet.paramConfigs
+        configs[index].code = newCode
+        adoptReview(&configs)
+        snippet.paramConfigs = configs
+        select(id: id, in: snippet, declared: declared, applyValues: applyValues, forgetTrust: forgetTrust)
+        finishCodeWrite(snippet, forgetTrust: forgetTrust)
+        return true
+    }
+
     static func canAddToActive(
         snippet: Snippet, review: EfficiencyReview, suggestion: EfficiencyReview.Suggestion
     ) -> Bool {

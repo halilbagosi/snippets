@@ -99,7 +99,7 @@ struct SnippetCard: View {
                     .font(Mono.font(size: 10, weight: .semibold))
             }
             .padding(.horizontal, 7)
-            .padding(.vertical, 3)
+            .frame(height: LanguageBadge.compactHeight)
             .foregroundStyle(didCopy ? (colorScheme == .dark ? .white : languageAccent) : fgColor)
             .background {
                 RoundedRectangle(cornerRadius: 5, style: .continuous)
@@ -138,7 +138,7 @@ struct SnippetCard: View {
                     .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.horizontal, 7)
-            .padding(.vertical, 3)
+            .frame(height: LanguageBadge.compactHeight)
             .foregroundStyle(fgColor)
             .background {
                 RoundedRectangle(cornerRadius: 5, style: .continuous)

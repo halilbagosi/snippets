@@ -98,7 +98,7 @@ final class SnippetMCPTools: MCPToolProvider {
         var linkLanguage: SupportedLanguage { SupportedLanguage(rawValue: snippet.language) ?? .unknown }
         var linkCode: String { snippet.code }
         var linkDependencies: [LiveLinkable] {
-            snippet.dependencies.filter { !$0.isDeleted }.map(LiveLinkable.init)
+            (snippet.dependencies.filter { !$0.isDeleted } + snippet.siblingConnections()).map(LiveLinkable.init)
         }
     }
 

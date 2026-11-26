@@ -391,4 +391,58 @@ final class EfficiencyFixApplierTests: XCTestCase {
         XCTAssertEqual(snippet.activeParamConfigID, def.id)
         XCTAssertFalse(appliedValues, "no code config: deleting must not rewrite parameter values")
     }
+
+    // MARK: - Add to config
+
+    private func addToConfig(
+        _ id: UUID, _ snippet: Snippet, _ review: EfficiencyReview, _ suggestion: EfficiencyReview.Suggestion,
+        forget: @escaping (UUID?) -> Void = { _ in }
+    ) -> Bool {
+        EfficiencyFixApplier.addToConfig(
+            id: id, snippet: snippet, review: review, suggestion: suggestion,
+            declared: { [] }, applyValues: { _ in }, forgetTrust: forget)
+    }
+
+    func test_addToConfig_inactiveConfig_getsChangeAndBecomesActive() {
+        let snippet = makeSnippet(code: "a = 1; b = 1")
+        let (first, s1) = review(rated: "a = 1; b = 1", before: "a = 1", after: "a = 2")
+        saveAsNew(snippet, first, s1, name: "A")          // active: "a = 2; b = 1"
+        let (_, s2) = review(rated: "a = 1; b = 1", before: "b = 1", after: "b = 2")
+        saveAsNew(snippet, first, s2, name: "B")          // active: "a = 1; b = 2"
+        let configA = config("A", in: snippet)
+
+        var forgotten: [UUID?] = []
+        let (later, s3) = review(rated: "a = 2; b = 1", before: "b = 1", after: "b = 3")
+        XCTAssertTrue(EfficiencyFixApplier.addableConfigs(snippet: snippet, suggestion: s3).map(\.name).contains("A"))
+        XCTAssertTrue(addToConfig(configA.id, snippet, later, s3, forget: { forgotten.append($0) }))
+
+        XCTAssertEqual(snippet.activeParamConfigID, configA.id)
+        XCTAssertEqual(snippet.code, "a = 2; b = 3")
+        // B was flushed on the way out, not lost.
+        XCTAssertEqual(config("B", in: snippet).code, "a = 1; b = 2")
+        XCTAssertTrue(forgotten.contains(snippet.uuid))
+    }
+
+    func test_addToConfig_activeConfig_rewritesCodeInPlace() {
+        let snippet = makeSnippet(code: "a = 1; b = 1")
+        let (r, s1) = review(rated: "a = 1; b = 1", before: "a = 1", after: "a = 2")
+        saveAsNew(snippet, r, s1, name: "A")
+        let active = snippet.activeParamConfigID!
+        let (_, s2) = review(rated: "a = 1; b = 1", before: "b = 1", after: "b = 2")
+        XCTAssertTrue(addToConfig(active, snippet, r, s2))
+        XCTAssertEqual(snippet.code, "a = 2; b = 2")
+        XCTAssertEqual(snippet.activeParamConfigID, active)
+    }
+
+    func test_addToConfig_neverOffersDefault_orConfigsWhereChangeDoesNotApply() {
+        let snippet = makeSnippet(code: "a = 1")
+        let (r, s1) = review(rated: "a = 1")
+        saveAsNew(snippet, r, s1, name: "Two")             // active "a = 2"; Default "a = 1"
+        let defaultID = snippet.paramConfigs.first(where: \.isDefault)!.id
+        let (_, again) = review(rated: "a = 1", before: "a = 1", after: "a = 5")
+        // Applies to Default's code only, and Default is never a target.
+        XCTAssertTrue(EfficiencyFixApplier.addableConfigs(snippet: snippet, suggestion: again).isEmpty)
+        XCTAssertFalse(addToConfig(defaultID, snippet, r, again))
+        XCTAssertEqual(snippet.code, "a = 2")
+    }
 }
