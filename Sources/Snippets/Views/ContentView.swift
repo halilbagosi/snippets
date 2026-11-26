@@ -285,6 +285,18 @@ struct ContentView: View {
                     .position(x: column.midX, y: column.midY)
                     .zIndex(100)
                 }
+                #if !APP_STORE
+                // Rating runs, in every sidebar context (Trash included).
+                if detailFrame != .zero {
+                    RatingToastStack(
+                        presentedSnippetID: presentedSnippetID,
+                        onOpen: openSnippetFromRatingToast
+                    )
+                    .frame(width: column.width, height: column.height, alignment: .top)
+                    .position(x: column.midX, y: column.midY)
+                    .zIndex(100)
+                }
+                #endif
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
         }
@@ -292,6 +304,27 @@ struct ContentView: View {
         // window's top edge, as the sidebar does.
         .ignoresSafeArea()
     }
+
+    #if !APP_STORE
+    /// A rating toast was clicked: open that snippet the way a gallery card
+    /// click does. From Trash the gallery context comes first, since the
+    /// detail card is not shown there. A snippet that has since been trashed
+    /// has nowhere to open, so the click does nothing.
+    private func openSnippetFromRatingToast(_ id: PersistentIdentifier) {
+        guard snippets.contains(where: { $0.persistentModelID == id }) else { return }
+        if sidebarSelectionContext == .trash {
+            selectedCollectionID = nil
+            sidebarSelectionContext = .allSnippets
+        }
+        if presentedSnippetID == nil {
+            detailOrigin = Self.clickLocationInWindow()
+            morphSource = DetailMotionTuning.shared.values.morph ? cardGeometry.entries[id] : nil
+        }
+        // No `withAnimation`: the stage animates the open itself.
+        selectedSnippetID = id
+        syncDetailPresentation(to: id)
+    }
+    #endif
 
     private var presentedSnippet: Snippet? {
         guard let id = presentedSnippetID else { return nil }

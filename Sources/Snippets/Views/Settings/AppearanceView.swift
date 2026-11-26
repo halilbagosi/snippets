@@ -61,6 +61,7 @@ struct AppearanceView: View {
                 behaviorCard
                 #if !APP_STORE
                 agentsCard
+                efficiencyCard
                 updatesCard
                 #endif
                 #if DEBUG
@@ -310,6 +311,28 @@ struct AppearanceView: View {
 
                 Spacer(minLength: 0)
             }
+        }
+    }
+
+    /// Efficiency rating has its own switch: it needs the agent's CLI, not the
+    /// MCP server above.
+    private var efficiencyCard: some View {
+        @Bindable var settings = EfficiencyRatingCenter.shared.settings
+
+        return glassCard {
+            sectionLabel("Efficiency Rating")
+
+            behaviorRow(
+                icon: "gauge.with.dots.needle.50percent",
+                title: "Rate Snippet Efficiency",
+                caption: "Shows a button in a snippet's detail view that has your agent score its efficiency and suggest fixes. Sends the code to the agent's provider.",
+                isOn: $settings.enabled
+            )
+
+            Divider().opacity(0.5)
+
+            EfficiencyRatingSettings(settings: settings)
+                .disabled(!settings.enabled)
         }
     }
     #endif

@@ -17,6 +17,8 @@ final class EfficiencyRatingCenter {
         var snippetTitle: String
         var agent: AgentClient
         var state: State
+        /// Orders the toast stack: oldest run on top.
+        var startedAt = Date()
     }
 
     static let shared = EfficiencyRatingCenter()

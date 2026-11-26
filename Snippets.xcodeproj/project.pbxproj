@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EF0C4003B000000000000000 /* RatingToastModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4003F000000000000000 /* RatingToastModelTests.swift */; };
+		EF0C4002B000000000000000 /* EfficiencyRatingSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4002F000000000000000 /* EfficiencyRatingSettings.swift */; };
+		EF0C4001B000000000000000 /* RatingToastModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4001F000000000000000 /* RatingToastModel.swift */; };
+		EF0C4000B000000000000000 /* RatingToastStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4000F000000000000000 /* RatingToastStack.swift */; };
 		EF0B2004B000000000000000 /* ClaudeCodeRaterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B2004F000000000000000 /* ClaudeCodeRaterTests.swift */; };
 		EF0B1006B000000000000000 /* ClaudeCodeRater.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1006F000000000000000 /* ClaudeCodeRater.swift */; };
 		EF0B1005B000000000000000 /* AgentProcessRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1005F000000000000000 /* AgentProcessRunner.swift */; };
@@ -232,6 +236,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		EF0C4003F000000000000000 /* RatingToastModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingToastModelTests.swift; sourceTree = "<group>"; };
+		EF0C4002F000000000000000 /* EfficiencyRatingSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyRatingSettings.swift; sourceTree = "<group>"; };
+		EF0C4001F000000000000000 /* RatingToastModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingToastModel.swift; sourceTree = "<group>"; };
+		EF0C4000F000000000000000 /* RatingToastStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingToastStack.swift; sourceTree = "<group>"; };
 		EF0B2004F000000000000000 /* ClaudeCodeRaterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeRaterTests.swift; sourceTree = "<group>"; };
 		EF0B1006F000000000000000 /* ClaudeCodeRater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeRater.swift; sourceTree = "<group>"; };
 		EF0B1005F000000000000000 /* AgentProcessRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentProcessRunner.swift; sourceTree = "<group>"; };
@@ -475,6 +483,7 @@
 				EF0B1001F000000000000000 /* EfficiencyPrompt.swift */,
 				EF0B1000F000000000000000 /* EfficiencyRater.swift */,
 				EF0C1001F000000000000000 /* EfficiencySettings.swift */,
+				EF0C4001F000000000000000 /* RatingToastModel.swift */,
 				EF0C1000F000000000000000 /* EfficiencyRatingCenter.swift */,
 			);
 			path = Efficiency;
@@ -613,6 +622,7 @@
 				B6A7ABD6C5C29369D4E765CB /* SectionHeader.swift */,
 				EF0C3002F000000000000000 /* EfficiencyConsentSheet.swift */,
 				EF0C3001F000000000000000 /* EfficiencyPanelState.swift */,
+				EF0C4000F000000000000000 /* RatingToastStack.swift */,
 				EF0C3000F000000000000000 /* EfficiencyPanel.swift */,
 				EE6D5D60A49D9012A433BB0B /* SnippetCard.swift */,
 				349D293E241CD1A4BD2E312A /* DetailCardStage.swift */,
@@ -727,6 +737,7 @@
 				EF0A0000000000000000B003 /* EfficiencyReviewStoreTests.swift */,
 				EF0A0000000000000000D003 /* EfficiencyFixApplierTests.swift */,
 				EF0C3003F000000000000000 /* EfficiencyPanelStateTests.swift */,
+				EF0C4003F000000000000000 /* RatingToastModelTests.swift */,
 				EF0C2000F000000000000000 /* EfficiencyRatingCenterTests.swift */,
 				EF0B2002F000000000000000 /* AgentCLILocatorTests.swift */,
 				EF0B2003F000000000000000 /* ClaudeCodeEnvelopeTests.swift */,
@@ -843,6 +854,7 @@
 				F8540F55E9369EE99D79F3CF /* SettingsView.swift */,
 				271373FECC71F698C4601723 /* ThirdPartyNoticesView.swift */,
 				1E6A1D0C0000000000000002 /* LegalDocument.swift */,
+				EF0C4002F000000000000000 /* EfficiencyRatingSettings.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -1100,6 +1112,7 @@
 				75BA5AA7792F8E5F50152054 /* SnippetArchive.swift in Sources */,
 				F46B79656507314308974187 /* ThirdPartyNoticesView.swift in Sources */,
 				1E6A1D0C0000000000000001 /* LegalDocument.swift in Sources */,
+				EF0C4002B000000000000000 /* EfficiencyRatingSettings.swift in Sources */,
 				40D4ED353970535DB11DCF63 /* HelpCommands.swift in Sources */,
 				6333331BA52F47421580DCE1 /* DetailMotionTuning.swift in Sources */,
 				FFF479394F15C59C3593A3CB /* DetailMotionTuningView.swift in Sources */,
@@ -1148,6 +1161,7 @@
 				23BC99AF3722159BED37DB79 /* SectionHeader.swift in Sources */,
 				EF0C3002B000000000000000 /* EfficiencyConsentSheet.swift in Sources */,
 				EF0C3001B000000000000000 /* EfficiencyPanelState.swift in Sources */,
+				EF0C4000B000000000000000 /* RatingToastStack.swift in Sources */,
 				EF0C3000B000000000000000 /* EfficiencyPanel.swift in Sources */,
 				AB649C3AF7BC8AC17F5FD0BB /* SettingsView.swift in Sources */,
 				594C6D13011DDBBD5D15AC39 /* Snippet.swift in Sources */,
@@ -1222,6 +1236,7 @@
 				EF0B1001B000000000000000 /* EfficiencyPrompt.swift in Sources */,
 				EF0B1000B000000000000000 /* EfficiencyRater.swift in Sources */,
 				EF0C1001B000000000000000 /* EfficiencySettings.swift in Sources */,
+				EF0C4001B000000000000000 /* RatingToastModel.swift in Sources */,
 				EF0C1000B000000000000000 /* EfficiencyRatingCenter.swift in Sources */,
 				6E2A43ECAC9C0E5D05506755 /* PreviewConfigControl.swift in Sources */,
 				F6E64CBF8C0BB58AA4AAC952 /* ColorPanelCenterer.swift in Sources */,
@@ -1251,6 +1266,7 @@
 				EF0A0000000000000000B004 /* EfficiencyReviewStoreTests.swift in Sources */,
 				EF0A0000000000000000D004 /* EfficiencyFixApplierTests.swift in Sources */,
 				EF0C3003B000000000000000 /* EfficiencyPanelStateTests.swift in Sources */,
+				EF0C4003B000000000000000 /* RatingToastModelTests.swift in Sources */,
 				EF0C2000B000000000000000 /* EfficiencyRatingCenterTests.swift in Sources */,
 				EF0B2002B000000000000000 /* AgentCLILocatorTests.swift in Sources */,
 				EF0B2003B000000000000000 /* ClaudeCodeEnvelopeTests.swift in Sources */,

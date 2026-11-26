@@ -66,6 +66,10 @@ public extension DSToken {
         /// so it should not take as long as the arrival did.
         public static let toastOut: Animation = .easeOut(duration: 0.18)
 
+        /// The rating toast's agent logo, breathing while a run is in flight.
+        /// Slow and symmetric: it says "still working", never "look here".
+        public static let ratingPulse: Animation = .easeInOut(duration: 1.1).repeatForever(autoreverses: true)
+
         /// Onboarding page turns: the device zooms toward the next feature
         /// while the screenshot and copy blur across. Slower than ``overlay``
         /// because the zoom travels much further than a sheet does, and it
