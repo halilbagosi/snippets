@@ -60,11 +60,14 @@ struct BackButton: View {
                 .liquidGlassSurface(
                     in: silhouette,
                     interactive: true,
-                    borderOpacity: colorScheme == .dark ? 0.18 : 0.36,
-                    shadowRadius: 5,
-                    shadowY: 2,
+                    // Glass only: rim, fill and shadow are static layers that
+                    // stay put while the interactive glass morphs.
+                    borderOpacity: 0,
+                    shadowRadius: 0,
+                    shadowY: 0,
                     glassID: glassNamespace.map { _ in Self.glassID },
-                    glassNamespace: glassNamespace
+                    glassNamespace: glassNamespace,
+                    drawsFills: false
                 )
                 // No .compositingGroup(): flattening the button into its own
                 // offscreen layer rasterises the rim and shadow at once while
@@ -72,7 +75,7 @@ struct BackButton: View {
                 // pass, so the frame arrives before the texture.
                 .contentShape(silhouette)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GlassPressButtonStyle())
         .contentShape(silhouette)
         .accessibilityLabel(accessibilityLabel)
     }

@@ -768,8 +768,9 @@ struct CollectionEditorSheet: View {
                         .transition(.opacity)
                 } else {
                     LazyVStack(alignment: .leading, spacing: 6) {
-                        ForEach(snippets) { snippet in
-                            glassSnippetToggleRow(snippet)
+                        let stacks = SnippetLinker.stacks(in: snippets)
+                        ForEach(stacks, id: \.entry.persistentModelID) { stack in
+                            glassSnippetToggleRow(stack.entry, connectedCount: stack.entry.connectedClosure.count)
                         }
                     }
                     .padding(.top, 16)
@@ -785,14 +786,25 @@ struct CollectionEditorSheet: View {
         )
     }
 
-    private func glassSnippetToggleRow(_ snippet: Snippet) -> some View {
+    /// Connections are not offered on their own: picking a snippet picks its
+    /// connections with it, and unpicking it drops them unless another picked
+    /// snippet still connects them.
+    private func toggleWithConnections(_ snippet: Snippet) {
+        let group = Set(([snippet] + snippet.connectedClosure).map(\.persistentModelID))
+        if selectedSnippetIDs.contains(snippet.persistentModelID) {
+            selectedSnippetIDs.subtract(group)
+            for other in snippets where selectedSnippetIDs.contains(other.persistentModelID) {
+                selectedSnippetIDs.formUnion(other.connectedClosure.map(\.persistentModelID))
+            }
+        } else {
+            selectedSnippetIDs.formUnion(group)
+        }
+    }
+
+    private func glassSnippetToggleRow(_ snippet: Snippet, connectedCount: Int) -> some View {
         Button {
             withAnimation(DSToken.Motion.toggle) {
-                if selectedSnippetIDs.contains(snippet.persistentModelID) {
-                    selectedSnippetIDs.remove(snippet.persistentModelID)
-                } else {
-                    selectedSnippetIDs.insert(snippet.persistentModelID)
-                }
+                toggleWithConnections(snippet)
             }
         } label: {
             let isSelected = selectedSnippetIDs.contains(snippet.persistentModelID)
@@ -827,6 +839,13 @@ struct CollectionEditorSheet: View {
                     .font(.system(size: 13, weight: isSelected ? .medium : .regular))
                     .foregroundStyle(isSelected ? .primary : .secondary)
                     .lineLimit(1)
+
+                if connectedCount > 0 {
+                    Label("+\(connectedCount)", systemImage: "link")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .help("\(connectedCount) connected snippet\(connectedCount == 1 ? "" : "s") come along")
+                }
 
                 Spacer()
 

@@ -24,6 +24,23 @@ struct RatingToastModel: Equatable {
 
     var overflowText: String? { overflow > 0 ? "+\(overflow) more" : nil }
 
+    /// Every job the stack covers, shown or folded into "+N more".
+    let runningCount: Int
+    let failedCount: Int
+    let totalCount: Int
+    /// The agent of the oldest running job, for the mini view's mark.
+    let runningAgent: AgentClient?
+
+    var isEmpty: Bool { totalCount == 0 }
+
+    /// The collapsed mini view's words: what is still going on first, then
+    /// what went wrong, then what finished.
+    var miniText: String {
+        if runningCount > 0 { return runningCount == 1 ? "rating 1" : "rating \(runningCount)" }
+        if failedCount > 0 { return "\(failedCount) failed" }
+        return "\(totalCount) rated"
+    }
+
     /// - Parameter trashed: snippets currently in Trash.
     /// - Parameter presented: the snippet whose detail card is open. Its panel
     ///   already shows the run, so it has no toast.
@@ -49,6 +66,10 @@ struct RatingToastModel: Equatable {
                 canRetry: !trashed.contains(id))
         }
         overflow = max(visible.count - limit, 0)
+        totalCount = visible.count
+        runningCount = visible.filter { $0.value.state == .running }.count
+        failedCount = visible.filter { if case .failed = $0.value.state { true } else { false } }.count
+        runningAgent = visible.first { $0.value.state == .running }?.value.agent
     }
 
     private static func kind(of state: EfficiencyRatingCenter.Job.State) -> Row.Kind {

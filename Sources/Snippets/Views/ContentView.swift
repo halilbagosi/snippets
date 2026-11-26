@@ -199,8 +199,35 @@ struct ContentView: View {
         let id = UUID()
         let message: String
         let showsUndo: Bool
+        let kind: ToastKind
+    }
+
+    /// What a toast is about, which picks its leading icon.
+    enum ToastKind: Equatable {
+        case move, delete, copy, transfer, error
+
+        var symbol: String {
+            switch self {
+            case .move: "arrow.right"
+            case .delete: "trash"
+            case .copy: "doc.on.doc"
+            case .transfer: "shippingbox"
+            case .error: "exclamationmark.triangle.fill"
+            }
+        }
+    }
+
+    private func toastColor(_ kind: ToastKind) -> Color {
+        switch kind {
+        case .move, .copy, .transfer: theme.accent
+        case .delete: .red
+        case .error: .orange
+        }
     }
     @State private var activeToast: Toast?
+    /// Rating toasts folded into a pill in the toasts' spot.
+    /// A per-viewer convenience, remembered across launches.
+    @AppStorage("efficiency.toastsCollapsed") private var ratingToastsCollapsed = false
     @State private var toastHideTask: Task<Void, Never>? = nil
 
 
@@ -240,64 +267,58 @@ struct ContentView: View {
                         .frame(width: proxy.size.width, height: proxy.size.height)
                         .zIndex(2)
                 }
-                if sidebarSelectionContext != .trash, detailFrame != .zero {
-                    Group {
-                        if let toast = activeToast {
-                            VStack {
-                                Spacer()
-                                HStack(spacing: 12) {
-                                    Text(toast.message)
-                                        .foregroundStyle(theme.text)
-                                    if toast.showsUndo {
-                                        Button("Undo") {
-                                            withAnimation(DSToken.Motion.toastOut) {
-                                                _ = undoLast()
-                                                activeToast = nil
-                                            }
+                if detailFrame != .zero {
+                    // One bottom-anchored stack for every toast, so rating rows
+                    // appear where the app's other toasts do and sit just above
+                    // a live one instead of overlapping it.
+                    VStack(spacing: 8) {
+                        Spacer(minLength: 0)
+                        #if !APP_STORE
+                        // Rating runs, in every sidebar context (Trash included).
+                        RatingToastStack(
+                            presentedSnippetID: presentedSnippetID,
+                            trashedIDs: Set(trashedSnippets.map(\.persistentModelID)),
+                            onOpen: openSnippetFromRatingToast,
+                            isCollapsed: $ratingToastsCollapsed
+                        )
+                        #endif
+                        if sidebarSelectionContext != .trash, let toast = activeToast {
+                            HStack(spacing: 10) {
+                                ToastIcon(systemName: toast.kind.symbol, color: toastColor(toast.kind))
+                                Text(toast.message)
+                                    .foregroundStyle(theme.text)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                if toast.showsUndo {
+                                    ToastActionButton(title: "Undo", accent: theme.accent) {
+                                        withAnimation(DSToken.Motion.toastOut) {
+                                            _ = undoLast()
+                                            activeToast = nil
                                         }
-                                        .bold()
-                                        .foregroundStyle(theme.accent)
-                                        .buttonStyle(.plain)
                                     }
                                 }
-                                // Keyed on the toast's identity so a message that
-                                // replaces a live toast cross-fades in place rather
-                                // than swapping text inside a motionless pill.
-                                // Order matters: `.transition` has to sit inside the
-                                // `.id` so it travels with the view being swapped,
-                                // and `.animation` outside it to drive that swap.
-                                .transition(.opacity)
-                                .id(toast.id)
-                                .animation(DSToken.Motion.toastIn, value: toast.id)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
-                                .liquidGlassSurface(in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                .padding(.bottom, 60)
                             }
-                            .zIndex(100)
+                            // Keyed on the toast's identity so a message that
+                            // replaces a live toast cross-fades in place rather
+                            // than swapping text inside a motionless pill.
+                            // Order matters: `.transition` has to sit inside the
+                            // `.id` so it travels with the view being swapped,
+                            // and `.animation` outside it to drive that swap.
+                            .transition(.opacity)
+                            .id(toast.id)
+                            .animation(DSToken.Motion.toastIn, value: toast.id)
+                            .toastPill()
                             // Asymmetric on purpose: the toast rises into view, but
                             // dismissal is the system getting out of the way, so it
                             // fades rather than sliding back down.
                             .transition(toastTransition)
                         }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 60)
                     .frame(width: column.width, height: column.height)
                     .position(x: column.midX, y: column.midY)
                     .zIndex(100)
                 }
-                #if !APP_STORE
-                // Rating runs, in every sidebar context (Trash included).
-                if detailFrame != .zero {
-                    RatingToastStack(
-                        presentedSnippetID: presentedSnippetID,
-                        trashedIDs: Set(trashedSnippets.map(\.persistentModelID)),
-                        onOpen: openSnippetFromRatingToast
-                    )
-                    .frame(width: column.width, height: column.height, alignment: .top)
-                    .position(x: column.midX, y: column.midY)
-                    .zIndex(100)
-                }
-                #endif
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
         }
@@ -1177,7 +1198,7 @@ struct ContentView: View {
         }
         .onChange(of: SnippetTransferController.shared.notice, initial: true) { _, notice in
             guard let notice else { return }
-            showToast(notice.message)
+            showToast(notice.message, kind: .transfer)
             SnippetTransferController.shared.clearNotice()
         }
         .onChange(of: searchText) { _, newValue in
@@ -1609,19 +1630,19 @@ struct ContentView: View {
             }
             let count = snippets.count + collections.count
             if count > 1 {
-                self.showToast("\(count) items moved to Recently Deleted", showsUndo: true)
+                self.showToast("\(count) items moved to Recently Deleted", kind: .delete, showsUndo: true)
             }
         }
     }
 
-    private func showToast(_ message: String, showsUndo: Bool = false) {
-        withAnimation(DSToken.Motion.toastIn) { activeToast = Toast(message: message, showsUndo: showsUndo) }
+    private func showToast(_ message: String, kind: ToastKind, showsUndo: Bool = false) {
+        withAnimation(DSToken.Motion.toastIn) { activeToast = Toast(message: message, showsUndo: showsUndo, kind: kind) }
         hideToastAfterDelay()
     }
 
     private func saveOrToast(_ context: ModelContext) {
         do { try context.save() }
-        catch { showToast("Couldn't save changes: \(error.localizedDescription)") }
+        catch { showToast("Couldn't save changes: \(error.localizedDescription)", kind: .error) }
     }
 
     private func performDeleteSnippet(_ snippet: Snippet) {
@@ -1636,7 +1657,7 @@ struct ContentView: View {
         snippet.updatedAt = .now
         saveOrToast(modelContext)
 
-        showToast("Snippet moved to Recently Deleted", showsUndo: true)
+        showToast("Snippet moved to Recently Deleted", kind: .delete, showsUndo: true)
     }
 
     /// Restores everything from the most recent delete action. Returns whether
@@ -1723,7 +1744,7 @@ struct ContentView: View {
                 forgetTrust: { previewTrust.forget($0) }
             )
         } catch {
-            showToast("Couldn't save changes: \(error.localizedDescription)")
+            showToast("Couldn't save changes: \(error.localizedDescription)", kind: .error)
         }
     }
 
@@ -1820,13 +1841,31 @@ struct ContentView: View {
 
 
     private func copySnippet(_ snippet: Snippet, to collection: SnippetCollection) {
-        if !snippet.collections.contains(where: { $0.persistentModelID == collection.persistentModelID }) {
-            snippet.collections.append(collection)
-            collection.updatedAt = .now
-            snippet.updatedAt = .now
-            saveOrToast(modelContext)
-            showToast("Copied to \u{201C}\(collection.name)\u{201D}.")
+        var copiedAny = false
+        for member in Self.withConnections([snippet])
+        where !member.collections.contains(where: { $0.persistentModelID == collection.persistentModelID }) {
+            member.collections.append(collection)
+            member.updatedAt = .now
+            copiedAny = true
         }
+        guard copiedAny else { return }
+        collection.updatedAt = .now
+        saveOrToast(modelContext)
+        showToast("Copied to \u{201C}\(collection.name)\u{201D}.", kind: .copy)
+    }
+
+    /// `snippets` plus each one's live connections, each once, in order.
+    /// Placing a snippet in (or out of) a collection carries its connections.
+    static func withConnections(_ snippets: [Snippet]) -> [Snippet] {
+        var seen: Set<PersistentIdentifier> = []
+        var result: [Snippet] = []
+        for snippet in snippets {
+            for member in [snippet] + snippet.connectedClosure
+            where seen.insert(member.persistentModelID).inserted {
+                result.append(member)
+            }
+        }
+        return result
     }
 
     private func handleDrop(items: [String], to collection: SnippetCollection?) -> Bool {
@@ -1912,7 +1951,7 @@ struct ContentView: View {
         saveOrToast(modelContext)
 
         if !permanent {
-            showToast("Collection moved to Recently Deleted", showsUndo: true)
+            showToast("Collection moved to Recently Deleted", kind: .delete, showsUndo: true)
         }
     }
 
@@ -1971,17 +2010,17 @@ struct ContentView: View {
     // MARK: - Move actions (single item)
 
     private func moveSnippetToLibrary(_ snippet: Snippet) {
-        lastMove = [setSnippetCollections(snippet, to: [])]
+        lastMove = Self.withConnections([snippet]).map { setSnippetCollections($0, to: []) }
         lastUndoKind = .move
         saveOrToast(modelContext)
-        showToast("Moved to Library", showsUndo: true)
+        showToast("Moved to Library", kind: .move, showsUndo: true)
     }
 
     private func moveSnippet(_ snippet: Snippet, to collection: SnippetCollection) {
-        lastMove = [setSnippetCollections(snippet, to: [collection])]
+        lastMove = Self.withConnections([snippet]).map { setSnippetCollections($0, to: [collection]) }
         lastUndoKind = .move
         saveOrToast(modelContext)
-        showToast("Moved to \u{201C}\(collection.name)\u{201D}", showsUndo: true)
+        showToast("Moved to \u{201C}\(collection.name)\u{201D}", kind: .move, showsUndo: true)
     }
 
     // MARK: - Move action (bulk selection)
@@ -1994,7 +2033,7 @@ struct ContentView: View {
         to target: SnippetCollection?
     ) {
         var records: [MoveRecord] = []
-        for snippet in movedSnippets {
+        for snippet in Self.withConnections(movedSnippets) {
             records.append(setSnippetCollections(snippet, to: target.map { [$0] } ?? []))
         }
         for collection in movedCollections {
@@ -2010,10 +2049,14 @@ struct ContentView: View {
         saveOrToast(modelContext)
 
         let destination = target.map { "\u{201C}\($0.name)\u{201D}" } ?? "Library"
-        if records.count == 1 {
-            showToast("Moved to \(destination)", showsUndo: true)
+        // Count what the user picked; connections ride along silently.
+        let pickedCount = movedSnippets.count + records.filter {
+            if case .collection = $0 { return true } else { return false }
+        }.count
+        if pickedCount <= 1 {
+            showToast("Moved to \(destination)", kind: .move, showsUndo: true)
         } else {
-            showToast("\(records.count) items moved to \(destination)", showsUndo: true)
+            showToast("\(pickedCount) items moved to \(destination)", kind: .move, showsUndo: true)
         }
     }
 }

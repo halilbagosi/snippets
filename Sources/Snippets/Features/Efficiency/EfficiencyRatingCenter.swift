@@ -47,7 +47,11 @@ final class EfficiencyRatingCenter {
     }
 
     nonisolated static func productionRater(for agent: AgentClient) -> EfficiencyRater? {
-        agent == .claudeCode ? ClaudeCodeRater() : nil
+        switch agent {
+        case .claudeCode: ClaudeCodeRater()
+        case .gemini: GeminiRater()
+        default: nil
+        }
     }
 
     // MARK: Consent (the panel shows the sheet)
@@ -83,6 +87,7 @@ final class EfficiencyRatingCenter {
             title: title, language: language, code: code,
             dependencies: SnippetLinker.orderedDependencies(of: snippet).dependencies.map { ($0.title, $0.language, $0.code) })
         let model = settings.modelOverride(for: agent)
+        let effort = settings.effortOverride(for: agent)
 
         var run = Run(context: context)
         let token = run.token
@@ -90,7 +95,7 @@ final class EfficiencyRatingCenter {
         run.task = Task { [weak self] in
             let outcome: Result<EfficiencyReport, EfficiencyRatingError>
             do {
-                outcome = .success(try await rater.rate(request, model: model))
+                outcome = .success(try await rater.rate(request, model: model, effort: effort))
             } catch let error as EfficiencyRatingError {
                 outcome = .failure(error)
             } catch is CancellationError {

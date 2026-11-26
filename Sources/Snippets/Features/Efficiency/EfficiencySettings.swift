@@ -13,6 +13,7 @@ final class EfficiencySettings {
         static let agent = "efficiency.agent"
         static func model(_ agent: AgentClient) -> String { "efficiency.model.\(agent.rawValue)" }
         static func consented(_ agent: AgentClient) -> String { "efficiency.consented.\(agent.rawValue)" }
+        static func effort(_ agent: AgentClient) -> String { "efficiency.effort.\(agent.rawValue)" }
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -67,6 +68,23 @@ final class EfficiencySettings {
         return trimmed.isEmpty ? nil : trimmed
     }
 
+    /// Empty = the agent's default effort.
+    func effort(for agent: AgentClient) -> String {
+        _ = modelVersion
+        return defaults.string(forKey: Key.effort(agent)) ?? ""
+    }
+
+    func setEffort(_ effort: String, for agent: AgentClient) {
+        defaults.set(effort, forKey: Key.effort(agent))
+        modelVersion += 1
+    }
+
+    /// The effort to pass to the rater; nil when empty.
+    func effortOverride(for agent: AgentClient) -> String? {
+        let trimmed = effort(for: agent).trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     func isConsented(_ agent: AgentClient) -> Bool {
         _ = consentVersion
         return defaults.bool(forKey: Key.consented(agent))
@@ -79,7 +97,11 @@ final class EfficiencySettings {
 
     /// The executable the agent is found by.
     static func executableName(for agent: AgentClient) -> String? {
-        agent == .claudeCode ? ClaudeCodeRater.executableName : nil
+        switch agent {
+        case .claudeCode: ClaudeCodeRater.executableName
+        case .gemini: GeminiRater.executableName
+        default: nil
+        }
     }
 
     /// Resolves the chosen agent's CLI (cached by the locator).

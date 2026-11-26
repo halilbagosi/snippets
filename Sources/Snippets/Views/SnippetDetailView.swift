@@ -107,13 +107,13 @@ struct SnippetDetailView: View {
                             defersHeavyContent: defersHeavyContent,
                             accent: Color(hex: language.accentHex) ?? theme.accent,
                             onSaveAsNew: { applyFixAsNewConfig($0, from: $1, named: $2, base: $3) },
-                            onAddToActive: { applyFixToActiveConfig($0, from: $1) }
+                            onAddToConfig: { applyFix($0, from: $1, toConfig: $2) }
                         )
 #endif
                         if !expanded {
                             metadata
                                 .transition(.opacity)
-                            if !snippet.dependencies.isEmpty {
+                            if !snippet.effectiveConnections.isEmpty {
                                 connectedCode
                                     .transition(.identity)
                             }
@@ -153,11 +153,14 @@ struct SnippetDetailView: View {
                         .contentShape(Circle())
                         .liquidGlassSurface(
                             in: Circle(),
-                            shadowRadius: 12,
-                            shadowY: 6
+                            interactive: true,
+                            borderOpacity: 0,
+                            shadowRadius: 0,
+                            shadowY: 0,
+                            drawsFills: false
                         )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GlassPressButtonStyle())
                 // Escape closes the card. Hidden while the preview is
                 // expanded, when Escape belongs to the expand button and
                 // collapses the preview first.
@@ -242,13 +245,13 @@ struct SnippetDetailView: View {
                 actionBar
             }
 
-            if !snippet.dependencies.isEmpty {
+            if !snippet.effectiveConnections.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("uses")
                         .font(Mono.font(size: 11, weight: .semibold))
                         .foregroundStyle(theme.comment)
                     FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
-                        ForEach(snippet.dependencies) { dependency in
+                        ForEach(snippet.effectiveConnections) { dependency in
                             FilterTag(
                                 label: dependency.title.lowercased(),
                                 icon: "link",
@@ -265,7 +268,16 @@ struct SnippetDetailView: View {
         }
     }
 
+    /// Same setup as the gallery's chip row: one glass container (spacing 10
+    /// over 8pt gaps, so a pressed chip's interactive glass flexes into its
+    /// neighbours) and state changes on `DSToken.Motion.toggle`.
     private var actionBar: some View {
+        DSGlassContainer(spacing: 10) {
+            actionBarChips
+        }
+    }
+
+    private var actionBarChips: some View {
         HStack(spacing: 8) {
             FilterTag(
                 label: didCopy ? "copied" : "copy",
@@ -279,9 +291,9 @@ struct SnippetDetailView: View {
                 // records, and `updatedAt` is deliberately left alone so
                 // copying never reshuffles the gallery.
                 SnippetStore.recordCopy(snippet, in: modelContext)
-                didCopy = true
+                withAnimation(DSToken.Motion.toggle) { didCopy = true }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    didCopy = false
+                    withAnimation(DSToken.Motion.toggle) { didCopy = false }
                 }
             }
 
@@ -300,7 +312,9 @@ struct SnippetDetailView: View {
                 accent: snippet.isFavorite ? Color(red: 1.0, green: 0.80, blue: 0.20) : theme.textMuted,
                 isSelected: snippet.isFavorite
             ) {
-                snippet.isFavorite.toggle()
+                withAnimation(DSToken.Motion.toggle) {
+                    snippet.isFavorite.toggle()
+                }
             }
 
             FilterTag(
@@ -404,9 +418,16 @@ struct SnippetDetailView: View {
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: Self.expandButtonSize, height: Self.expandButtonSize)
                 .contentShape(Circle())
-                .liquidGlassSurface(in: Circle(), shadowRadius: 8, shadowY: 4)
+                .liquidGlassSurface(
+                    in: Circle(),
+                    interactive: true,
+                    borderOpacity: 0,
+                    shadowRadius: 0,
+                    shadowY: 0,
+                    drawsFills: false
+                )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GlassPressButtonStyle())
         .keyboardShortcut(isExpanded ? .cancelAction : nil)
         .padding(isExpanded ? Self.expandedButtonPadding : Self.expandButtonPadding)
         .help(isExpanded ? "Exit expanded preview" : "Expand preview")
@@ -640,7 +661,7 @@ struct SnippetDetailView: View {
                 .map(\.code)
         )
         guard !usageCode.isEmpty else { return nil }
-        return snippet.dependencies.first { usageCode.contains($0.code) }
+        return snippet.effectiveConnections.first { usageCode.contains($0.code) }
     }
 
     /// Rewrites the source so it declares `values`, then clears the live
@@ -737,11 +758,13 @@ struct SnippetDetailView: View {
         )
     }
 
-    func applyFixToActiveConfig(
-        _ suggestion: EfficiencyReview.Suggestion, from review: EfficiencyReview
+    func applyFix(
+        _ suggestion: EfficiencyReview.Suggestion, from review: EfficiencyReview, toConfig id: UUID
     ) {
-        EfficiencyFixApplier.addToActive(
-            snippet: snippet, review: review, suggestion: suggestion,
+        EfficiencyFixApplier.addToConfig(
+            id: id, snippet: snippet, review: review, suggestion: suggestion,
+            declared: { detectedParams(SnippetLinker.resolve(entry: snippet)).map(\.param) },
+            applyValues: { applyValues($0, resolution: SnippetLinker.resolve(entry: snippet)) },
             forgetTrust: { previewTrust.forget($0) }
         )
     }
@@ -803,11 +826,11 @@ struct SnippetDetailView: View {
     private var connectedCode: some View {
         VStack(alignment: .leading, spacing: 16) {
             SectionHeader("connected") {
-                Text("\(snippet.dependencies.count)")
+                Text("\(snippet.effectiveConnections.count)")
                     .font(Mono.font(size: 10, weight: .semibold))
                     .foregroundStyle(theme.textFaint)
             }
-            ForEach(snippet.dependencies) { dependency in
+            ForEach(snippet.effectiveConnections) { dependency in
                 connectedCodeWindow(dependency)
             }
         }
@@ -1063,11 +1086,14 @@ private struct MediaAttachmentLightbox: View {
                     .contentShape(Circle())
                     .liquidGlassSurface(
                         in: Circle(),
-                        shadowRadius: 12,
-                        shadowY: 6
+                        interactive: true,
+                        borderOpacity: 0,
+                        shadowRadius: 0,
+                        shadowY: 0,
+                        drawsFills: false
                     )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(GlassPressButtonStyle())
             .keyboardShortcut(.cancelAction)
             .padding(14)
             .accessibilityLabel("Close attachment viewer")
@@ -1144,7 +1170,7 @@ private struct MediaAttachmentLightbox: View {
                 .frame(width: 22, height: 22)
                 .contentShape(Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GlassPressButtonStyle())
         .keyboardShortcut(key, modifiers: [])
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.3)
@@ -1166,11 +1192,13 @@ private struct MediaAttachmentLightbox: View {
                 .liquidGlassSurface(
                     in: Circle(),
                     interactive: true,
-                    shadowRadius: 12,
-                    shadowY: 6
+                    borderOpacity: 0,
+                    shadowRadius: 0,
+                    shadowY: 0,
+                    drawsFills: false
                 )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GlassPressButtonStyle())
         .keyboardShortcut(key, modifiers: [])
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.3)

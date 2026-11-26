@@ -8,6 +8,7 @@ struct EfficiencyRatingSettings: View {
     @Environment(\.colorScheme) private var colorScheme
 
     let settings: EfficiencySettings
+    @State private var catalog = AgentModelCatalog(models: [AgentModelCatalog.defaultOption], efforts: [])
 
     private var theme: Theme { Theme.current(colorScheme) }
 
@@ -54,26 +55,70 @@ struct EfficiencyRatingSettings: View {
 
             Divider().opacity(0.5)
 
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Model")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(theme.text)
-                    Text("Leave empty to use the agent's default model")
-                        .font(.system(size: 11))
-                        .foregroundStyle(theme.textMuted)
-                }
-                Spacer(minLength: 12)
-                TextField("Default", text: Binding(
+            dropdownRow(
+                title: "Model",
+                detail: "Default uses the agent's own choice",
+                options: AgentModelCatalog.including(settings.model(for: settings.agent), in: catalog.models),
+                selection: Binding(
                     get: { settings.model(for: settings.agent) },
                     set: { settings.setModel($0, for: settings.agent) }
-                ))
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 160)
+                )
+            )
+
+            if !catalog.efforts.isEmpty {
+                Divider().opacity(0.5)
+
+                dropdownRow(
+                    title: "Effort",
+                    detail: "How hard the model thinks before answering",
+                    options: AgentModelCatalog.including(settings.effort(for: settings.agent), in: catalog.efforts),
+                    selection: Binding(
+                        get: { settings.effort(for: settings.agent) },
+                        set: { settings.setEffort($0, for: settings.agent) }
+                    )
+                )
             }
         }
         // Settings forces a fresh lookup (the locator caches "not found").
-        .task(id: settings.agent) { await settings.forceRefreshCLIPath() }
+        .task(id: settings.agent) {
+            catalog = AgentModelCatalog.builtIn(for: settings.agent)
+            await settings.forceRefreshCLIPath()
+            await refreshCatalogFromCLI()
+        }
+    }
+
+    /// Claude Code lists its effort levels and model aliases in `--help`;
+    /// read them from the installed CLI so the menus match its version.
+    private func refreshCatalogFromCLI() async {
+        let agent = settings.agent
+        guard agent == .claudeCode, let cli = settings.cliPath,
+              let help = await AgentHelpReader.help(executable: cli),
+              settings.agent == agent else { return }
+        catalog = AgentModelCatalog.claude(fromHelp: help)
+    }
+
+    private func dropdownRow(
+        title: String, detail: String,
+        options: [AgentModelCatalog.Option], selection: Binding<String>
+    ) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(theme.text)
+                Text(detail)
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.textMuted)
+            }
+            Spacer(minLength: 12)
+            Picker(title, selection: selection) {
+                ForEach(options) { option in
+                    Text(option.label).tag(option.value)
+                }
+            }
+            .labelsHidden()
+            .fixedSize()
+        }
     }
 }
 #endif

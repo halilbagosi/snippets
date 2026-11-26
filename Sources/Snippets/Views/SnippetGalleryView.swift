@@ -28,7 +28,6 @@ struct SnippetGalleryView: View {
     var onBack: (() -> Void)? = nil
     /// Shared with `topBar`'s `GlassEffectContainer` so the back button's glass
     /// is a named member of it rather than an anonymous one.
-    @Namespace private var topBarGlass
     /// Shared by every section header's glass, so a header the language filter
     /// inserts or removes is a known member of one container rather than a new
     /// shape. See ``GallerySectionHeader/glassID``.
@@ -67,6 +66,7 @@ struct SnippetGalleryView: View {
     var onPermanentDeleteCollection: ((SnippetCollection) -> Void)? = nil
 
     @FocusState private var searchFocused: Bool
+    @State private var isSearchBarPressed = false
     @State private var viewModel = SnippetGalleryViewModel()
     /// Flipped once when the gallery appears, so cards play their staggered
     /// entrance exactly once rather than on every scroll.
@@ -204,11 +204,13 @@ struct SnippetGalleryView: View {
     /// the texture fills it. Sliding moves the resolved glass instead of
     /// building it up, and `glassEffectID` keeps the container morphing it as
     /// one member. Removal can still fade — there is nothing left to arrive.
+    /// From and back to the leading edge, the direction the search bar
+    /// moves to make room — so the two travel together and the field's edge
+    /// never slides over the button. (A slide from the trailing edge dragged
+    /// the button across the field; appearing in place left it under the
+    /// field's still-moving edge for a few frames.)
     private var backButtonTransition: AnyTransition {
-        .asymmetric(
-            insertion: .move(edge: .trailing),
-            removal: .opacity
-        )
+        .move(edge: .leading).combined(with: .opacity)
     }
 
     var body: some View {
@@ -342,6 +344,12 @@ struct SnippetGalleryView: View {
                         searchFocused = false
                         return nil
                     }
+                    if viewModel.isSelectMode {
+                        withAnimation(DSToken.Motion.toggle) {
+                            viewModel.clearSelectionAndExitSelectMode()
+                        }
+                        return nil
+                    }
                     if !searchText.isEmpty {
                         searchText = ""
                         return nil
@@ -359,6 +367,9 @@ struct SnippetGalleryView: View {
         }
         .onChange(of: selectedLanguages) { _, _ in
             syncLanguageSelectionOrder()
+        }
+        .onChange(of: selectableIDs) { _, visible in
+            viewModel.pruneSelection(toVisible: visible)
         }
         .onDisappear {
             #if canImport(AppKit)
@@ -493,10 +504,8 @@ struct SnippetGalleryView: View {
                             inTrashView: isTrashMode,
                             isSelectionMode: viewModel.isSelectMode,
                             onOpen: {
-                                if viewModel.isSelectMode {
-                                    withAnimation(DSToken.Motion.toggle) {
-                                        viewModel.toggleSelection(for: collection)
-                                    }
+                                if viewModel.isSelectMode || Self.selectionModifierHeld {
+                                    handleSelectionClick(collection.persistentModelID)
                                 } else {
                                     onSelectCollection?(collection)
                                 }
@@ -514,20 +523,8 @@ struct SnippetGalleryView: View {
                                 onPermanentDeleteCollection?(collection)
                             }
                         )
-
-                        if viewModel.isSelectMode {
-                            let isSelected = viewModel.selectedForAction.contains(collection.persistentModelID)
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .stroke(isSelected ? theme.accent : Color.clear, lineWidth: 3)
-                                .overlay(alignment: .topTrailing) {
-                                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                                        .foregroundStyle(isSelected ? theme.accent : theme.textMuted.opacity(0.5))
-                                        .font(.title2)
-                                        .padding(DSToken.Spacing.sm)
-                                        .background {
-                                            Circle().fill(theme.surfaceElevated).padding(DSToken.Spacing.sm)
-                                        }
-                                }
+                        .overlay {
+                            selectionOverlay(for: collection.persistentModelID, cornerRadius: 20)
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -680,20 +677,13 @@ struct SnippetGalleryView: View {
                         collectionTags: collectionTags,
                         isCompact: compactCards
                     )
-
-                    if viewModel.isSelectMode {
-                        let isSelected = viewModel.selectedForAction.contains(snippet.persistentModelID)
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(isSelected ? theme.accent : Color.clear, lineWidth: 3)
-                            .overlay(alignment: .topTrailing) {
-                                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(isSelected ? theme.accent : theme.textMuted.opacity(0.5))
-                                    .font(.title2)
-                                    .padding(DSToken.Spacing.sm)
-                                    .background {
-                                        Circle().fill(theme.surfaceElevated).padding(DSToken.Spacing.sm)
-                                    }
-                            }
+                    // While selecting, a click anywhere on the card selects it —
+                    // its copy, favorite and stack buttons must not catch it.
+                    .allowsHitTesting(!viewModel.isSelectMode)
+                    // On the card, not the cell: a cell stretches to its row's
+                    // tallest card, so a cell-sized ring overshoots shorter cards.
+                    .overlay {
+                        selectionOverlay(for: snippet.persistentModelID, cornerRadius: 12)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -759,10 +749,8 @@ struct SnippetGalleryView: View {
                         }
                     }
                     .onTapGesture {
-                        if viewModel.isSelectMode {
-                            withAnimation(DSToken.Motion.toggle) {
-                                viewModel.toggleSelection(for: snippet)
-                            }
+                        if viewModel.isSelectMode || Self.selectionModifierHeld {
+                            handleSelectionClick(snippet.persistentModelID)
                             return
                         }
                         
@@ -772,6 +760,83 @@ struct SnippetGalleryView: View {
                         // every glass element in the window refresh per frame.
                         onSelect(snippet)
                     }
+    }
+
+    // MARK: - Selection
+
+    /// ⌘ or ⇧ held on click: starts selecting without the "select" chip.
+    static var selectionModifierHeld: Bool {
+        #if canImport(AppKit)
+        !NSEvent.modifierFlags.intersection([.command, .shift]).isEmpty
+        #else
+        false
+        #endif
+    }
+
+    /// Everything a selection may hold right now: what select-all picks.
+    private var selectableIDs: Set<PersistentIdentifier> {
+        Set(displaySnippets.map(\.persistentModelID) + subcollections.map(\.persistentModelID))
+    }
+
+    /// Cards in on-screen order — collections first, then each strip's
+    /// cards as laid out (stack entries, plus members of expanded stacks) —
+    /// for Shift-click ranges.
+    private var selectionOrder: [PersistentIdentifier] {
+        let collections: [SnippetCollection]
+        let snippetSource: [Snippet]
+        if searchQuery.isEmpty {
+            collections = hasVisibleSubcollections ? subcollections : []
+            snippetSource = snippets
+        } else {
+            collections = selectedLanguages.isEmpty ? searchResultCollections : []
+            snippetSource = searchResultSnippets
+        }
+        return viewModel.ordered(collections).map(\.persistentModelID)
+            + snippetSectionSpecs(snippetSource).flatMap { spec in
+                stackDisplayItems(spec.snippets).map(\.snippet.persistentModelID)
+            }
+    }
+
+    private func handleSelectionClick(_ id: PersistentIdentifier) {
+        #if canImport(AppKit)
+        let extending = NSEvent.modifierFlags.contains(.shift)
+        #else
+        let extending = false
+        #endif
+        // Bare: entering select mode animates the top bar through its own
+        // scoped `.animation(value: isSelectMode)`, and the badges through
+        // theirs. An ambient transaction here would also animate the grid.
+        viewModel.handleSelectionClick(id: id, extending: extending, order: selectionOrder)
+    }
+
+    /// The select-mode ring and check badge. Always in the hierarchy so it
+    /// can fade in with select mode and animate between states, instead of
+    /// popping in and out as an `if` would.
+    private func selectionOverlay(for id: PersistentIdentifier, cornerRadius: CGFloat) -> some View {
+        let isSelected = viewModel.isSelectMode && viewModel.selectedForAction.contains(id)
+        return RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .strokeBorder(theme.accent, lineWidth: 2.5)
+            .opacity(isSelected ? 1 : 0)
+            .overlay(alignment: .topTrailing) {
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? theme.accent : theme.surfaceElevated.opacity(0.9))
+                    Circle()
+                        .strokeBorder(isSelected ? Color.clear : theme.textMuted.opacity(0.45), lineWidth: 1.5)
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .scaleEffect(isSelected ? 1 : 0.4)
+                        .opacity(isSelected ? 1 : 0)
+                }
+                .frame(width: 22, height: 22)
+                .padding(DSToken.Spacing.sm)
+                .scaleEffect(viewModel.isSelectMode ? 1 : 0.6)
+                .opacity(viewModel.isSelectMode ? 1 : 0)
+            }
+            .allowsHitTesting(false)
+            .animation(DSToken.Motion.selection, value: isSelected)
+            .animation(DSToken.Motion.toggle, value: viewModel.isSelectMode)
     }
 
     private func toggleStack(_ entryID: PersistentIdentifier) {
@@ -1065,12 +1130,19 @@ struct SnippetGalleryView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 10) {
                     if let onBack {
-                        BackButton(
-                            action: onBack,
-                            accessibilityLabel: "Back to all snippets",
-                            style: .square,
-                            glassNamespace: topBarGlass
-                        )
+                        // Its own container, no glass ID: inside the bar's
+                        // container the button's glass was morphed out of the
+                        // search bar's on the container's schedule — the
+                        // chevron surfaced inside the search field and slid
+                        // out late while the field jumped. Isolated, the
+                        // glass renders with the view, on SwiftUI's curve.
+                        DSGlassContainer(spacing: 0) {
+                            BackButton(
+                                action: onBack,
+                                accessibilityLabel: "Back to all snippets",
+                                style: .square
+                            )
+                        }
                         // Horizontal padding only: vertical padding would
                         // make the back button taller than the search bar,
                         // growing the row and shifting the filter tags down
@@ -1079,8 +1151,13 @@ struct SnippetGalleryView: View {
                         .transition(backButtonTransition)
                     }
 
-                    searchBar
-                        .frame(maxWidth: .infinity)
+                    // Isolated for the same reason as the back button: inside
+                    // the bar's container the field's glass and text lagged the
+                    // layout by ~13 frames, then jumped into place.
+                    DSGlassContainer(spacing: 0) {
+                        searchBar
+                    }
+                    .frame(maxWidth: .infinity)
                     
                     HStack(spacing: 8) {
                         updateTag
@@ -1104,17 +1181,12 @@ struct SnippetGalleryView: View {
                                 accent: theme.textMuted,
                                 isSelected: isAllSelected
                             ) {
-                                withAnimation(DSToken.Motion.toggle) {
-                                    if isAllSelected {
-                                        viewModel.clearSelectionAndExitSelectMode()
-                                        viewModel.isSelectMode = true
-                                    } else {
-                                        let snippetIDs = displaySnippets.map(\.persistentModelID)
-                                        let collectionIDs = subcollections.map(\.persistentModelID)
-                                        let allIDs = Set(snippetIDs + collectionIDs)
-                                        viewModel.selectedForAction = allIDs
-                                    }
-                                }
+                                // Bare: the check badges animate on their own
+                                // scoped curve (see `selectionOverlay`).
+                                viewModel.setAllSelected(
+                                    !isAllSelected,
+                                    ids: displaySnippets.map(\.persistentModelID) + subcollections.map(\.persistentModelID)
+                                )
                             }
                             .transition(.opacity)
 
@@ -1219,7 +1291,11 @@ struct SnippetGalleryView: View {
                                     label: (selectedSearchCollections.isEmpty && !showUncategorizedOnly) ? "collections:all" : (showUncategorizedOnly ? "collections:none" : "collections:\(selectedSearchCollections.count)"),
                                     icon: "folder",
                                     accent: theme.textMuted,
-                                    isSelected: !selectedSearchCollections.isEmpty || showUncategorizedOnly
+                                    isSelected: !selectedSearchCollections.isEmpty || showUncategorizedOnly,
+                                    // Widest of all / none / a two-digit count,
+                                    // so opening a collection (none → all)
+                                    // doesn't shift select and sort sideways.
+                                    reservedLabel: "collections:none"
                                 ) {
                                     viewModel.isShowingCollectionFilter.toggle()
                                 }
@@ -1574,17 +1650,28 @@ struct SnippetGalleryView: View {
         .frame(height: 32)
         .liquidGlassSurface(
             in: RoundedRectangle(cornerRadius: 7, style: .continuous),
-            tint: searchFocused ? theme.accent : nil,
             interactive: true,
-            borderOpacity: searchFocused ? 0.48 : (colorScheme == .dark ? 0.16 : 0.36),
-            shadowRadius: 6,
-            shadowY: 3
+            // Glass only, like the chips beside it: rim, fills and shadow are
+            // static layers that stay put while the glass morphs. Focus is
+            // shown by tinting the glass itself.
+            borderOpacity: 0,
+            shadowRadius: 0,
+            shadowY: 0,
+            glassTint: searchFocused ? theme.accent.opacity(colorScheme == .dark ? 0.35 : 0.25) : nil,
+            drawsFills: false
         )
-        .overlay {
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .stroke(searchFocused ? theme.accent.opacity(0.42) : .clear, lineWidth: 1)
-        }
         .contentShape(Rectangle())
+        // The chips' press, scaled for a full-width bar: 0.95 on something
+        // this wide reads as a lurch, so it squeezes by the same few points
+        // a chip does instead. A field isn't a Button, so the press comes
+        // from a zero-distance drag that runs alongside the field's own clicks.
+        .scaleEffect(isSearchBarPressed ? 0.985 : 1)
+        .animation(DSToken.Motion.press, value: isSearchBarPressed)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in if !isSearchBarPressed { isSearchBarPressed = true } }
+                .onEnded { _ in isSearchBarPressed = false }
+        )
         .onTapGesture { searchFocused = true }
     }
 

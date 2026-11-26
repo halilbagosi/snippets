@@ -130,4 +130,114 @@ private final class Box<T>: @unchecked Sendable {
     var value: T
     init(_ value: T) { self.value = value }
 }
+
+final class GeminiRatingTests: XCTestCase {
+    func test_claudeArguments_passEffortOnlyWhenSet() {
+        XCTAssertFalse(ClaudeCodeRater.arguments(model: nil).contains("--effort"))
+        let args = ClaudeCodeRater.arguments(model: "opus", effort: " high ")
+        XCTAssertEqual(Array(args.suffix(4)), ["--model", "opus", "--effort", "high"])
+    }
+
+    func test_geminiArguments_blockMCPAndExtensions_andPassModel() {
+        let args = GeminiRater.arguments(model: "flash")
+        XCTAssertTrue(args.contains("--output-format"))
+        XCTAssertEqual(args[args.firstIndex(of: "--allowed-mcp-server-names")! + 1], GeminiRater.noMCPServers)
+        XCTAssertEqual(args[args.firstIndex(of: "--extensions")! + 1], "none")
+        XCTAssertEqual(args[args.firstIndex(of: "--approval-mode")! + 1], "default")
+        XCTAssertEqual(Array(args.suffix(2)), ["--model", "flash"])
+        XCTAssertFalse(GeminiRater.arguments(model: "  ").contains("--model"))
+    }
+
+    func test_geminiEnvironment_passesThroughAPIKeysOnly() {
+        let env = GeminiRater.environment(
+            cliDirectory: "/x", home: "/h", user: "u",
+            inherited: ["GEMINI_API_KEY": "k", "SECRET": "s"])
+        XCTAssertEqual(env["GEMINI_API_KEY"], "k")
+        XCTAssertNil(env["SECRET"])
+        XCTAssertEqual(env["HOME"], "/h")
+    }
+
+    func test_geminiPrompt_spellsOutSchema() throws {
+        let request = EfficiencyRequest(title: "t", language: .swift, code: "let a = 1", dependencies: [])
+        let prompt = try XCTUnwrap(EfficiencyPrompt.build(for: request, includeSchema: true))
+        XCTAssertTrue(prompt.contains(EfficiencyPrompt.schema))
+        XCTAssertFalse(try XCTUnwrap(EfficiencyPrompt.build(for: request)).contains(EfficiencyPrompt.schema))
+    }
+
+    private func envelope(_ object: [String: Any]) -> Data {
+        try! JSONSerialization.data(withJSONObject: object)
+    }
+
+    func test_envelope_extractsFencedJSONFromResponse() throws {
+        let response = "```json\n{\"applicable\":true,\"score\":80,\"summary\":\"ok\",\"suggestions\":[]}\n```"
+        let result = GeminiEnvelope.report(exitCode: 0, stdout: envelope(["response": response, "stats": [:]]), stderr: Data())
+        let data = try result.get()
+        let report = try EfficiencyResponseParser.parse(data, ratedCode: "x")
+        XCTAssertEqual(report.score, 80)
+    }
+
+    func test_envelope_mapsAuthFailures() {
+        XCTAssertEqual(
+            GeminiEnvelope.report(exitCode: 41, stdout: Data(), stderr: Data()),
+            .failure(.notSignedIn))
+        XCTAssertEqual(
+            GeminiEnvelope.report(
+                exitCode: 1, stdout: envelope(["error": ["message": "Please set an Auth method in settings"]]),
+                stderr: Data()),
+            .failure(.notSignedIn))
+    }
+
+    func test_envelope_reportsOtherErrorsAndMissingJSON() {
+        XCTAssertEqual(
+            GeminiEnvelope.report(exitCode: 1, stdout: Data(), stderr: Data("quota exceeded".utf8)),
+            .failure(.failed("quota exceeded")))
+        XCTAssertEqual(
+            GeminiEnvelope.report(exitCode: 0, stdout: envelope(["response": "no json here"]), stderr: Data()),
+            .failure(.invalidResponse("the response holds no JSON object")))
+    }
+
+    func test_geminiMCPSetup_usesUserScopeAndSeparator() {
+        XCTAssertEqual(
+            AgentClient.gemini.setup(executablePath: "/A B/snippets"),
+            "gemini mcp add --scope user snippets '/A B/snippets' -- \(MCPStdioShim.flag)")
+    }
+}
+
+final class AgentModelCatalogTests: XCTestCase {
+    private let help = """
+          --effort <level>                      Effort level for the current session
+                                                (low, medium, high, xhigh, max)
+          --model <model>                       Model for the current session. Provide
+                                                an alias for the latest model (e.g.
+                                                'fable', 'opus', or 'sonnet') or a
+                                                model's full name (e.g.
+                                                'claude-fable-5').
+        """
+
+    func test_parsesEffortLevelsAndAliasesFromClaudeHelp() {
+        XCTAssertEqual(AgentModelCatalog.effortLevels(inHelp: help), ["low", "medium", "high", "xhigh", "max"])
+        XCTAssertEqual(AgentModelCatalog.modelAliases(inHelp: help), ["fable", "opus", "sonnet"])
+        let catalog = AgentModelCatalog.claude(fromHelp: help)
+        XCTAssertEqual(catalog.efforts.map(\.value), ["", "low", "medium", "high", "xhigh", "max"])
+        XCTAssertEqual(Array(catalog.models.map(\.value).prefix(5)), ["", "fable", "opus", "sonnet", "haiku"])
+    }
+
+    func test_unparseableHelp_keepsBuiltIn() {
+        XCTAssertEqual(AgentModelCatalog.claude(fromHelp: "nothing"), AgentModelCatalog.builtIn(for: .claudeCode))
+    }
+
+    func test_geminiOffersNoEffort_andModelsStartWithDefault() {
+        let catalog = AgentModelCatalog.builtIn(for: .gemini)
+        XCTAssertTrue(catalog.efforts.isEmpty)
+        XCTAssertEqual(catalog.models.first?.value, "")
+        XCTAssertTrue(catalog.models.contains { $0.value == "flash" })
+    }
+
+    func test_unlistedStoredModel_staysSelectable() {
+        let options = AgentModelCatalog.builtIn(for: .claudeCode).models
+        XCTAssertEqual(AgentModelCatalog.including("my-custom", in: options).last?.value, "my-custom")
+        XCTAssertEqual(AgentModelCatalog.including("opus", in: options), options)
+        XCTAssertEqual(AgentModelCatalog.including("", in: options), options)
+    }
+}
 #endif

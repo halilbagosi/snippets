@@ -86,12 +86,14 @@ extension Snippet {
     var uuidsRunningThisCode: [UUID] {
         var visited: Set<PersistentIdentifier> = [persistentModelID]
         var ordered: [UUID] = uuid.map { [$0] } ?? []
-        var queue = dependents
+        // Siblings run this code too: connections of one snippet share access.
+        var queue = dependents + siblingConnections(includingTrashed: true)
         while !queue.isEmpty {
             let next = queue.removeFirst()
             guard visited.insert(next.persistentModelID).inserted else { continue }
             if let id = next.uuid { ordered.append(id) }
             queue.append(contentsOf: next.dependents)
+            queue.append(contentsOf: next.siblingConnections(includingTrashed: true))
         }
         return ordered
     }

@@ -4,6 +4,11 @@ import AppKit
 #endif
 
 struct LanguageBadge: View {
+    /// Shared chip heights — the card footer's copy and linked chips use
+    /// `compactHeight` so the whole row lines up.
+    static let compactHeight: CGFloat = 20
+    static let regularHeight: CGFloat = 22
+
     @Environment(\.colorScheme) private var colorScheme
     let language: SupportedLanguage
     var compact: Bool = false
@@ -39,7 +44,10 @@ struct LanguageBadge: View {
                 .lineLimit(1)
         }
         .padding(.horizontal, compact ? 7 : 9)
-        .padding(.vertical, compact ? 3 : 4)
+        // A fixed height, not vertical padding: each SF Symbol has its own
+        // glyph height, so padded chips with different icons (the card's
+        // language badge beside its copy button) came out different sizes.
+        .frame(height: compact ? Self.compactHeight : Self.regularHeight)
         .foregroundStyle(resolvedForeground)
         .background {
             RoundedRectangle(cornerRadius: 5, style: .continuous)

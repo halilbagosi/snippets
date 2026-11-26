@@ -14,7 +14,8 @@ struct EfficiencyPanel: View {
     let accent: Color
     var center: EfficiencyRatingCenter = .shared
     let onSaveAsNew: (EfficiencyReview.Suggestion, EfficiencyReview, String, EfficiencyFixApplier.Base) -> Void
-    let onAddToActive: (EfficiencyReview.Suggestion, EfficiencyReview) -> Void
+    /// "Add to config ‹name›": the chosen config's id.
+    let onAddToConfig: (EfficiencyReview.Suggestion, EfficiencyReview, UUID) -> Void
 
     @State private var suggestionsOpen = false
     @State private var inheritedOpen = false
@@ -84,6 +85,42 @@ struct EfficiencyPanel: View {
             textButton("Rate") { rate() }
         case .rated, .notApplicable, .stale:
             textButton("Re-rate") { rate() }
+        }
+    }
+
+    /// Offered beside "Save as new config…" whenever some config can take the
+    /// change; the active config is listed first.
+    @ViewBuilder
+    private func addToConfigMenu(_ suggestion: EfficiencyReview.Suggestion, review: EfficiencyReview) -> some View {
+        let addable = EfficiencyFixApplier.addableConfigs(snippet: snippet, suggestion: suggestion)
+        let targets = addable.filter { $0.id == snippet.activeParamConfigID }
+            + addable.filter { $0.id != snippet.activeParamConfigID }
+        if !targets.isEmpty {
+            Menu {
+                ForEach(targets) { config in
+                    Button {
+                        onAddToConfig(suggestion, review, config.id)
+                    } label: {
+                        if config.id == snippet.activeParamConfigID {
+                            Label(config.name, systemImage: "checkmark")
+                        } else {
+                            Text(config.name)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 3) {
+                    Text("Add to config")
+                    Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
+                }
+                .font(Mono.font(size: 11, weight: .semibold))
+                .foregroundStyle(accent)
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Apply this change to an existing config and switch to it")
         }
     }
 
@@ -283,7 +320,7 @@ struct EfficiencyPanel: View {
             mutedLine("Applied")
         case .noLongerApplies:
             mutedLine("no longer applies — Re-rate")
-        case .offer(let addToActive):
+        case .offer:
             if namingID == suggestion.id {
                 ConfigNameField(
                     initialName: suggestion.title, accent: accent, theme: theme,
@@ -296,9 +333,7 @@ struct EfficiencyPanel: View {
             } else {
                 HStack(spacing: 14) {
                     textButton("Save as new config…") { namingID = suggestion.id }
-                    if addToActive {
-                        textButton("Add to \(activeConfig?.name ?? "active")") { onAddToActive(suggestion, review) }
-                    }
+                    addToConfigMenu(suggestion, review: review)
                 }
             }
         }

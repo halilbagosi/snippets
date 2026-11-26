@@ -1,4 +1,5 @@
 import XCTest
+import SwiftData
 import SwiftUI
 @testable import Snippets
 
@@ -174,5 +175,46 @@ final class SnippetCardPreviewTextTests: XCTestCase {
         XCTAssertEqual(colour(of: "\"hi\""), theme.string)
         XCTAssertEqual(colour(of: "// greet"), theme.comment)
         XCTAssertEqual(colour(of: "name"), theme.text)
+    }
+
+    // MARK: - Selection
+
+    func test_shiftClick_selectsRangeFromAnchor_andStaysInSelectMode() throws {
+        let container = try ModelContainer(
+            for: Snippet.self, MediaItem.self, SnippetCollection.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        let items = (0..<5).map { Snippet(title: "S\($0)") }
+        items.forEach(container.mainContext.insert)
+        try container.mainContext.save()
+        let order = items.map(\.persistentModelID)
+        let sut = SnippetGalleryViewModel()
+
+        sut.handleSelectionClick(id: order[1], extending: false, order: order)
+        XCTAssertTrue(sut.isSelectMode)
+        sut.handleSelectionClick(id: order[3], extending: true, order: order)
+        XCTAssertEqual(sut.selectedForAction, Set(order[1...3]))
+
+        sut.setAllSelected(false, ids: order)
+        XCTAssertTrue(sut.selectedForAction.isEmpty)
+        XCTAssertTrue(sut.isSelectMode)
+        // No anchor after deselect-all: a shift-click is a plain toggle.
+        sut.handleSelectionClick(id: order[4], extending: true, order: order)
+        XCTAssertEqual(sut.selectedForAction, [order[4]])
+    }
+
+    func test_pruneSelection_dropsHiddenItemsAndAnchor() throws {
+        let container = try ModelContainer(
+            for: Snippet.self, MediaItem.self, SnippetCollection.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        let a = Snippet(title: "A"), b = Snippet(title: "B")
+        [a, b].forEach(container.mainContext.insert)
+        try container.mainContext.save()
+        let sut = SnippetGalleryViewModel()
+        sut.handleSelectionClick(id: a.persistentModelID, extending: false, order: [])
+        sut.handleSelectionClick(id: b.persistentModelID, extending: false, order: [])
+
+        sut.pruneSelection(toVisible: [a.persistentModelID])
+        XCTAssertEqual(sut.selectedForAction, [a.persistentModelID])
+        XCTAssertNil(sut.selectionAnchor)
     }
 }

@@ -13,6 +13,8 @@
 		EF0C4001B000000000000000 /* RatingToastModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4001F000000000000000 /* RatingToastModel.swift */; };
 		EF0C4000B000000000000000 /* RatingToastStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0C4000F000000000000000 /* RatingToastStack.swift */; };
 		EF0B2004B000000000000000 /* ClaudeCodeRaterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B2004F000000000000000 /* ClaudeCodeRaterTests.swift */; };
+		EF0B10A1B000000000000000 /* GeminiRater.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B10A1F000000000000000 /* GeminiRater.swift */; };
+		EF0B10A2B000000000000000 /* AgentModelCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B10A2F000000000000000 /* AgentModelCatalog.swift */; };
 		EF0B1006B000000000000000 /* ClaudeCodeRater.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1006F000000000000000 /* ClaudeCodeRater.swift */; };
 		EF0B1005B000000000000000 /* AgentProcessRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B1005F000000000000000 /* AgentProcessRunner.swift */; };
 		EF0B2003B000000000000000 /* ClaudeCodeEnvelopeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B2003F000000000000000 /* ClaudeCodeEnvelopeTests.swift */; };
@@ -206,6 +208,7 @@
 		D7ABBECB9F38217F80FFEC16 /* ModernSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49D1B942336B15815689BE07 /* ModernSidebar.swift */; };
 		DB7EE30E586966E1472A4152 /* CollectionIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398A89B7A64DB3CF4B4A6487 /* CollectionIconView.swift */; };
 		E171FA3EFC0968C49328CD00 /* MetalDisintegrationOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = E26B11F164FE7140EB8BADA7 /* MetalDisintegrationOverlay.swift */; };
+		EF0B10A3B000000000000000 /* ToastPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0B10A3F000000000000000 /* ToastPill.swift */; };
 		E275F13EA19A53681F553793 /* FilterTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = A526673AFEB2D7D97B6A125F /* FilterTag.swift */; };
 		E44E7EBA63F566394B2FF51F /* TransferCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964AFEF62C5E8FB2F8975326 /* TransferCommands.swift */; };
 		UPDATECMDS0000000000B001 /* UpdateCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = UPDATECMDS0000000000F001 /* UpdateCommands.swift */; };
@@ -245,6 +248,8 @@
 		EF0C4001F000000000000000 /* RatingToastModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingToastModel.swift; sourceTree = "<group>"; };
 		EF0C4000F000000000000000 /* RatingToastStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingToastStack.swift; sourceTree = "<group>"; };
 		EF0B2004F000000000000000 /* ClaudeCodeRaterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeRaterTests.swift; sourceTree = "<group>"; };
+		EF0B10A1F000000000000000 /* GeminiRater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiRater.swift; sourceTree = "<group>"; };
+		EF0B10A2F000000000000000 /* AgentModelCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentModelCatalog.swift; sourceTree = "<group>"; };
 		EF0B1006F000000000000000 /* ClaudeCodeRater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeRater.swift; sourceTree = "<group>"; };
 		EF0B1005F000000000000000 /* AgentProcessRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentProcessRunner.swift; sourceTree = "<group>"; };
 		EF0B2003F000000000000000 /* ClaudeCodeEnvelopeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeEnvelopeTests.swift; sourceTree = "<group>"; };
@@ -399,6 +404,7 @@
 		A4BA448BBE813C0F4A7135E4 /* ShaderPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShaderPipeline.swift; sourceTree = "<group>"; };
 		A4D3F65EC1966AF5DF35CA28 /* Snippets-AppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Snippets-AppStore.entitlements"; sourceTree = SOURCE_ROOT; };
 		B7E2D1A40C5F4E8899A1F3C2 /* Snippets-Release.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Snippets-Release.entitlements"; sourceTree = SOURCE_ROOT; };
+		EF0B10A3F000000000000000 /* ToastPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastPill.swift; sourceTree = "<group>"; };
 		A526673AFEB2D7D97B6A125F /* FilterTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterTag.swift; sourceTree = "<group>"; };
 		A8EF3384EF715D1C281D899A /* CodeEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeEditor.swift; sourceTree = "<group>"; };
 		A90285C260B1BC9E05BE3F39 /* GallerySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GallerySection.swift; sourceTree = "<group>"; };
@@ -482,6 +488,8 @@
 				EF0A0000000000000000A001 /* EfficiencyReview.swift */,
 				EF0A0000000000000000D001 /* EfficiencyFixApplier.swift */,
 				EF0B1004F000000000000000 /* AgentCLILocator.swift */,
+				EF0B10A1F000000000000000 /* GeminiRater.swift */,
+				EF0B10A2F000000000000000 /* AgentModelCatalog.swift */,
 				EF0B1006F000000000000000 /* ClaudeCodeRater.swift */,
 				EF0B1005F000000000000000 /* AgentProcessRunner.swift */,
 				EF0B1003F000000000000000 /* ClaudeCodeEnvelope.swift */,
@@ -620,6 +628,7 @@
 				0C82E0C23D62D7837A6EAE83 /* DotGridBackground.swift */,
 				2E7553D99F70014816334E2E /* EditorTabHeader.swift */,
 				A526673AFEB2D7D97B6A125F /* FilterTag.swift */,
+				EF0B10A3F000000000000000 /* ToastPill.swift */,
 				A90285C260B1BC9E05BE3F39 /* GallerySection.swift */,
 				ADD742F16AED07C5B6DA1EFE /* LanguageBadge.swift */,
 				53A58852F6AFD3FD2F31AFB3 /* LoopingVideoPlayerView.swift */,
@@ -1152,6 +1161,7 @@
 				19FDFDF94315B732D1434FFF /* DotGridBackground.swift in Sources */,
 				397143D34A386C5AB9B9F776 /* EditorTabHeader.swift in Sources */,
 				E275F13EA19A53681F553793 /* FilterTag.swift in Sources */,
+				EF0B10A3B000000000000000 /* ToastPill.swift in Sources */,
 				38E4A6BBA1118D66A3042E59 /* FindSnippetsIntent.swift in Sources */,
 				45090D04E962028F81E10D04 /* GallerySection.swift in Sources */,
 				1034317420206F8CAC37E289 /* LanguageBadge.swift in Sources */,
@@ -1239,6 +1249,8 @@
 				EF0A0000000000000000A002 /* EfficiencyReview.swift in Sources */,
 				EF0A0000000000000000D002 /* EfficiencyFixApplier.swift in Sources */,
 				EF0B1004B000000000000000 /* AgentCLILocator.swift in Sources */,
+				EF0B10A1B000000000000000 /* GeminiRater.swift in Sources */,
+				EF0B10A2B000000000000000 /* AgentModelCatalog.swift in Sources */,
 				EF0B1006B000000000000000 /* ClaudeCodeRater.swift in Sources */,
 				EF0B1005B000000000000000 /* AgentProcessRunner.swift in Sources */,
 				EF0B1003B000000000000000 /* ClaudeCodeEnvelope.swift in Sources */,

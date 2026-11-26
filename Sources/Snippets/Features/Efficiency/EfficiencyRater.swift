@@ -26,5 +26,14 @@ enum EfficiencyRatingError: Error, Equatable {
 
 protocol EfficiencyRater: Sendable {
     func rate(_ request: EfficiencyRequest, model: String?) async throws -> EfficiencyReport
+    /// `effort` is the agent's reasoning-effort level; raters whose CLI has
+    /// no such setting ignore it.
+    func rate(_ request: EfficiencyRequest, model: String?, effort: String?) async throws -> EfficiencyReport
+}
+
+extension EfficiencyRater {
+    func rate(_ request: EfficiencyRequest, model: String?, effort: String?) async throws -> EfficiencyReport {
+        try await rate(request, model: model)
+    }
 }
 #endif

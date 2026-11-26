@@ -55,7 +55,9 @@ enum EfficiencyPrompt {
 
     /// Nil for languages that get no rating. `fence` is injectable for tests;
     /// by default a random token is drawn until nothing in the request contains it.
-    static func build(for request: EfficiencyRequest, fence: String? = nil) -> String? {
+    /// `includeSchema` spells the answer schema out in the prompt, for agents
+    /// whose CLI cannot enforce it (Claude Code gets `--json-schema` instead).
+    static func build(for request: EfficiencyRequest, fence: String? = nil, includeSchema: Bool = false) -> String? {
         guard let family = Family(language: request.language) else { return nil }
         let texts = [request.title, request.code]
             + request.dependencies.flatMap { [$0.title, $0.language, $0.code] }
@@ -74,6 +76,9 @@ enum EfficiencyPrompt {
         ]
         for dep in request.dependencies {
             parts.append(block(kind: "DEPENDENCY", title: dep.title, language: dep.language, code: dep.code, fence: token))
+        }
+        if includeSchema {
+            parts.append("The answer must be one JSON object matching this JSON Schema, with no Markdown fences and no other text:\n\(schema)")
         }
         parts.append("Answer with the JSON object only.")
         return parts.joined(separator: "\n\n")

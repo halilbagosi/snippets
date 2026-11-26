@@ -105,25 +105,42 @@ final class SnippetGalleryViewModel {
         isSelectMode.toggle()
         if !isSelectMode {
             selectedForAction.removeAll()
+            selectionAnchor = nil
         }
     }
 
+    /// The item a Shift-click extends from: the last one toggled on its own.
+    var selectionAnchor: PersistentIdentifier?
+
     func toggleSelection(for snippet: Snippet) {
-        let id = snippet.persistentModelID
-        if selectedForAction.contains(id) {
-            selectedForAction.remove(id)
-        } else {
-            selectedForAction.insert(id)
-        }
+        toggleSelection(id: snippet.persistentModelID)
     }
 
     func toggleSelection(for collection: SnippetCollection) {
-        let id = collection.persistentModelID
+        toggleSelection(id: collection.persistentModelID)
+    }
+
+    func toggleSelection(id: PersistentIdentifier) {
         if selectedForAction.contains(id) {
             selectedForAction.remove(id)
         } else {
             selectedForAction.insert(id)
         }
+        selectionAnchor = id
+    }
+
+    /// One click on a card while selecting (or ⌘-clicking to start).
+    /// Shift extends from the anchor to `id` through `order` — the cards as
+    /// they appear on screen — the way Finder does; without an anchor in
+    /// `order` it behaves like a plain toggle.
+    func handleSelectionClick(id: PersistentIdentifier, extending: Bool, order: [PersistentIdentifier]) {
+        isSelectMode = true
+        guard extending, let anchor = selectionAnchor,
+              let from = order.firstIndex(of: anchor), let to = order.firstIndex(of: id) else {
+            toggleSelection(id: id)
+            return
+        }
+        selectedForAction.formUnion(order[min(from, to)...max(from, to)])
     }
 
     func toggleSelectAll(for snippets: [Snippet]) {
@@ -133,6 +150,21 @@ final class SnippetGalleryViewModel {
         } else {
             selectedForAction = ids
         }
+    }
+
+    /// Select-all that stays in select mode either way.
+    func setAllSelected(_ selectAll: Bool, ids: [PersistentIdentifier]) {
+        selectedForAction = selectAll ? Set(ids) : []
+        selectionAnchor = nil
+    }
+
+    /// Drops selected items that are no longer on screen (a filter or search
+    /// changed), so the counts on the action chips always match what is shown
+    /// and an action never touches something the user can't see.
+    func pruneSelection(toVisible visible: Set<PersistentIdentifier>) {
+        let pruned = selectedForAction.intersection(visible)
+        if pruned != selectedForAction { selectedForAction = pruned }
+        if let anchor = selectionAnchor, !visible.contains(anchor) { selectionAnchor = nil }
     }
 
     func selectedSnippets(from snippets: [Snippet]) -> [Snippet] {
@@ -145,6 +177,7 @@ final class SnippetGalleryViewModel {
 
     func clearSelectionAndExitSelectMode() {
         selectedForAction.removeAll()
+        selectionAnchor = nil
         isSelectMode = false
     }
 }

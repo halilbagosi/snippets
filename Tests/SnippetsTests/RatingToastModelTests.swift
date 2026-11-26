@@ -102,6 +102,31 @@ final class RatingToastModelTests: XCTestCase {
         XCTAssertEqual(model.rows.map(\.canRetry), [false, true])
     }
 
+    func test_miniSummary_runningThenFailedThenRated() throws {
+        let ids = try makeIDs(5)
+        let all = RatingToastModel(jobs: [
+            ids[0]: job("A", .running, at: 0),
+            ids[1]: job("B", .running, at: 1),
+            ids[2]: job("C", .failed(.timedOut), at: 2),
+            ids[3]: job("D", .succeeded(score: 90, band: nil), at: 3),
+            ids[4]: job("E", .succeeded(score: 70, band: nil), at: 4),
+        ], hiding: nil)
+        // Counts cover jobs folded into "+N more" too.
+        XCTAssertEqual(all.totalCount, 5)
+        XCTAssertEqual(all.miniText, "rating 2")
+        XCTAssertEqual(all.runningAgent, .claudeCode)
+
+        let failed = RatingToastModel(jobs: [
+            ids[2]: job("C", .failed(.timedOut)), ids[3]: job("D", .succeeded(score: 90, band: nil)),
+        ], hiding: nil)
+        XCTAssertEqual(failed.miniText, "1 failed")
+        XCTAssertNil(failed.runningAgent)
+
+        let done = RatingToastModel(jobs: [ids[3]: job("D", .succeeded(score: 90, band: nil))], hiding: nil)
+        XCTAssertEqual(done.miniText, "1 rated")
+        XCTAssertTrue(RatingToastModel(jobs: [:], hiding: nil).isEmpty)
+    }
+
     func test_settingsStatusLine() {
         XCTAssertEqual(
             EfficiencyRatingSettings.statusLine(agent: .claudeCode, path: nil),
@@ -109,7 +134,7 @@ final class RatingToastModelTests: XCTestCase {
         XCTAssertEqual(
             EfficiencyRatingSettings.statusLine(agent: .claudeCode, path: URL(fileURLWithPath: "/opt/bin/claude")),
             "/opt/bin/claude")
-        XCTAssertEqual(EfficiencyRatingSettings.ratableAgents, [.claudeCode])
+        XCTAssertEqual(EfficiencyRatingSettings.ratableAgents, [.claudeCode, .gemini])
     }
 }
 #endif
