@@ -83,28 +83,47 @@ struct EfficiencyPanelState: Equatable {
         }
     }
 
-    /// A rating's suggestions the active code can still take (the "From the
-    /// rating of …" list). Those whose `before` no longer matches are dropped.
-    static func remainingSuggestions(
-        of review: EfficiencyReview, in activeCode: String
-    ) -> [EfficiencyReview.Suggestion] {
-        review.suggestions.filter {
-            EfficiencyReviewStore.matchState(of: $0, in: activeCode) == .applies
-        }
-    }
-
     enum SuggestionAction: Equatable {
+        /// The change is already in the active code.
+        case applied
+        /// "Save as new config…", plus "Add to ‹active›" when allowed.
         case offer(addToActive: Bool)
         case noLongerApplies
     }
 
-    /// "Save as new config…" needs `before` to occur exactly once in the rated
-    /// code; "Add to ‹active›" additionally needs the active config's approval.
+    /// Where a suggestion is listed, which decides the code it is checked against.
+    enum Context: Equatable {
+        /// Rating of exactly the current code.
+        case fresh
+        /// Rating of code that has since changed; changes go onto the current code.
+        case stale
+        /// "From the rating of ‹config›": the active config came from this rating.
+        case inherited
+    }
+
+    /// The code "Save as new config…" builds from for this context.
+    static func saveBase(for context: Context) -> EfficiencyFixApplier.Base {
+        context == .stale ? .currentCode : .ratedCode
+    }
+
     static func action(
-        for suggestion: EfficiencyReview.Suggestion, in review: EfficiencyReview, canAddToActive: Bool
+        for suggestion: EfficiencyReview.Suggestion, in review: EfficiencyReview,
+        context: Context, activeCode: String, canAddToActive: Bool
     ) -> SuggestionAction {
-        EfficiencyReviewStore.matchState(of: suggestion, in: review.ratedCode) == .applies
-            ? .offer(addToActive: canAddToActive) : .noLongerApplies
+        func applies(_ code: String) -> Bool {
+            EfficiencyReviewStore.matchState(of: suggestion, in: code) == .applies
+        }
+        switch context {
+        case .fresh:
+            return applies(review.ratedCode) ? .offer(addToActive: canAddToActive) : .noLongerApplies
+        case .stale:
+            return applies(activeCode) ? .offer(addToActive: false) : .noLongerApplies
+        case .inherited:
+            if !suggestion.after.isEmpty, activeCode.contains(suggestion.after),
+               !activeCode.contains(suggestion.before) { return .applied }
+            if applies(activeCode) { return .offer(addToActive: canAddToActive) }
+            return applies(review.ratedCode) ? .offer(addToActive: false) : .noLongerApplies
+        }
     }
 }
 #endif

@@ -114,20 +114,47 @@ final class EfficiencyPanelStateTests: XCTestCase {
         XCTAssertEqual(line(.failed(String(repeating: "x", count: 200))).count, 91)
     }
 
-    func testRemainingSuggestionsDropThoseThatNoLongerMatch() {
-        let applies = suggestion(before: "one"), gone = suggestion(before: "zzz"), twice = suggestion(before: "dup")
-        let r = review(suggestions: [applies, gone, twice])
-        let remaining = EfficiencyPanelState.remainingSuggestions(of: r, in: "one dup dup")
-        XCTAssertEqual(remaining, [applies])
+    private func act(
+        _ s: EfficiencyReview.Suggestion, rated: String, active: String,
+        _ context: EfficiencyPanelState.Context, canAdd: Bool = false
+    ) -> EfficiencyPanelState.SuggestionAction {
+        EfficiencyPanelState.action(
+            for: s, in: review(code: rated, suggestions: [s]), context: context,
+            activeCode: active, canAddToActive: canAdd)
     }
 
-    func testActionOffersAddOnlyWhenAllowedAndHidesStaleSuggestions() {
+    func testFreshActionChecksRatedCode() {
         let s = suggestion(before: "a")
-        let r = review(code: "a = 1", suggestions: [s])
-        XCTAssertEqual(EfficiencyPanelState.action(for: s, in: r, canAddToActive: true), .offer(addToActive: true))
-        XCTAssertEqual(EfficiencyPanelState.action(for: s, in: r, canAddToActive: false), .offer(addToActive: false))
-        let missing = suggestion(before: "nope")
-        XCTAssertEqual(EfficiencyPanelState.action(for: missing, in: r, canAddToActive: true), .noLongerApplies)
+        XCTAssertEqual(act(s, rated: "a = 1", active: "a = 1", .fresh, canAdd: true), .offer(addToActive: true))
+        XCTAssertEqual(act(s, rated: "a = 1", active: "a = 1", .fresh), .offer(addToActive: false))
+        XCTAssertEqual(act(suggestion(before: "nope"), rated: "a = 1", active: "a = 1", .fresh), .noLongerApplies)
+    }
+
+    func testStaleActionChecksCurrentCodeAndNeverOffersAddToActive() {
+        let s = suggestion(before: "loop")
+        XCTAssertEqual(act(s, rated: "loop", active: "loop // edited", .stale, canAdd: true), .offer(addToActive: false))
+        XCTAssertEqual(act(s, rated: "loop", active: "rewritten", .stale), .noLongerApplies)
+        XCTAssertEqual(act(s, rated: "loop", active: "loop loop", .stale), .noLongerApplies)
+    }
+
+    func testInheritedActionBranches() {
+        let s = suggestion(before: "slow", after: "fast")
+        // Already in the active code.
+        XCTAssertEqual(act(s, rated: "slow", active: "fast", .inherited), .applied)
+        // Still matches the active code: both actions.
+        XCTAssertEqual(act(s, rated: "slow", active: "slow x", .inherited, canAdd: true), .offer(addToActive: true))
+        // Only the rated code matches: save as new only.
+        XCTAssertEqual(act(s, rated: "slow", active: "other", .inherited, canAdd: true), .offer(addToActive: false))
+        // Matches nowhere.
+        XCTAssertEqual(act(s, rated: "gone", active: "other", .inherited), .noLongerApplies)
+        // `after` present but `before` too: not applied.
+        XCTAssertEqual(act(s, rated: "slow", active: "fast slow", .inherited, canAdd: true), .offer(addToActive: true))
+    }
+
+    func testSaveBase() {
+        XCTAssertEqual(EfficiencyPanelState.saveBase(for: .fresh), .ratedCode)
+        XCTAssertEqual(EfficiencyPanelState.saveBase(for: .inherited), .ratedCode)
+        XCTAssertEqual(EfficiencyPanelState.saveBase(for: .stale), .currentCode)
     }
 }
 #endif

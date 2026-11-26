@@ -13,28 +13,30 @@ struct EfficiencyPanel: View {
     let defersHeavyContent: Bool
     let accent: Color
     var center: EfficiencyRatingCenter = .shared
-    let onSaveAsNew: (EfficiencyReview.Suggestion, EfficiencyReview, String) -> Void
+    let onSaveAsNew: (EfficiencyReview.Suggestion, EfficiencyReview, String, EfficiencyFixApplier.Base) -> Void
     let onAddToActive: (EfficiencyReview.Suggestion, EfficiencyReview) -> Void
 
     @State private var suggestionsOpen = false
+    @State private var inheritedOpen = false
     @State private var namingID: UUID?
     @State private var showsConsent = false
 
     private var theme: Theme { Theme.current(colorScheme) }
     private var settings: EfficiencySettings { center.settings }
+    private var activeConfig: PreviewParamConfig? {
+        snippet.paramConfigs.first { $0.id == snippet.activeParamConfigID }
+    }
     private var language: SupportedLanguage { SupportedLanguage(rawValue: snippet.language) ?? .unknown }
 
     var body: some View {
-        // `Group` + `.task` stays out of the stack's spacing while hidden.
+        // The CLI lookup is not started here: a hidden panel has no view, so a
+        // `.task` on it would never run. See `refreshesEfficiencyCLI()`.
         Group {
             if EfficiencyPanelState.isVisible(
                 language: language, enabled: settings.enabled,
                 cliFound: settings.cliPath != nil, previewExpanded: isPreviewExpanded) {
                 content
             }
-        }
-        .task(id: settings.agent) {
-            if settings.cliPath == nil { await settings.refreshCLIPath() }
         }
     }
 
@@ -46,13 +48,12 @@ struct EfficiencyPanel: View {
         let state = EfficiencyPanelState.derive(
             job: center.jobs[id]?.state, fresh: fresh,
             latest: EfficiencyReviewStore.latest(in: reviews),
-            activeConfig: snippet.paramConfigs.first { $0.id == snippet.activeParamConfigID },
-            reviews: reviews)
+            activeConfig: activeConfig, reviews: reviews)
 
         return VStack(alignment: .leading, spacing: 8) {
             SectionHeader("efficiency") { headerAction(state, id: id) }
             VStack(alignment: .leading, spacing: 10) {
-                body(for: state)
+                stateContent(for: state)
                 if let failure = state.failure { failureRow(failure, id: id) }
                 if let inherited = state.inherited { inheritedSection(inherited) }
             }
@@ -93,6 +94,11 @@ struct EfficiencyPanel: View {
         .buttonStyle(.plain)
     }
 
+    /// Rate and Retry both go through consent: the agent may have changed.
+    private func retry(_ id: PersistentIdentifier) {
+        if center.needsConsent(for: settings.agent) { showsConsent = true } else { center.retry(id) }
+    }
+
     private func rate() {
         if center.needsConsent(for: settings.agent) {
             showsConsent = true
@@ -104,7 +110,7 @@ struct EfficiencyPanel: View {
     // MARK: Content
 
     @ViewBuilder
-    private func body(for state: EfficiencyPanelState) -> some View {
+    private func stateContent(for state: EfficiencyPanelState) -> some View {
         switch state.content {
         case .notRated:
             if state.inherited == nil {
@@ -119,19 +125,24 @@ struct EfficiencyPanel: View {
             }
         case .rated(let review):
             ratedHeader(review)
-            suggestionsFold(review, review.suggestions)
+            suggestionsFold(review, context: .fresh, open: $suggestionsOpen)
             provenance(review)
         case .notApplicable(let review):
-            Text(review.notApplicableReason ?? "Not applicable").font(Mono.font(size: 12))
-                .foregroundStyle(theme.text)
+            notApplicableLine(review)
             provenance(review)
         case .stale(let review):
             VStack(alignment: .leading, spacing: 8) {
-                ratedHeader(review)
+                if review.score == nil { notApplicableLine(review) } else { ratedHeader(review) }
                 mutedLine("Code changed — Re-rate")
+                suggestionsFold(review, context: .stale, open: $suggestionsOpen)
             }
             .opacity(0.55)
         }
+    }
+
+    private func notApplicableLine(_ review: EfficiencyReview) -> some View {
+        Text(review.notApplicableReason ?? "Not applicable").font(Mono.font(size: 12))
+            .foregroundStyle(theme.text)
     }
 
     private func ratedHeader(_ review: EfficiencyReview) -> some View {
@@ -154,7 +165,7 @@ struct EfficiencyPanel: View {
     private func tint(for band: EfficiencyBand) -> Color {
         switch band {
         case .excellent: theme.trafficGreen
-        case .good: .mint
+        case .good: theme.accent
         case .fair: theme.trafficYellow
         case .poor: theme.trafficRed
         }
@@ -180,7 +191,7 @@ struct EfficiencyPanel: View {
                 .font(Mono.font(size: 11)).foregroundStyle(theme.textMuted)
                 .lineLimit(2)
             Spacer(minLength: 8)
-            textButton("Retry") { center.retry(id) }
+            textButton("Retry") { retry(id) }
         }
     }
 
@@ -188,33 +199,41 @@ struct EfficiencyPanel: View {
 
     @ViewBuilder
     private func suggestionsFold(
-        _ review: EfficiencyReview, _ suggestions: [EfficiencyReview.Suggestion]
+        _ review: EfficiencyReview, context: EfficiencyPanelState.Context,
+        open: Binding<Bool>
     ) -> some View {
+        let suggestions = review.suggestions
         if !suggestions.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Button {
-                    withAnimation(reduceMotion ? nil : DSToken.Motion.reveal) { suggestionsOpen.toggle() }
+                    withAnimation(reduceMotion ? nil : DSToken.Motion.reveal) { open.wrappedValue.toggle() }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 9, weight: .bold))
-                            .rotationEffect(.degrees(suggestionsOpen ? 90 : 0))
+                            .rotationEffect(.degrees(open.wrappedValue ? 90 : 0))
                         Text("\(suggestions.count) suggestion\(suggestions.count == 1 ? "" : "s")")
                             .font(Mono.font(size: 11, weight: .semibold))
                     }
                     .foregroundStyle(theme.textMuted)
                 }
                 .buttonStyle(.plain)
-                if suggestionsOpen && !defersHeavyContent {
-                    ForEach(suggestions) { suggestion in suggestionRow(suggestion, in: review) }
+                if open.wrappedValue && !defersHeavyContent {
+                    ForEach(suggestions) { suggestion in
+                        suggestionRow(suggestion, in: review, context: context)
+                    }
                 }
             }
         }
     }
 
-    private func suggestionRow(_ suggestion: EfficiencyReview.Suggestion, in review: EfficiencyReview) -> some View {
+    private func suggestionRow(
+        _ suggestion: EfficiencyReview.Suggestion, in review: EfficiencyReview,
+        context: EfficiencyPanelState.Context
+    ) -> some View {
         let canAdd = EfficiencyFixApplier.canAddToActive(snippet: snippet, review: review, suggestion: suggestion)
-        let action = EfficiencyPanelState.action(for: suggestion, in: review, canAddToActive: canAdd)
+        let action = EfficiencyPanelState.action(
+            for: suggestion, in: review, context: context, activeCode: snippet.code, canAddToActive: canAdd)
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text(suggestion.impact.rawValue)
@@ -226,7 +245,7 @@ struct EfficiencyPanel: View {
                 .fixedSize(horizontal: false, vertical: true)
             codeBlock("before", suggestion.before)
             codeBlock("after", suggestion.after)
-            actionRow(suggestion, review: review, action: action)
+            actionRow(suggestion, review: review, context: context, action: action)
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -257,9 +276,11 @@ struct EfficiencyPanel: View {
     @ViewBuilder
     private func actionRow(
         _ suggestion: EfficiencyReview.Suggestion, review: EfficiencyReview,
-        action: EfficiencyPanelState.SuggestionAction
+        context: EfficiencyPanelState.Context, action: EfficiencyPanelState.SuggestionAction
     ) -> some View {
         switch action {
+        case .applied:
+            mutedLine("Applied")
         case .noLongerApplies:
             mutedLine("no longer applies — Re-rate")
         case .offer(let addToActive):
@@ -268,7 +289,7 @@ struct EfficiencyPanel: View {
                     initialName: suggestion.title, accent: accent, theme: theme,
                     onSave: { name in
                         namingID = nil
-                        onSaveAsNew(suggestion, review, name)
+                        onSaveAsNew(suggestion, review, name, EfficiencyPanelState.saveBase(for: context))
                     },
                     onCancel: { namingID = nil })
                 .id(suggestion.id)
@@ -276,8 +297,7 @@ struct EfficiencyPanel: View {
                 HStack(spacing: 14) {
                     textButton("Save as new config…") { namingID = suggestion.id }
                     if addToActive {
-                        let name = snippet.paramConfigs.first { $0.id == snippet.activeParamConfigID }?.name ?? "active"
-                        textButton("Add to \(name)") { onAddToActive(suggestion, review) }
+                        textButton("Add to \(activeConfig?.name ?? "active")") { onAddToActive(suggestion, review) }
                     }
                 }
             }
@@ -286,18 +306,29 @@ struct EfficiencyPanel: View {
 
     // MARK: From the rating of ‹config›
 
-    @ViewBuilder
     private func inheritedSection(_ inherited: EfficiencyPanelState.Inherited) -> some View {
-        let remaining = EfficiencyPanelState.remainingSuggestions(of: inherited.review, in: snippet.code)
-        if !remaining.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("From the rating of \(inherited.configName)")
-                    .font(Mono.font(size: 11, weight: .semibold)).foregroundStyle(theme.textMuted)
-                if !defersHeavyContent {
-                    ForEach(remaining) { suggestion in suggestionRow(suggestion, in: inherited.review) }
-                }
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            Text("From the rating of \(inherited.configName)")
+                .font(Mono.font(size: 11, weight: .semibold)).foregroundStyle(theme.textMuted)
+            suggestionsFold(inherited.review, context: .inherited, open: $inheritedOpen)
         }
     }
+}
+
+extension View {
+    /// Locates the rating agent's CLI whenever a detail view appears or the
+    /// agent changes (the locator caches). Lives on an always-present view:
+    /// the panel itself is absent until the CLI is found.
+    func refreshesEfficiencyCLI() -> some View {
+        task(id: EfficiencyRatingCenter.shared.settings.agent) {
+            await EfficiencyRatingCenter.shared.settings.refreshCLIPath()
+        }
+    }
+}
+#else
+import SwiftUI
+
+extension View {
+    func refreshesEfficiencyCLI() -> some View { self }
 }
 #endif

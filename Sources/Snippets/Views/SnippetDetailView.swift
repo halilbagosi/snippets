@@ -106,7 +106,7 @@ struct SnippetDetailView: View {
                             snippet: snippet, isPreviewExpanded: expanded,
                             defersHeavyContent: defersHeavyContent,
                             accent: Color(hex: language.accentHex) ?? theme.accent,
-                            onSaveAsNew: { applyFixAsNewConfig($0, from: $1, named: $2) },
+                            onSaveAsNew: { applyFixAsNewConfig($0, from: $1, named: $2, base: $3) },
                             onAddToActive: { applyFixToActiveConfig($0, from: $1) }
                         )
 #endif
@@ -136,6 +136,7 @@ struct SnippetDetailView: View {
                 // both ends. A couple of points off the rim, too.
                 .contentMargins(.vertical, Self.cardCornerRadius, for: .scrollIndicators)
                 .contentMargins(.trailing, 3, for: .scrollIndicators)
+                .refreshesEfficiencyCLI()
                 // Coming back from the expanded view, land on the preview the
                 // user left rather than wherever the clamped offset ended up.
                 .onChange(of: expanded) { _, isExpanded in
@@ -718,10 +719,11 @@ struct SnippetDetailView: View {
     /// Entry points for the efficiency panel. A fix is saved as a new named
     /// config; it never overwrites code.
     func applyFixAsNewConfig(
-        _ suggestion: EfficiencyReview.Suggestion, from review: EfficiencyReview, named name: String
+        _ suggestion: EfficiencyReview.Suggestion, from review: EfficiencyReview, named name: String,
+        base: EfficiencyFixApplier.Base = .ratedCode
     ) {
         EfficiencyFixApplier.saveAsNew(
-            snippet: snippet, review: review, suggestion: suggestion, name: name,
+            snippet: snippet, review: review, suggestion: suggestion, name: name, base: base,
             overrides: paramOverrides,
             declared: { detectedParams(SnippetLinker.resolve(entry: snippet)).map(\.param) },
             applyValues: { applyValues($0, resolution: SnippetLinker.resolve(entry: snippet)) },

@@ -13,23 +13,29 @@ import Foundation
 enum EfficiencyFixApplier {
     /// "Save as new config…": rated code + this one change, saved under `name`
     /// and made active. Returns false (changing nothing) when the suggestion's
-    /// `before` no longer occurs exactly once in `review.ratedCode`.
+    /// `before` no longer occurs exactly once in the base code (`review.ratedCode`
+    /// by default, or the current `snippet.code`).
     ///
     /// `declared` and `applyValues` must work from the snippet's code as it is
     /// when they are called (re-resolve each time, never a snapshot taken
     /// before the swap), or old ranges get spliced into the new code.
+    /// Which code the suggestion's change is applied to.
+    enum Base { case ratedCode, currentCode }
+
     @discardableResult
     static func saveAsNew(
         snippet: Snippet,
         review: EfficiencyReview,
         suggestion: EfficiencyReview.Suggestion,
         name: String,
+        base: Base = .ratedCode,
         overrides: [String: PreviewParamValue],
         declared: () -> [PreviewParam],
         applyValues: ([String: PreviewParamValue]) -> Void,
         forgetTrust: (UUID?) -> Void
     ) -> Bool {
-        guard let newCode = EfficiencyReviewStore.applying(suggestion, to: review.ratedCode) else {
+        let source = base == .ratedCode ? review.ratedCode : snippet.code
+        guard let newCode = EfficiencyReviewStore.applying(suggestion, to: source) else {
             return false
         }
         let before = snippet.code

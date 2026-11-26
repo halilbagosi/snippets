@@ -34,10 +34,10 @@ final class EfficiencyFixApplierTests: XCTestCase {
     @discardableResult
     private func saveAsNew(
         _ snippet: Snippet, _ review: EfficiencyReview, _ suggestion: EfficiencyReview.Suggestion,
-        name: String = "Fast", forget: @escaping (UUID?) -> Void = { _ in }
+        name: String = "Fast", base: EfficiencyFixApplier.Base = .ratedCode, forget: @escaping (UUID?) -> Void = { _ in }
     ) -> Bool {
         EfficiencyFixApplier.saveAsNew(
-            snippet: snippet, review: review, suggestion: suggestion, name: name, overrides: [:],
+            snippet: snippet, review: review, suggestion: suggestion, name: name, base: base, overrides: [:],
             declared: { [] }, applyValues: { _ in }, forgetTrust: forget)
     }
 
@@ -75,6 +75,21 @@ final class EfficiencyFixApplierTests: XCTestCase {
         let (r, s) = review(rated: "a = 1")
         saveAsNew(snippet, r, s)
         XCTAssertEqual(snippet.paramConfigs.first(where: \.isDefault)?.code, "a = 1")
+    }
+
+    func test_saveAsNew_currentCodeBaseKeepsTheUsersEdits() {
+        let snippet = makeSnippet(code: "a = 1 // my edit")
+        let (r, s) = review(rated: "a = 1")
+        XCTAssertTrue(saveAsNew(snippet, r, s, base: .currentCode))
+        XCTAssertEqual(snippet.code, "a = 2 // my edit")
+        XCTAssertEqual(config("Default", in: snippet).code, "a = 1 // my edit")
+    }
+
+    func test_saveAsNew_currentCodeBaseRefusedWhenBeforeGoneFromCurrentCode() {
+        let snippet = makeSnippet(code: "b = 9")
+        let (r, s) = review(rated: "a = 1")
+        XCTAssertFalse(saveAsNew(snippet, r, s, base: .currentCode))
+        XCTAssertEqual(snippet.code, "b = 9")
     }
 
     func test_saveAsNew_refusedWhenBeforeNoLongerMatchesRatedCode() {

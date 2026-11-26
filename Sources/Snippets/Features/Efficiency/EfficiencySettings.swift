@@ -20,7 +20,15 @@ final class EfficiencySettings {
 
     /// On by default; the panel still needs the CLI to be found.
     var enabled: Bool { didSet { defaults.set(enabled, forKey: Key.enabled) } }
-    var agent: AgentClient { didSet { defaults.set(agent.rawValue, forKey: Key.agent) } }
+    var agent: AgentClient {
+        didSet {
+            defaults.set(agent.rawValue, forKey: Key.agent)
+            // The old agent's path must not make the panel look available.
+            guard agent != oldValue else { return }
+            cliPath = nil
+            Task { await refreshCLIPath() }
+        }
+    }
     /// Where the chosen agent's CLI was last found; nil until `refreshCLIPath`
     /// finds it.
     private(set) var cliPath: URL?
@@ -73,8 +81,11 @@ final class EfficiencySettings {
 
     /// Resolves the chosen agent's CLI (cached by the locator).
     func refreshCLIPath() async {
-        guard let name = Self.executableName(for: agent) else { cliPath = nil; return }
-        cliPath = await locate(name)
+        let requested = agent
+        guard let name = Self.executableName(for: requested) else { cliPath = nil; return }
+        let found = await locate(name)
+        // The agent may have been switched while the lookup ran.
+        if agent == requested { cliPath = found }
     }
 }
 #endif

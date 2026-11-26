@@ -105,6 +105,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // license: access is off until the user turns it on in Settings.
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil {
             AgentAccess.shared.start()
+            // Locates the rating agent's CLI so the detail panel can appear.
+            Task { await EfficiencyRatingCenter.shared.settings.refreshCLIPath() }
         }
         #endif
         guard !launchedByAgent else { return }
